@@ -1,0 +1,384 @@
+{% extends "base.html" %}
+
+{% block title %}Host Management - Network Map{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <h1><i class="fas fa-server me-2"></i>Host Management</h1>
+        <p class="text-muted">Add and configure hosts for network monitoring</p>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Add Host Form -->
+    <div class="col-lg-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-plus me-2"></i>Add New Host</h5>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('add_host') }}">
+                    <div class="mb-3">
+                        <label for="name" class="form-label">Host Name *</label>
+                        <input type="text" class="form-control" id="name" name="name" required 
+                               placeholder="e.g., Web Server 1">
+                        <div class="form-text">A friendly name for this host</div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="ip_address" class="form-label">IP Address *</label>
+                        <input type="text" class="form-control" id="ip_address" name="ip_address" required
+                               placeholder="192.168.1.100" pattern="^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$">
+                        <div class="form-text">IPv4 address of the host</div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="username" class="form-label">SSH Username</label>
+                        <input type="text" class="form-control" id="username" name="username" 
+                               value="root" placeholder="root">
+                        <div class="form-text">Username for SSH connections</div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="ssh_port" class="form-label">SSH Port</label>
+                        <input type="number" class="form-control" id="ssh_port" name="ssh_port" 
+                               value="22" min="1" max="65535">
+                        <div class="form-text">SSH port (default: 22)</div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="description" class="form-label">Description</label>
+                        <textarea class="form-control" id="description" name="description" rows="2"
+                                  placeholder="Optional description of this host"></textarea>
+                    </div>
+                    
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-plus me-1"></i>Add Host
+                        </button>
+                    </div>
+                </form>
+                
+                <hr class="my-4">
+                
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle me-2"></i>
+                    <strong>Prerequisites:</strong>
+                    <ul class="mb-0 mt-2">
+                        <li>SSH access must be configured</li>
+                        <li>Passwordless authentication (keys) required</li>
+                        <li>Host must be reachable from this server</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Hosts List -->
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="fas fa-list me-2"></i>Configured Hosts ({{ hosts|length }})</h5>
+                {% if hosts %}
+                <button class="btn btn-sm btn-outline-primary" onclick="testAllHosts()">
+                    <i class="fas fa-heartbeat me-1"></i>Test All
+                </button>
+                {% endif %}
+            </div>
+            <div class="card-body">
+                {% if hosts %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Host Details</th>
+                                    <th>Connection</th>
+                                    <th>Status</th>
+                                    <th>Last Activity</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for host in hosts %}
+                                <tr id="host-{{ host.id }}">
+                                    <td>
+                                        <div>
+                                            <strong>{{ host.name }}</strong>
+                                            <br>
+                                            <code class="small">{{ host.ip_address }}</code>
+                                        </div>
+                                        {% if host.description %}
+                                            <div class="small text-muted mt-1">{{ host.description }}</div>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <div class="small">
+                                            <i class="fas fa-user"></i> {{ host.username }}<br>
+                                            <i class="fas fa-network-port"></i> :{{ host.ssh_port }}
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <span class="status-{{ host.status or 'unknown' }}" id="status-{{ host.id }}">
+                                            {% if host.status == 'online' %}
+                                                <i class="fas fa-check-circle"></i> Online
+                                            {% elif host.status == 'offline' %}
+                                                <i class="fas fa-times-circle"></i> Offline
+                                            {% elif host.status == 'ping_only' %}
+                                                <i class="fas fa-exclamation-circle"></i> Ping Only
+                                            {% else %}
+                                                <i class="fas fa-question-circle"></i> Unknown
+                                            {% endif %}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <div class="small">
+                                            {% if host.last_seen %}
+                                                {{ host.last_seen.strftime('%m/%d/%Y %H:%M') }}
+                                            {% else %}
+                                                <span class="text-muted">Never</span>
+                                            {% endif %}
+                                        </div>
+                                        <div class="small text-muted">
+                                            Added: {% if host.created_at %}{{ host.created_at[:10] if host.created_at|string|length > 10 else host.created_at }}{% else %}Unknown{% endif %}
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="btn-group btn-group-sm">
+                                            <button class="btn btn-outline-info" onclick="testHost({{ host.id }})" 
+                                                    title="Test Connection" id="test-btn-{{ host.id }}">
+                                                <i class="fas fa-heartbeat"></i>
+                                            </button>
+                                            <button class="btn btn-outline-primary" onclick="showHostDetails({{ host.id }})" 
+                                                    title="View Details">
+                                                <i class="fas fa-info-circle"></i>
+                                            </button>
+                                            <button class="btn btn-outline-danger" onclick="confirmRemoveHost({{ host.id }}, '{{ host.name }}')" 
+                                                    title="Remove Host">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="text-center py-5">
+                        <i class="fas fa-server fa-4x text-muted mb-3"></i>
+                        <h4>No Hosts Configured</h4>
+                        <p class="text-muted">Add your first host to start monitoring your network infrastructure.</p>
+                        <p class="small text-muted">Hosts can be servers, routers, switches, or any device with SSH access.</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+        
+        {% if hosts %}
+        <!-- Host Statistics -->
+        <div class="card mt-3">
+            <div class="card-header">
+                <h6 class="mb-0"><i class="fas fa-chart-bar me-2"></i>Host Statistics</h6>
+            </div>
+            <div class="card-body">
+                <div class="row text-center">
+                    <div class="col-3">
+                        <div class="h4 mb-0 text-primary">{{ hosts|length }}</div>
+                        <div class="small text-muted">Total</div>
+                    </div>
+                    <div class="col-3">
+                        <div class="h4 mb-0 text-success">{{ hosts|selectattr("status", "equalto", "online")|list|length }}</div>
+                        <div class="small text-muted">Online</div>
+                    </div>
+                    <div class="col-3">
+                        <div class="h4 mb-0 text-warning">{{ hosts|selectattr("status", "equalto", "ping_only")|list|length }}</div>
+                        <div class="small text-muted">Ping Only</div>
+                    </div>
+                    <div class="col-3">
+                        <div class="h4 mb-0 text-danger">{{ hosts|selectattr("status", "equalto", "offline")|list|length }}</div>
+                        <div class="small text-muted">Offline</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Remove Host Confirmation Modal -->
+<div class="modal fade" id="removeHostModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Remove Host</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-warning">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    <strong>Warning:</strong> This will permanently remove the host and all associated data including:
+                </div>
+                <ul>
+                    <li>Network scan history</li>
+                    <li>Traffic statistics</li>
+                    <li>Connection data</li>
+                    <li>System information</li>
+                </ul>
+                <p>Are you sure you want to remove <strong id="removeHostName"></strong>?</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <form method="POST" id="removeHostForm" style="display: inline;">
+                    <button type="submit" class="btn btn-danger">
+                        <i class="fas fa-trash me-1"></i>Remove Host
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Host Details Modal (reuse from dashboard) -->
+<div class="modal fade" id="hostDetailsModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Host Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="hostDetailsContent">
+                <div class="text-center">
+                    <div class="spinner-border" role="status"></div>
+                    <p class="mt-2">Loading host details...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function testHost(hostId) {
+    const testBtn = document.getElementById(`test-btn-${hostId}`);
+    const statusElement = document.getElementById(`status-${hostId}`);
+    
+    // Show loading state
+    testBtn.disabled = true;
+    testBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+    statusElement.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Testing...';
+    
+    // This would be implemented as a separate API endpoint
+    // For now, we'll simulate the test
+    setTimeout(() => {
+        testBtn.disabled = false;
+        testBtn.innerHTML = '<i class="fas fa-heartbeat"></i>';
+        
+        // In a real implementation, you'd call an API to test connectivity
+        // statusElement.innerHTML = '<i class="fas fa-check-circle text-success"></i> Online';
+        
+        // For now, just trigger a page refresh to show updated status
+        window.location.reload();
+    }, 2000);
+}
+
+function testAllHosts() {
+    const hosts = {{ hosts|map(attribute='id')|list }};
+    
+    hosts.forEach(hostId => {
+        setTimeout(() => testHost(hostId), Math.random() * 1000);
+    });
+}
+
+function confirmRemoveHost(hostId, hostName) {
+    const modal = new bootstrap.Modal(document.getElementById('removeHostModal'));
+    const form = document.getElementById('removeHostForm');
+    const nameElement = document.getElementById('removeHostName');
+    
+    nameElement.textContent = hostName;
+    form.action = `/remove_host/${hostId}`;
+    
+    modal.show();
+}
+
+function showHostDetails(hostId) {
+    const modal = new bootstrap.Modal(document.getElementById('hostDetailsModal'));
+    const content = document.getElementById('hostDetailsContent');
+    
+    // Show loading state
+    content.innerHTML = `
+        <div class="text-center">
+            <div class="spinner-border" role="status"></div>
+            <p class="mt-2">Loading host details...</p>
+        </div>
+    `;
+    
+    modal.show();
+    
+    // Fetch host details
+    fetch(`/api/host_stats/${hostId}`)
+    .then(response => response.json())
+    .then(data => {
+        const host = data.host;
+        content.innerHTML = `
+            <div class="row">
+                <div class="col-md-6">
+                    <h6>Host Information</h6>
+                    <table class="table table-sm">
+                        <tr><th>Name:</th><td>${host.name}</td></tr>
+                        <tr><th>IP Address:</th><td><code>${host.ip_address}</code></td></tr>
+                        <tr><th>Username:</th><td>${host.username}</td></tr>
+                        <tr><th>SSH Port:</th><td>${host.ssh_port}</td></tr>
+                        <tr><th>Status:</th><td><span class="status-${host.status}">${host.status}</span></td></tr>
+                        <tr><th>Description:</th><td>${host.description || 'None'}</td></tr>
+                        <tr><th>Created:</th><td>${host.created_at || 'Unknown'}</td></tr>
+                        <tr><th>Last Seen:</th><td>${host.last_seen || 'Never'}</td></tr>
+                    </table>
+                </div>
+                <div class="col-md-6">
+                    <h6>Network Statistics</h6>
+                    <table class="table table-sm">
+                        <tr><th>Open Ports:</th><td>${data.open_ports}</td></tr>
+                        <tr><th>Outbound Connections:</th><td>${data.outbound_connections}</td></tr>
+                        <tr><th>Inbound Connections:</th><td>${data.inbound_connections}</td></tr>
+                        <tr><th>Bytes In (24h):</th><td>${formatBytes(data.bytes_in_24h)}</td></tr>
+                        <tr><th>Bytes Out (24h):</th><td>${formatBytes(data.bytes_out_24h)}</td></tr>
+                    </table>
+                    
+                    <div class="mt-3">
+                        <button class="btn btn-sm btn-outline-primary" onclick="testHost(${hostId})">
+                            <i class="fas fa-heartbeat me-1"></i>Test Connection
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+    })
+    .catch(error => {
+        console.error('Error loading host details:', error);
+        content.innerHTML = `
+            <div class="alert alert-danger">
+                <i class="fas fa-exclamation-triangle me-2"></i>
+                Error loading host details. Please try again.
+            </div>
+        `;
+    });
+}
+
+// Form validation
+document.getElementById('ip_address').addEventListener('input', function(e) {
+    const value = e.target.value;
+    const isValid = /^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$/.test(value);
+    
+    if (value && !isValid) {
+        e.target.setCustomValidity('Please enter a valid IPv4 address');
+    } else {
+        e.target.setCustomValidity('');
+    }
+});
+
+// Auto-focus first input
+document.getElementById('name').focus();
+</script>
+{% endblock %}

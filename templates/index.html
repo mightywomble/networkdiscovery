@@ -1,0 +1,368 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - Network Map{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <h1><i class="fas fa-tachometer-alt me-2"></i>Network Dashboard</h1>
+        <p class="text-muted">Monitor your network infrastructure in real-time</p>
+    </div>
+</div>
+
+<!-- Statistics Cards -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card card-stats">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <div class="stats-number">{{ stats.total_hosts }}</div>
+                        <div class="stats-label">Total Hosts</div>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-server fa-2x text-primary"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3">
+        <div class="card card-stats">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <div class="stats-number text-success">{{ stats.online_hosts }}</div>
+                        <div class="stats-label">Online Hosts</div>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-check-circle fa-2x text-success"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3">
+        <div class="card card-stats">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <div class="stats-number">{{ stats.total_connections }}</div>
+                        <div class="stats-label">Total Connections</div>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-network-wired fa-2x text-info"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3">
+        <div class="card card-stats">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <div class="stats-number text-warning">{{ stats.recent_connections }}</div>
+                        <div class="stats-label">Recent Activity</div>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-clock fa-2x text-warning"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Hosts Overview -->
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="fas fa-server me-2"></i>Hosts Overview</h5>
+                <a href="{{ url_for('hosts') }}" class="btn btn-sm btn-outline-primary">
+                    <i class="fas fa-cog me-1"></i>Manage Hosts
+                </a>
+            </div>
+            <div class="card-body">
+                {% if hosts %}
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Name</th>
+                                    <th>IP Address</th>
+                                    <th>Status</th>
+                                    <th>Last Seen</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for host in hosts %}
+                                <tr>
+                                    <td>
+                                        <strong>{{ host.name }}</strong>
+                                        {% if host.description %}
+                                            <br><small class="text-muted">{{ host.description }}</small>
+                                        {% endif %}
+                                    </td>
+                                    <td><code>{{ host.ip_address }}</code></td>
+                                    <td>
+                                        <span class="status-{{ host.status or 'unknown' }}">
+                                            {% if host.status == 'online' %}
+                                                <i class="fas fa-check-circle"></i> Online
+                                            {% elif host.status == 'offline' %}
+                                                <i class="fas fa-times-circle"></i> Offline
+                                            {% elif host.status == 'ping_only' %}
+                                                <i class="fas fa-exclamation-circle"></i> Ping Only
+                                            {% else %}
+                                                <i class="fas fa-question-circle"></i> Unknown
+                                            {% endif %}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        {% if host.last_seen %}
+                                            <small>{% if host.last_seen|string|length > 16 %}{{ host.last_seen[:16] }}{% else %}{{ host.last_seen }}{% endif %}</small>
+                                        {% else %}
+                                            <small class="text-muted">Never</small>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <button class="btn btn-sm btn-outline-info" onclick="showHostDetails({{ host.id }})">
+                                            <i class="fas fa-info-circle"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="text-center py-4">
+                        <i class="fas fa-server fa-3x text-muted mb-3"></i>
+                        <h5>No hosts configured</h5>
+                        <p class="text-muted">Add your first host to start monitoring your network.</p>
+                        <a href="{{ url_for('hosts') }}" class="btn btn-primary">
+                            <i class="fas fa-plus me-1"></i>Add Host
+                        </a>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <!-- Quick Actions -->
+    <div class="col-lg-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-bolt me-2"></i>Quick Actions</h5>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <button class="btn btn-primary" onclick="startScan()">
+                        <i class="fas fa-search me-2"></i>Start Network Scan
+                    </button>
+                    <a href="{{ url_for('network_map') }}" class="btn btn-info">
+                        <i class="fas fa-project-diagram me-2"></i>View Network Map
+                    </a>
+                    <a href="{{ url_for('hosts') }}" class="btn btn-success">
+                        <i class="fas fa-plus me-2"></i>Add New Host
+                    </a>
+                </div>
+                
+                <hr>
+                
+                <h6><i class="fas fa-chart-line me-2"></i>Network Stats</h6>
+                <div class="small">
+                    <div class="d-flex justify-content-between mb-1">
+                        <span>Uptime Ratio:</span>
+                        <span class="text-success">
+                            {{ "%.1f"|format((stats.online_hosts / stats.total_hosts * 100) if stats.total_hosts > 0 else 0) }}%
+                        </span>
+                    </div>
+                    <div class="d-flex justify-content-between mb-1">
+                        <span>Avg. Connections:</span>
+                        <span>
+                            {{ "%.1f"|format(stats.total_connections / stats.total_hosts if stats.total_hosts > 0 else 0) }}
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Scan Status -->
+        <div class="card mt-3">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-radar me-2"></i>Scan Status</h5>
+            </div>
+            <div class="card-body">
+                <div id="scan-info">
+                    <div class="d-flex justify-content-between mb-2">
+                        <span>Status:</span>
+                        <span id="scan-status-detail">Ready</span>
+                    </div>
+                    <div class="progress mb-2" style="height: 8px;">
+                        <div class="progress-bar" id="scan-progress-bar" style="width: 0%"></div>
+                    </div>
+                    <div class="small text-muted" id="scan-details"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Host Details Modal -->
+<div class="modal fade" id="hostDetailsModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Host Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="hostDetailsContent">
+                <div class="text-center">
+                    <div class="spinner-border" role="status"></div>
+                    <p class="mt-2">Loading host details...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function showHostDetails(hostId) {
+    const modal = new bootstrap.Modal(document.getElementById('hostDetailsModal'));
+    const content = document.getElementById('hostDetailsContent');
+    
+    // Show loading state
+    content.innerHTML = `
+        <div class="text-center">
+            <div class="spinner-border" role="status"></div>
+            <p class="mt-2">Loading host details...</p>
+        </div>
+    `;
+    
+    modal.show();
+    
+    // Fetch host details
+    fetch(`/api/host_stats/${hostId}`)
+    .then(response => response.json())
+    .then(data => {
+        const host = data.host;
+        content.innerHTML = `
+            <div class="row">
+                <div class="col-md-6">
+                    <h6>Host Information</h6>
+                    <table class="table table-sm">
+                        <tr><th>Name:</th><td>${host.name}</td></tr>
+                        <tr><th>IP Address:</th><td><code>${host.ip_address}</code></td></tr>
+                        <tr><th>Username:</th><td>${host.username}</td></tr>
+                        <tr><th>SSH Port:</th><td>${host.ssh_port}</td></tr>
+                        <tr><th>Status:</th><td><span class="status-${host.status}">${host.status}</span></td></tr>
+                        <tr><th>Last Seen:</th><td>${host.last_seen || 'Never'}</td></tr>
+                    </table>
+                </div>
+                <div class="col-md-6">
+                    <h6>Network Statistics</h6>
+                    <table class="table table-sm">
+                        <tr><th>Open Ports:</th><td>${data.open_ports}</td></tr>
+                        <tr><th>Outbound Connections:</th><td>${data.outbound_connections}</td></tr>
+                        <tr><th>Inbound Connections:</th><td>${data.inbound_connections}</td></tr>
+                        <tr><th>Bytes In (24h):</th><td>${formatBytes(data.bytes_in_24h)}</td></tr>
+                        <tr><th>Bytes Out (24h):</th><td>${formatBytes(data.bytes_out_24h)}</td></tr>
+                    </table>
+                </div>
+            </div>
+        `;
+    })
+    .catch(error => {
+        console.error('Error loading host details:', error);
+        content.innerHTML = `
+            <div class="alert alert-danger">
+                <i class="fas fa-exclamation-triangle me-2"></i>
+                Error loading host details. Please try again.
+            </div>
+        `;
+    });
+}
+
+// Enhanced scan status updates for dashboard
+function updateDashboardScanStatus(data) {
+    const statusDetail = document.getElementById('scan-status-detail');
+    const progressBar = document.getElementById('scan-progress-bar');
+    const scanDetails = document.getElementById('scan-details');
+    
+    if (statusDetail && progressBar && scanDetails) {
+        if (data.running) {
+            const progress = data.progress || 0;
+            const phase = data.phase || 'scanning';
+            const phaseMessage = data.phase_message || 'Scanning...';
+            const step = data.step ? ` (${data.step})` : '';
+            
+            // Update status with phase information
+            statusDetail.innerHTML = `<i class="fas fa-spinner fa-spin me-1"></i>${phase.charAt(0).toUpperCase() + phase.slice(1)}`;
+            
+            // Update progress bar
+            progressBar.style.width = progress + '%';
+            progressBar.setAttribute('aria-valuenow', progress);
+            progressBar.className = `progress-bar ${getProgressBarClass(phase)}`;
+            
+            // Update detailed message
+            let detailText = phaseMessage;
+            if (progress > 0 && progress < 100) {
+                detailText += ` ${progress}%`;
+            }
+            if (step) {
+                detailText += step;
+            }
+            scanDetails.textContent = detailText;
+            
+        } else {
+            // Scan completed or idle
+            if (data.phase === 'error') {
+                statusDetail.innerHTML = '<i class="fas fa-exclamation-triangle text-danger me-1"></i>Error';
+                progressBar.className = 'progress-bar bg-danger';
+                scanDetails.textContent = data.phase_message || 'Scan failed';
+            } else {
+                statusDetail.innerHTML = '<i class="fas fa-check-circle text-success me-1"></i>Ready';
+                progressBar.className = 'progress-bar';
+                progressBar.style.width = '0%';
+                
+                const lastScan = data.last_scan ? new Date(data.last_scan).toLocaleString() : 'Never';
+                scanDetails.textContent = `Last scan: ${lastScan}`;
+            }
+        }
+    }
+}
+
+function getProgressBarClass(phase) {
+    switch(phase) {
+        case 'initializing':
+        case 'preparing': return 'progress-bar bg-info';
+        case 'scanning': return 'progress-bar bg-primary';
+        case 'analyzing': return 'progress-bar bg-warning';
+        case 'finalizing': return 'progress-bar bg-info';
+        case 'complete': return 'progress-bar bg-success';
+        case 'error': return 'progress-bar bg-danger';
+        default: return 'progress-bar';
+    }
+}
+
+// Hook into the parent updateScanUI function
+document.addEventListener('DOMContentLoaded', function() {
+    // Override the parent updateScanUI to also update dashboard elements
+    const originalUpdateScanUI = window.updateScanUI;
+    window.updateScanUI = function(data) {
+        // Call original function
+        originalUpdateScanUI(data);
+        // Also update dashboard-specific elements
+        updateDashboardScanStatus(data);
+    };
+});
+</script>
+{% endblock %}
