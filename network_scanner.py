@@ -33,58 +33,81 @@ class NetworkScanner:
             self.progress_callback(message)
     
     def scan_host(self, host):
-        """Perform comprehensive scan of a single host"""
-        self._update_progress(f"Scanning host: {host['name']} ({host['ip_address']})")
+        """Perform comprehensive scan of a single host using all available tools"""
+        self._update_progress(f"🚀 Starting comprehensive scan: {host['name']} ({host['ip_address']})")
         
         # Test connectivity first
         connectivity = self.host_manager.test_connectivity(host)
         if not connectivity['ssh']:
-            self._update_progress(f"Host {host['name']} is not accessible via SSH")
+            self._update_progress(f"❌ Host {host['name']} is not accessible via SSH")
             return
         
+        # Check if enhanced network scanner is available and use it
+        try:
+            from enhanced_network_scanner import EnhancedNetworkScanner
+            enhanced_scanner = EnhancedNetworkScanner(self.host_manager, self.db)
+            enhanced_scanner.set_progress_callback(self.progress_callback)
+            
+            # Run comprehensive enhanced scan
+            enhanced_results = enhanced_scanner.comprehensive_network_scan(host)
+            self._update_progress(f"✅ Enhanced comprehensive scan completed for {host['name']}")
+            
+            # Continue with traditional scanning for compatibility
+            self._traditional_scan(host)
+            
+        except ImportError:
+            self._update_progress(f"⚠️ Enhanced scanner not available, using traditional scan for {host['name']}")
+            self._traditional_scan(host)
+        except Exception as e:
+            self._update_progress(f"❌ Error in enhanced scanning for {host['name']}: {e}")
+            self._update_progress(f"🔄 Falling back to traditional scan for {host['name']}")
+            self._traditional_scan(host)
+    
+    def _traditional_scan(self, host):
+        """Traditional scanning methods for compatibility"""
         # Get system information
         try:
             system_info = self.host_manager.get_system_info(host)
-            self._update_progress(f"Collected system info for {host['name']}")
+            self._update_progress(f"📋 Collected system info for {host['name']}")
         except Exception as e:
-            self._update_progress(f"Error collecting system info for {host['name']}: {e}")
+            self._update_progress(f"❌ Error collecting system info for {host['name']}: {e}")
         
         # Get network connections
         try:
             connections = self.host_manager.get_network_connections(host)
             self._process_connections(host, connections)
-            self._update_progress(f"Found {len(connections)} network connections on {host['name']}")
+            self._update_progress(f"🔗 Found {len(connections)} network connections on {host['name']}")
         except Exception as e:
-            self._update_progress(f"Error getting network connections for {host['name']}: {e}")
+            self._update_progress(f"❌ Error getting network connections for {host['name']}: {e}")
         
         # Get traffic statistics
         try:
             traffic_stats = self.host_manager.get_traffic_stats(host)
-            self._update_progress(f"Collected traffic stats for {host['name']}")
+            self._update_progress(f"📊 Collected traffic stats for {host['name']}")
         except Exception as e:
-            self._update_progress(f"Error collecting traffic stats for {host['name']}: {e}")
+            self._update_progress(f"❌ Error collecting traffic stats for {host['name']}: {e}")
         
         # Perform port scan on the host
         try:
             ports = self._port_scan_host(host)
             if ports:
                 self.db.save_port_scan(host['id'], ports)
-                self._update_progress(f"Found {len(ports)} open ports on {host['name']}")
+                self._update_progress(f"🔍 Found {len(ports)} open ports on {host['name']}")
         except Exception as e:
-            self._update_progress(f"Error port scanning {host['name']}: {e}")
+            self._update_progress(f"❌ Error port scanning {host['name']}: {e}")
         
         # Discover local network from this host
         try:
             self._discover_local_network(host)
         except Exception as e:
-            self._update_progress(f"Error discovering local network from {host['name']}: {e}")
+            self._update_progress(f"❌ Error discovering local network from {host['name']}: {e}")
         
-        # Enhanced comprehensive discovery
+        # Enhanced comprehensive discovery (fallback)
         try:
             enhanced_data = self.enhanced_discovery.collect_comprehensive_data(host)
-            self._update_progress(f"Enhanced discovery completed for {host['name']}")
+            self._update_progress(f"🔬 Enhanced discovery completed for {host['name']}")
         except Exception as e:
-            self._update_progress(f"Error in enhanced discovery for {host['name']}: {e}")
+            self._update_progress(f"❌ Error in enhanced discovery for {host['name']}: {e}")
     
     def _port_scan_host(self, host, ports=None):
         """Scan common ports on a host"""
@@ -362,31 +385,87 @@ class NetworkScanner:
                 print(f"Error scanning host {host['name']}: {e}")
     
     def get_network_topology(self):
-        """Generate network topology data for visualization"""
+        """Generate enhanced network topology data for visualization"""
         hosts = self.host_manager.get_all_hosts()
         connections = self.db.get_recent_connections(hours=24)
         
-        # Create nodes and edges for network graph
+        # Try to use enhanced topology data if available
+        try:
+            from enhanced_network_scanner import EnhancedNetworkScanner
+            enhanced_scanner = EnhancedNetworkScanner(self.host_manager, self.db)
+            enhanced_topology = enhanced_scanner.generate_enhanced_topology()
+            
+            if enhanced_topology:
+                self._update_progress("✨ Using enhanced network topology with comprehensive analysis")
+                return enhanced_topology
+        except (ImportError, Exception) as e:
+            self._update_progress(f"📊 Using traditional topology (enhanced not available: {e})")
+        
+        # Fallback to traditional topology
         nodes = []
         edges = []
         
+        # Enhanced node information if scan results are available
         for host in hosts:
-            nodes.append({
+            node = {
                 'id': host['id'],
                 'label': host['name'],
                 'ip': host['ip_address'],
                 'status': host.get('status', 'unknown'),
-                'group': self._determine_host_group(host)
-            })
+                'group': self._determine_host_group(host),
+                'title': f"{host['name']} ({host['ip_address']})"
+            }
+            
+            # Try to get enhanced scan results for additional info
+            try:
+                scan_results = self.db.get_enhanced_scan_results(host['id'])
+                if scan_results:
+                    latest_scan = max(scan_results, key=lambda x: x.get('timestamp', ''))
+                    scan_data = latest_scan.get('scan_data', {})
+                    
+                    # Add enhanced information to node
+                    if 'host_discovery' in scan_data:
+                        discovery = scan_data['host_discovery']
+                        node['title'] += f"\nOS: {discovery.get('os_detection', 'Unknown')}"
+                        node['title'] += f"\nOpen Ports: {len(discovery.get('port_scan', []))}"
+                    
+                    if 'performance_monitoring' in scan_data:
+                        perf = scan_data['performance_monitoring']
+                        if 'speed_test' in perf:
+                            speed = perf['speed_test']
+                            node['title'] += f"\nSpeed: ↓{speed.get('download_mbps', 'N/A')} Mbps"
+                    
+                    # Color coding based on scan results
+                    if scan_data.get('security_analysis', {}).get('threats_detected'):
+                        node['group'] = 'security-risk'
+                    elif scan_data.get('performance_monitoring', {}).get('high_load'):
+                        node['group'] = 'high-load'
+            except Exception:
+                pass  # Continue with basic node info
+            
+            nodes.append(node)
         
+        # Enhanced edges with more connection details
         for conn in connections:
             if conn['source_host_id'] and conn['dest_host_id']:
-                edges.append({
+                edge = {
                     'from': conn['source_host_id'],
                     'to': conn['dest_host_id'],
                     'label': f":{conn['dest_port']}",
                     'title': f"{conn['protocol'].upper()} connection to port {conn['dest_port']}\nConnections: {conn['connection_count']}"
-                })
+                }
+                
+                # Enhanced edge styling based on connection type
+                if conn['dest_port'] in [22, 3389]:  # SSH/RDP
+                    edge['color'] = {'color': '#2ecc71'}  # Green for management
+                elif conn['dest_port'] in [80, 443, 8080, 8443]:  # HTTP/HTTPS
+                    edge['color'] = {'color': '#3498db'}  # Blue for web
+                elif conn['dest_port'] in [3306, 5432, 1433, 6379]:  # Databases
+                    edge['color'] = {'color': '#e74c3c'}  # Red for databases
+                else:
+                    edge['color'] = {'color': '#95a5a6'}  # Gray for others
+                
+                edges.append(edge)
         
         return {'nodes': nodes, 'edges': edges}
     

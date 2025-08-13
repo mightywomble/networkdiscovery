@@ -108,6 +108,28 @@ class Database:
                 )
             ''')
             
+            # Network discovery data
+            conn.execute('''
+                CREATE TABLE IF NOT EXISTS network_discovery (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    host_id INTEGER,
+                    discovery_type TEXT,
+                    discovery_data TEXT,
+                    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (host_id) REFERENCES hosts (id)
+                )
+            ''')
+            
+            # Topology analysis results
+            conn.execute('''
+                CREATE TABLE IF NOT EXISTS topology_analysis (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    analysis_type TEXT,
+                    analysis_data TEXT,
+                    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            ''')
+            
             conn.commit()
     
     # Host management
@@ -132,7 +154,19 @@ class Database:
         """Get all hosts"""
         with self.get_connection() as conn:
             cursor = conn.execute('SELECT * FROM hosts ORDER BY name')
-            return [dict(row) for row in cursor.fetchall()]
+            hosts = []
+            for row in cursor.fetchall():
+                host = dict(row)
+                # Convert last_seen string to datetime object if it exists
+                if host.get('last_seen'):
+                    try:
+                        # Parse SQLite timestamp string to datetime object
+                        host['last_seen'] = datetime.fromisoformat(host['last_seen'].replace(' ', 'T'))
+                    except (ValueError, AttributeError):
+                        # If parsing fails, set to None
+                        host['last_seen'] = None
+                hosts.append(host)
+            return hosts
     
     def update_host_status(self, host_id, status, last_seen=None):
         """Update host status and last seen time"""
@@ -358,3 +392,86 @@ class Database:
                 'bytes_in_24h': traffic['total_bytes_in'] or 0,
                 'bytes_out_24h': traffic['total_bytes_out'] or 0
             }
+    
+    # Network discovery data
+    def save_network_discovery(self, host_id, discovery_type, discovery_data):
+        """Save network discovery data for a host"""
+        with self.get_connection() as conn:
+            conn.execute('''
+                INSERT INTO network_discovery (host_id, discovery_type, discovery_data)
+                VALUES (?, ?, ?)
+            ''', (host_id, discovery_type, json.dumps(discovery_data)))
+            conn.commit()
+    
+    def get_network_discovery(self, host_id=None, discovery_type=None, hours=24):
+        """Get network discovery data"""
+        cutoff = datetime.now() - timedelta(hours=hours)
+        query = 'SELECT * FROM network_discovery WHERE timestamp > ?'
+        params = [cutoff]
+        
+        if host_id:
+            query += ' AND host_id = ?'
+            params.append(host_id)
+        
+        if discovery_type:
+            query += ' AND discovery_type = ?'
+            params.append(discovery_type)
+        
+        query += ' ORDER BY timestamp DESC'
+        
+        with self.get_connection() as conn:
+            cursor = conn.execute(query, params)
+            results = []
+            for row in cursor.fetchall():
+                result = dict(row)
+                try:
+                    result['discovery_data'] = json.loads(result['discovery_data'])
+                except json.JSONDecodeError:
+                    result['discovery_data'] = {}
+                results.append(result)
+            return results
+    
+    # Topology analysis results
+    def save_topology_analysis(self, analysis_type, analysis_data):
+        """Save topology analysis results"""
+        with self.get_connection() as conn:
+            # Remove old analysis of the same type
+            conn.execute('DELETE FROM topology_analysis WHERE analysis_type = ?', (analysis_type,))
+            
+            # Insert new analysis
+            conn.execute('''
+                INSERT INTO topology_analysis (analysis_type, analysis_data)
+                VALUES (?, ?)
+            ''', (analysis_type, json.dumps(analysis_data)))
+            conn.commit()
+    
+    def get_topology_analysis(self, analysis_type=None):
+        """Get topology analysis results"""
+        with self.get_connection() as conn:
+            if analysis_type:
+                cursor = conn.execute('''
+                    SELECT * FROM topology_analysis WHERE analysis_type = ?
+                    ORDER BY timestamp DESC LIMIT 1
+                ''', (analysis_type,))
+                row = cursor.fetchone()
+                if row:
+                    result = dict(row)
+                    try:
+                        result['analysis_data'] = json.loads(result['analysis_data'])
+                    except json.JSONDecodeError:
+                        result['analysis_data'] = {}
+                    return result
+                return None
+            else:
+                cursor = conn.execute('''
+                    SELECT * FROM topology_analysis ORDER BY timestamp DESC
+                ''')
+                results = []
+                for row in cursor.fetchall():
+                    result = dict(row)
+                    try:
+                        result['analysis_data'] = json.loads(result['analysis_data'])
+                    except json.JSONDecodeError:
+                        result['analysis_data'] = {}
+                    results.append(result)
+                return results

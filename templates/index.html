@@ -125,7 +125,7 @@
                                     </td>
                                     <td>
                                         {% if host.last_seen %}
-                                            <small>{% if host.last_seen|string|length > 16 %}{{ host.last_seen[:16] }}{% else %}{{ host.last_seen }}{% endif %}</small>
+                                            <small>{{ host.last_seen.strftime('%m/%d/%Y %H:%M') }}</small>
                                         {% else %}
                                             <small class="text-muted">Never</small>
                                         {% endif %}
@@ -164,6 +164,9 @@
                 <div class="d-grid gap-2">
                     <button class="btn btn-primary" onclick="startScan()">
                         <i class="fas fa-search me-2"></i>Start Network Scan
+                    </button>
+                    <button class="btn btn-warning" onclick="installUbuntuTools()" id="install-tools-btn">
+                        <img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxNiIgaGVpZ2h0PSIxNiIgZmlsbD0iY3VycmVudENvbG9yIiBjbGFzcz0iYmkgYmktdWJ1bnR1IiB2aWV3Qm94PSIwIDAgMTYgMTYiPgogIDxwYXRoIGQ9Im0xMi4xNjYgOC45NGMtLjUyNSAxLjA5Ni0xLjY1NSAxLjg0My0yLjk1MiAxLjk5M2EyLjcgMi43IDAgMCAwIDAtLjM5M2MwLS43MS0uMTY4LTEuMTctLjY1OS0xLjU1OWwtLjg5NC0uODk0YTQuNyA0LjcgMCAwIDEtLjQ5Mi0uNTE5IDMuNDQgMy40NCAwIDAgMSAuNDkyLS41MTlsLjg5NC0uODk0Yy40OTEtLjM4OS42NTktLjg0OS42NTktMS41NTkgMC0uMTI4IDAtLjI3IDAtLjM5MyAxLjI5Ny4xNSAyLjQyNy44OTcgMi45NTIgMS45OTNsLS40OTIuNTE5YTUuMjggNS4yOCAwIDAgMCAwIDEuMDRsLjQ5Mi41MTlaIi8+CiAgPHBhdGggZD0ibTIuNzEgOS43MDNhNS4yNSA1LjI1IDAgMCAwIDUuNTkxIDEuNDU0Yy40OTMtLjg5NS40OTMtMS4zNDQgMC0xLjc1M2wtLjcwOC0uNzk0YTQuNyA0LjcgMCAwIDEtLjU3Ni0uNDI5IDMuNzQgMy43NCAwIDAgMS0uNDIzLS42NGwxLjExNy0xLjExN2E0LjcgNC43IDAgMCAxIC40MjMtLjY0IDMuNzQgMy43NCAwIDAgMSAuNTc2LS40MjlsLjcwOC0uNzk0Yy40OTMtLjQwOS40OTMtLjg1OCAwLTEuNzUzYTUuMjUgNS4yNSAwIDAgMC01LjU5MSAxLjQ1NGw2Ljk5NiA2Ljk5NloiLz4KPC9zdmc+" class="me-2" style="width: 16px; height: 16px;"/>Install Ubuntu Tools
                     </button>
                     <a href="{{ url_for('network_map') }}" class="btn btn-info">
                         <i class="fas fa-project-diagram me-2"></i>View Network Map
@@ -209,6 +212,219 @@
                     </div>
                     <div class="small text-muted" id="scan-details"></div>
                 </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Enhanced Network Scan Modal -->
+<div class="modal fade" id="enhancedScanModal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-satellite-dish me-2 text-primary"></i>
+                    Enhanced Network Discovery & Analysis
+                </h5>
+            </div>
+            <div class="modal-body">
+                <div id="enhancedScanContent">
+                    <div class="alert alert-info">
+                        <div class="row">
+                            <div class="col-md-4">
+                                <h6><i class="fas fa-search me-2"></i>Network Discovery:</h6>
+                                <ul class="small mb-2">
+                                    <li>Advanced nmap port scanning</li>
+                                    <li>ARP table discovery</li>
+                                    <li>Network route analysis</li>
+                                    <li>Fast ping sweep (fping)</li>
+                                    <li>Rapid port discovery (masscan)</li>
+                                </ul>
+                            </div>
+                            <div class="col-md-4">
+                                <h6><i class="fas fa-chart-line me-2"></i>Traffic Analysis:</h6>
+                                <ul class="small mb-2">
+                                    <li>Interface statistics & bandwidth</li>
+                                    <li>Active connection analysis</li>
+                                    <li>Protocol breakdown (tshark)</li>
+                                    <li>Bandwidth monitoring (iftop)</li>
+                                    <li>Historical traffic data (vnstat)</li>
+                                </ul>
+                            </div>
+                            <div class="col-md-4">
+                                <h6><i class="fas fa-tachometer-alt me-2"></i>Performance & Security:</h6>
+                                <ul class="small mb-0">
+                                    <li>System performance analysis</li>
+                                    <li>Network latency testing (mtr)</li>
+                                    <li>Internet speed testing</li>
+                                    <li>Service fingerprinting</li>
+                                    <li>SNMP infrastructure discovery</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="scan-progress">
+                        <div class="card mb-3">
+                            <div class="card-header">
+                                <h6 class="mb-0"><i class="fas fa-cogs me-2"></i>Overall Scan Progress</h6>
+                            </div>
+                            <div class="card-body py-2">
+                                <div id="overallScanProgressContainer">
+                                    <div class="progress mb-2" style="height: 25px;">
+                                        <div id="overallScanProgressBar" class="progress-bar progress-bar-striped progress-bar-animated" 
+                                             role="progressbar" style="width: 0%" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">
+                                            0%
+                                        </div>
+                                    </div>
+                                    <div id="currentScanPhase" class="small text-muted">Ready to start comprehensive network scan...</div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div id="scanLogs" class="card mb-3" style="display: none;">
+                            <div class="card-header d-flex justify-content-between align-items-center">
+                                <h6 class="mb-0"><i class="fas fa-terminal me-2"></i>Scan Output</h6>
+                                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="toggleScanLogVisibility()" id="toggleScanLogsBtn">
+                                    <i class="fas fa-chevron-up"></i>
+                                </button>
+                            </div>
+                            <div class="card-body p-0" id="scanLogsBody">
+                                <div id="scanLogsContent" style="max-height: 300px; overflow-y: auto; background: #1a1a1a; color: #00ff00; padding: 10px; font-family: 'Courier New', monospace; font-size: 12px; line-height: 1.2;">
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div id="hostScanStatusContainer" class="card" style="display: none;">
+                            <div class="card-header">
+                                <h6 class="mb-0"><i class="fas fa-server me-2"></i>Host Scan Status</h6>
+                            </div>
+                            <div class="card-body">
+                                <div id="hostScanStatusCards" class="row">
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div id="scanPhasesContainer" class="card" style="display: none;">
+                            <div class="card-header">
+                                <h6 class="mb-0"><i class="fas fa-layer-group me-2"></i>Scan Phases</h6>
+                            </div>
+                            <div class="card-body">
+                                <div id="scanPhasesCards" class="row">
+                                    <div class="col-md-6">
+                                        <div class="card border-primary mb-2">
+                                            <div class="card-body p-2">
+                                                <div class="d-flex align-items-center">
+                                                    <div class="phase-icon me-2">
+                                                        <i id="phase1-icon" class="fas fa-search-plus text-muted"></i>
+                                                    </div>
+                                                    <div>
+                                                        <div class="fw-bold small">Phase 1: Network Discovery</div>
+                                                        <div id="phase1-status" class="text-muted small">Pending</div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="card border-warning mb-2">
+                                            <div class="card-body p-2">
+                                                <div class="d-flex align-items-center">
+                                                    <div class="phase-icon me-2">
+                                                        <i id="phase2-icon" class="fas fa-chart-line text-muted"></i>
+                                                    </div>
+                                                    <div>
+                                                        <div class="fw-bold small">Phase 2: Traffic Analysis</div>
+                                                        <div id="phase2-status" class="text-muted small">Pending</div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="card border-info mb-2">
+                                            <div class="card-body p-2">
+                                                <div class="d-flex align-items-center">
+                                                    <div class="phase-icon me-2">
+                                                        <i id="phase3-icon" class="fas fa-tachometer-alt text-muted"></i>
+                                                    </div>
+                                                    <div>
+                                                        <div class="fw-bold small">Phase 3: Performance Analysis</div>
+                                                        <div id="phase3-status" class="text-muted small">Pending</div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="card border-danger mb-2">
+                                            <div class="card-body p-2">
+                                                <div class="d-flex align-items-center">
+                                                    <div class="phase-icon me-2">
+                                                        <i id="phase4-icon" class="fas fa-shield-alt text-muted"></i>
+                                                    </div>
+                                                    <div>
+                                                        <div class="fw-bold small">Phase 4: Security Analysis</div>
+                                                        <div id="phase4-status" class="text-muted small">Pending</div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="card border-success mb-2">
+                                            <div class="card-body p-2">
+                                                <div class="d-flex align-items-center">
+                                                    <div class="phase-icon me-2">
+                                                        <i id="phase5-icon" class="fas fa-building text-muted"></i>
+                                                    </div>
+                                                    <div>
+                                                        <div class="fw-bold small">Phase 5: Infrastructure Discovery</div>
+                                                        <div id="phase5-status" class="text-muted small">Pending</div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="card border-primary mb-2">
+                                            <div class="card-body p-2">
+                                                <div class="d-flex align-items-center">
+                                                    <div class="phase-icon me-2">
+                                                        <i id="phase6-icon" class="fas fa-globe text-muted"></i>
+                                                    </div>
+                                                    <div>
+                                                        <div class="fw-bold small">Phase 6: Internet Connectivity</div>
+                                                        <div id="phase6-status" class="text-muted small">Pending</div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="scan-result" style="display: none;">
+                        <div id="scanResult"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <div class="scan-loading-spinner">
+                    <div class="spinner-border spinner-border-sm text-primary me-2"></div>
+                    <span class="text-muted">Running comprehensive network scan, please wait...</span>
+                </div>
+                <button type="button" class="btn btn-warning scan-retry-button" onclick="retryScan()" style="display: none;">
+                    <i class="fas fa-redo me-2"></i>Retry Scan
+                </button>
+                <button type="button" class="btn btn-primary scan-export-button" onclick="exportScanResults()" style="display: none;">
+                    <i class="fas fa-download me-2"></i>Export Results
+                </button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" onclick="closeScanModal()">
+                    Close
+                </button>
             </div>
         </div>
     </div>
@@ -351,6 +567,603 @@ function getProgressBarClass(phase) {
         case 'error': return 'progress-bar bg-danger';
         default: return 'progress-bar';
     }
+};
+
+// Enhanced Network Scan Modal Functions
+let scanProgressTimer = null;
+let scanStarted = false;
+let scanRetryCount = 0;
+
+function startScan() {
+    const btn = event.target;
+    
+    if (!confirm('This will perform a comprehensive network analysis using all available tools. The scan will analyze network topology, traffic patterns, performance metrics, and security posture. This may take 10-30 minutes depending on network size. Continue?')) {
+        return;
+    }
+    
+    // Disable button and show loading state
+    btn.disabled = true;
+    const originalHtml = btn.innerHTML;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Starting Scan...';
+    
+    // Show enhanced scan modal and start scanning
+    showEnhancedScanModal();
+    startScanProcess(false);
+    
+    // Re-enable button after a short delay
+    setTimeout(() => {
+        btn.disabled = false;
+        btn.innerHTML = originalHtml;
+    }, 2000);
+}
+
+function retryScan() {
+    scanRetryCount++;
+    showEnhancedScanModal();
+    startScanProcess(true);
+}
+
+function startScanProcess(retry = false) {
+    scanStarted = true;
+    
+    // Clear any existing progress timer
+    if (scanProgressTimer) {
+        clearInterval(scanProgressTimer);
+    }
+    
+    const requestBody = retry ? { retry: true } : {};
+    
+    // Send scan request with timeout handling
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
+    
+    fetch('/start_enhanced_scan', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(requestBody),
+        signal: controller.signal
+    })
+    .then(response => {
+        clearTimeout(timeoutId);
+        if (!response.ok) {
+            return response.json().then(err => Promise.reject(err));
+        }
+        return response.json();
+    })
+    .then(data => {
+        if (data.success) {
+            // Start polling for progress updates every 2 seconds
+            scanProgressTimer = setInterval(updateScanProgress, 2000);
+        } else {
+            displayScanError(data.error || 'Failed to start enhanced scan');
+        }
+    })
+    .catch(error => {
+        clearTimeout(timeoutId);
+        console.error('Scan request error:', error);
+        
+        let errorMessage = 'Failed to start enhanced network scan';
+        
+        if (error.name === 'AbortError') {
+            errorMessage = 'Request timeout - the server may be busy. Please try again.';
+        } else if (error.error) {
+            errorMessage = error.error;
+        } else if (error.message) {
+            errorMessage = error.message;
+        } else if (typeof error === 'string') {
+            errorMessage = error;
+        }
+        
+        displayScanError(errorMessage);
+    });
+}
+
+function updateScanProgress() {
+    fetch('/scan_progress')
+        .then(response => response.json())
+        .then(data => {
+            displayScanProgress(data);
+            
+            // Stop polling when scan is complete
+            if (!data.running) {
+                clearInterval(scanProgressTimer);
+                scanProgressTimer = null;
+            }
+        })
+        .catch(error => {
+            console.error('Scan progress update error:', error);
+            // Continue polling even if there's an error - just log it
+        });
+}
+
+function showEnhancedScanModal() {
+    const modal = document.getElementById('enhancedScanModal');
+    if (modal) {
+        const bootstrapModal = new bootstrap.Modal(modal);
+        bootstrapModal.show();
+        
+        // Reset modal state
+        resetScanModal();
+    }
+}
+
+function resetScanModal() {
+    // Reset progress bar
+    const progressBar = document.getElementById('overallScanProgressBar');
+    if (progressBar) {
+        progressBar.style.width = '0%';
+        progressBar.textContent = '0%';
+        progressBar.className = 'progress-bar progress-bar-striped progress-bar-animated';
+    }
+    
+    // Reset phase display
+    const phaseElement = document.getElementById('currentScanPhase');
+    if (phaseElement) {
+        phaseElement.textContent = 'Initializing comprehensive network scan...';
+    }
+    
+    // Reset phase cards
+    for (let i = 1; i <= 6; i++) {
+        const icon = document.getElementById(`phase${i}-icon`);
+        const status = document.getElementById(`phase${i}-status`);
+        if (icon && status) {
+            icon.className = icon.className.replace(/text-\w+/, 'text-muted');
+            status.textContent = 'Pending';
+        }
+    }
+    
+    // Hide/show appropriate sections
+    document.getElementById('scanLogs').style.display = 'none';
+    document.getElementById('hostScanStatusContainer').style.display = 'none';
+    document.getElementById('scanPhasesContainer').style.display = 'none';
+    
+    // Reset footer buttons
+    document.querySelector('.scan-loading-spinner').style.display = 'flex';
+    document.querySelector('.scan-retry-button').style.display = 'none';
+    document.querySelector('.scan-export-button').style.display = 'none';
+}
+
+function displayScanProgress(data) {
+    const { running, hosts, current_phase, logs, overall_progress, scan_phases, current_host } = data;
+    
+    // Update overall progress bar
+    const progressBar = document.getElementById('overallScanProgressBar');
+    if (progressBar) {
+        progressBar.style.width = `${overall_progress}%`;
+        progressBar.textContent = `${overall_progress}%`;
+        progressBar.setAttribute('aria-valuenow', overall_progress);
+        
+        // Update progress bar color based on phase
+        const progressClasses = {
+            'initializing': 'bg-info',
+            'discovery': 'bg-primary',
+            'analysis': 'bg-warning',
+            'performance': 'bg-info',
+            'security': 'bg-danger',
+            'infrastructure': 'bg-success',
+            'connectivity': 'bg-primary',
+            'complete': 'bg-success',
+            'error': 'bg-danger'
+        };
+        
+        progressBar.className = `progress-bar progress-bar-striped ${progressClasses[current_phase] || 'bg-primary'}`;
+        if (running) {
+            progressBar.classList.add('progress-bar-animated');
+        }
+    }
+    
+    // Update current phase
+    const phaseElement = document.getElementById('currentScanPhase');
+    if (phaseElement) {
+        const phaseEmojis = {
+            'initializing': '🚀',
+            'discovery': '🔍',
+            'analysis': '📊',
+            'performance': '⚡',
+            'security': '🔒',
+            'infrastructure': '🏗️',
+            'connectivity': '🌐',
+            'complete': '✅',
+            'error': '❌'
+        };
+        
+        const phaseNames = {
+            'initializing': 'Initializing comprehensive network scan',
+            'discovery': 'Network discovery and topology mapping',
+            'analysis': 'Traffic analysis and protocol inspection',
+            'performance': 'Performance testing and latency analysis',
+            'security': 'Security analysis and fingerprinting',
+            'infrastructure': 'Infrastructure discovery and SNMP analysis',
+            'connectivity': 'Internet connectivity and routing analysis',
+            'complete': 'Scan completed successfully',
+            'error': 'Scan encountered errors'
+        };
+        
+        let phaseText = `${phaseEmojis[current_phase] || '📊'} ${phaseNames[current_phase] || current_phase}`;
+        
+        if (current_host) {
+            phaseText += ` (${current_host})`;
+        }
+        
+        phaseElement.textContent = phaseText;
+    }
+    
+    // Update scan phases
+    if (scan_phases) {
+        document.getElementById('scanPhasesContainer').style.display = 'block';
+        updateScanPhases(scan_phases);
+    }
+    
+    // Update scan logs
+    const logsContainer = document.getElementById('scanLogs');
+    const logsContent = document.getElementById('scanLogsContent');
+    if (logsContainer && logsContent && logs && logs.length > 0) {
+        logsContainer.style.display = 'block';
+        
+        let logsHtml = '';
+        logs.slice(-30).forEach(log => {  // Show last 30 log entries
+            const timestamp = new Date(log.timestamp).toLocaleTimeString();
+            const levelColors = {
+                'error': '#ff4444',
+                'warning': '#ffaa00',
+                'info': '#00ff00',
+                'debug': '#888888'
+            };
+            const color = levelColors[log.level] || '#00ff00';
+            const hostPrefix = log.host ? `[${log.host}] ` : '[SYSTEM] ';
+            logsHtml += `<div style="color: ${color}; margin-bottom: 2px;">${timestamp} ${hostPrefix}${log.message}</div>`;
+        });
+        
+        logsContent.innerHTML = logsHtml;
+        logsContent.scrollTop = logsContent.scrollHeight;
+    }
+    
+    // Update host status cards
+    updateHostScanStatusCards(hosts);
+    
+    // If scan is complete, show final results
+    if (!running && scanStarted) {
+        showFinalScanResults(data);
+        scanStarted = false;
+    }
+}
+
+function updateScanPhases(phases) {
+    const phaseMapping = {
+        'discovery': 1,
+        'analysis': 2,
+        'performance': 3,
+        'security': 4,
+        'infrastructure': 5,
+        'connectivity': 6
+    };
+    
+    Object.entries(phases).forEach(([phaseName, phaseData]) => {
+        const phaseNum = phaseMapping[phaseName];
+        if (phaseNum) {
+            const icon = document.getElementById(`phase${phaseNum}-icon`);
+            const status = document.getElementById(`phase${phaseNum}-status`);
+            
+            if (icon && status) {
+                // Update icon based on phase status
+                icon.className = icon.className.replace(/text-\w+/, '');
+                
+                switch (phaseData.status) {
+                    case 'pending':
+                        icon.classList.add('text-muted');
+                        status.textContent = 'Pending';
+                        break;
+                    case 'running':
+                        icon.classList.add('text-primary', 'fa-spin');
+                        status.textContent = `Running (${phaseData.progress || 0}%)`;
+                        break;
+                    case 'complete':
+                        icon.classList.add('text-success');
+                        status.textContent = 'Complete';
+                        break;
+                    case 'error':
+                        icon.classList.add('text-danger');
+                        status.textContent = 'Error';
+                        break;
+                }
+            }
+        }
+    });
+}
+
+function updateHostScanStatusCards(hosts) {
+    const container = document.getElementById('hostScanStatusContainer');
+    const cardsContainer = document.getElementById('hostScanStatusCards');
+    
+    if (!hosts || Object.keys(hosts).length === 0) {
+        if (container) container.style.display = 'none';
+        return;
+    }
+    
+    if (container) container.style.display = 'block';
+    
+    let cardsHtml = '';
+    Object.entries(hosts).forEach(([hostname, hostData]) => {
+        const { status, progress, current_phase, current_action, completed_phases, error } = hostData;
+        
+        let statusClass = 'secondary';
+        let statusIcon = 'clock';
+        let statusText = 'Pending';
+        
+        switch (status) {
+            case 'scanning':
+                statusClass = 'primary';
+                statusIcon = 'cog fa-spin';
+                statusText = 'Scanning';
+                break;
+            case 'complete':
+                statusClass = 'success';
+                statusIcon = 'check';
+                statusText = 'Complete';
+                break;
+            case 'error':
+                statusClass = 'danger';
+                statusIcon = 'exclamation-triangle';
+                statusText = 'Error';
+                break;
+        }
+        
+        const completedCount = completed_phases ? completed_phases.length : 0;
+        const totalPhases = 6;
+        
+        cardsHtml += `
+            <div class="col-md-6 col-xl-4 mb-3">
+                <div class="card h-100">
+                    <div class="card-body py-2">
+                        <h6 class="card-title mb-1 d-flex justify-content-between align-items-center">
+                            <span><i class="fas fa-${statusIcon} me-1"></i> ${hostname}</span>
+                            <span class="badge bg-${statusClass}">${statusText}</span>
+                        </h6>
+                        
+                        <div class="progress mb-2" style="height: 8px;">
+                            <div class="progress-bar bg-${statusClass} ${status === 'scanning' ? 'progress-bar-striped progress-bar-animated' : ''}" 
+                                 style="width: ${progress || 0}%"></div>
+                        </div>
+                        
+                        <div class="small text-muted mb-1">${current_action || current_phase || 'Waiting...'}</div>
+                        <div class="small">Phases: ${completedCount}/${totalPhases}</div>
+                        ${error ? `<div class="small text-danger mt-1">Error: ${error}</div>` : ''}
+                    </div>
+                </div>
+            </div>
+        `;
+    });
+    
+    if (cardsContainer) {
+        cardsContainer.innerHTML = cardsHtml;
+    }
+}
+
+function displayScanError(error) {
+    const progressContainer = document.querySelector('.scan-progress');
+    const resultContainer = document.querySelector('.scan-result');
+    const loadingSpinner = document.querySelector('.scan-loading-spinner');
+    
+    // Hide progress, show results
+    if (progressContainer) progressContainer.style.display = 'none';
+    if (loadingSpinner) loadingSpinner.style.display = 'none';
+    if (resultContainer) resultContainer.style.display = 'block';
+    
+    document.getElementById('scanResult').innerHTML = `
+        <div class="alert alert-danger">
+            <h5><i class="fas fa-times-circle me-2"></i>Enhanced Scan Failed to Start</h5>
+            <p><strong>Error:</strong> ${error}</p>
+            <div class="mt-3">
+                <h6>Common Causes & Solutions:</h6>
+                <ul>
+                    <li><strong>Network Issues:</strong> Check internet connectivity and DNS resolution</li>
+                    <li><strong>SSH Authentication:</strong> Verify SSH keys and credentials are correct</li>
+                    <li><strong>Host Availability:</strong> Ensure target hosts are online and accessible</li>
+                    <li><strong>Tool Installation:</strong> Verify network analysis tools are installed (use Install Ubuntu Tools)</li>
+                    <li><strong>Permissions:</strong> Verify the user has necessary privileges for network scanning</li>
+                </ul>
+            </div>
+        </div>
+    `;
+    
+    // Show retry button
+    const retryButton = document.querySelector('.scan-retry-button');
+    if (retryButton) retryButton.style.display = 'inline-block';
+    
+    // Clear any progress timer
+    if (scanProgressTimer) {
+        clearInterval(scanProgressTimer);
+        scanProgressTimer = null;
+    }
+}
+
+function showFinalScanResults(data) {
+    const { hosts, current_phase, overall_progress, scan_summary } = data;
+    
+    const progressContainer = document.querySelector('.scan-progress');
+    const resultContainer = document.querySelector('.scan-result');
+    const loadingSpinner = document.querySelector('.scan-loading-spinner');
+    
+    // Hide progress, show results
+    if (progressContainer) progressContainer.style.display = 'none';
+    if (loadingSpinner) loadingSpinner.style.display = 'none';
+    if (resultContainer) resultContainer.style.display = 'block';
+    
+    const successfulHosts = Object.values(hosts).filter(h => h.status === 'complete').length;
+    const totalHosts = Object.keys(hosts).length;
+    const errorHosts = Object.values(hosts).filter(h => h.status === 'error').length;
+    const successRate = totalHosts > 0 ? Math.round((successfulHosts / totalHosts) * 100) : 0;
+    
+    let resultHtml = `
+        <div class="alert alert-${current_phase === 'error' ? 'danger' : successRate === 100 ? 'success' : successRate > 70 ? 'warning' : 'danger'}">
+            <h5><i class="fas fa-${current_phase === 'error' ? 'times-circle' : successRate === 100 ? 'check-circle' : successRate > 70 ? 'exclamation-triangle' : 'times-circle'} me-2"></i>
+                Enhanced Network Scan ${current_phase === 'error' ? 'Failed' : successRate === 100 ? 'Completed Successfully' : successRate > 70 ? 'Mostly Successful' : 'Completed with Errors'}
+            </h5>
+            <p><strong>Success Rate:</strong> ${successRate}% (${successfulHosts}/${totalHosts} hosts)</p>
+            ${errorHosts > 0 ? `<p class="text-danger"><strong>Failed Hosts:</strong> ${errorHosts}</p>` : ''}
+        </div>
+        
+        <div class="row">
+            <div class="col-md-8">
+                <div class="card">
+                    <div class="card-header">
+                        <h6 class="mb-0"><i class="fas fa-chart-bar me-2"></i>Scan Summary</h6>
+                    </div>
+                    <div class="card-body">
+                        ${generateScanSummary(scan_summary)}
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-header">
+                        <h6 class="mb-0"><i class="fas fa-server me-2"></i>Host Results</h6>
+                    </div>
+                    <div class="card-body">
+                        ${generateHostResults(hosts)}
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    document.getElementById('scanResult').innerHTML = resultHtml;
+    
+    // Show export button
+    const exportButton = document.querySelector('.scan-export-button');
+    if (exportButton && successfulHosts > 0) {
+        exportButton.style.display = 'inline-block';
+    }
+    
+    // Show retry button if there were errors
+    if (errorHosts > 0 || current_phase === 'error') {
+        const retryButton = document.querySelector('.scan-retry-button');
+        if (retryButton) retryButton.style.display = 'inline-block';
+    }
+    
+    // Hide loading spinner
+    if (loadingSpinner) loadingSpinner.style.display = 'none';
+}
+
+function generateScanSummary(summary) {
+    if (!summary) {
+        return '<p class="text-muted">No scan summary available.</p>';
+    }
+    
+    let html = '<div class="row">';
+    
+    // Discovery results
+    if (summary.discovery) {
+        html += `
+            <div class="col-md-6 mb-3">
+                <h6><i class="fas fa-search me-2"></i>Network Discovery</h6>
+                <ul class="list-unstyled small">
+                    <li>• Hosts discovered: ${summary.discovery.hosts_found || 0}</li>
+                    <li>• Networks mapped: ${summary.discovery.networks_scanned || 0}</li>
+                    <li>• Open ports found: ${summary.discovery.open_ports || 0}</li>
+                    <li>• Services identified: ${summary.discovery.services_identified || 0}</li>
+                </ul>
+            </div>
+        `;
+    }
+    
+    // Performance results
+    if (summary.performance) {
+        html += `
+            <div class="col-md-6 mb-3">
+                <h6><i class="fas fa-tachometer-alt me-2"></i>Performance Analysis</h6>
+                <ul class="list-unstyled small">
+                    <li>• Speed tests completed: ${summary.performance.speed_tests || 0}</li>
+                    <li>• Latency measurements: ${summary.performance.latency_tests || 0}</li>
+                    <li>• Bandwidth utilization analyzed: ${summary.performance.bandwidth_analysis || 0}</li>
+                </ul>
+            </div>
+        `;
+    }
+    
+    html += '</div>';
+    return html;
+}
+
+function generateHostResults(hosts) {
+    if (!hosts || Object.keys(hosts).length === 0) {
+        return '<p class="text-muted">No host results available.</p>';
+    }
+    
+    let html = '';
+    Object.entries(hosts).forEach(([hostname, hostData]) => {
+        const { status, completed_phases, error } = hostData;
+        const isSuccess = status === 'complete';
+        const statusClass = isSuccess ? 'success' : 'danger';
+        const statusIcon = isSuccess ? 'check' : 'times';
+        
+        html += `
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <div>
+                    <strong>${hostname}</strong>
+                    ${completed_phases ? `<br><small class="text-muted">${completed_phases.length}/6 phases</small>` : ''}
+                </div>
+                <span class="badge bg-${statusClass}">
+                    <i class="fas fa-${statusIcon}"></i>
+                </span>
+            </div>
+            ${error ? `<div class="small text-danger mb-2">Error: ${error}</div>` : ''}
+        `;
+    });
+    
+    return html;
+}
+
+function toggleScanLogVisibility() {
+    const logsBody = document.getElementById('scanLogsBody');
+    const toggleBtn = document.getElementById('toggleScanLogsBtn');
+    const icon = toggleBtn.querySelector('i');
+    
+    if (logsBody.style.display === 'none') {
+        logsBody.style.display = 'block';
+        icon.className = 'fas fa-chevron-up';
+    } else {
+        logsBody.style.display = 'none';
+        icon.className = 'fas fa-chevron-down';
+    }
+}
+
+function closeScanModal() {
+    // Clear any running timers
+    if (scanProgressTimer) {
+        clearInterval(scanProgressTimer);
+        scanProgressTimer = null;
+    }
+    
+    scanStarted = false;
+}
+
+function exportScanResults() {
+    // Create a download link for scan results
+    fetch('/export_scan_results')
+    .then(response => {
+        if (!response.ok) {
+            throw new Error('Failed to export scan results');
+        }
+        return response.blob();
+    })
+    .then(blob => {
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.style.display = 'none';
+        a.href = url;
+        a.download = `network_scan_results_${new Date().toISOString().slice(0, 19).replace(/:/g, '-')}.json`;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+    })
+    .catch(error => {
+        console.error('Export error:', error);
+        alert('Failed to export scan results: ' + error.message);
+    });
 }
 
 // Hook into the parent updateScanUI function
@@ -364,5 +1177,871 @@ document.addEventListener('DOMContentLoaded', function() {
         updateDashboardScanStatus(data);
     };
 });
+
+// Enhanced Ubuntu Tools Installation with Real-time Progress
+let installationProgressTimer = null;
+let installationStarted = false;
+let retryCount = 0;
+
+function installUbuntuTools() {
+    const btn = document.getElementById('install-tools-btn');
+    
+    if (!confirm('This will install network analysis tools on all Ubuntu servers. The process will check existing installations and only install missing tools. This may take several minutes. Continue?')) {
+        return;
+    }
+    
+    // Disable button and show loading state
+    btn.disabled = true;
+    const originalHtml = btn.innerHTML;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Starting Installation...';
+    
+    // Show enhanced modal and start installation
+    showEnhancedInstallationModal();
+    startInstallationProcess(false);
+    
+    // Re-enable button after a short delay
+    setTimeout(() => {
+        btn.disabled = false;
+        btn.innerHTML = originalHtml;
+    }, 2000);
+}
+
+function retryInstallation() {
+    retryCount++;
+    showEnhancedInstallationModal();
+    startInstallationProcess(true);
+}
+
+function startInstallationProcess(retry = false) {
+    installationStarted = true;
+    
+    // Clear any existing progress timer
+    if (installationProgressTimer) {
+        clearInterval(installationProgressTimer);
+    }
+    
+    const requestBody = retry ? { retry: true } : {};
+    
+    // Send installation request with timeout handling
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout for start request
+    
+    fetch('/install_ubuntu_tools', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(requestBody),
+        signal: controller.signal
+    })
+    .then(response => {
+        clearTimeout(timeoutId);
+        if (!response.ok) {
+            return response.json().then(err => Promise.reject(err));
+        }
+        return response.json();
+    })
+    .then(data => {
+        if (data.success) {
+            // Start polling for progress updates every 2 seconds
+            installationProgressTimer = setInterval(updateInstallationProgress, 2000);
+        } else {
+            displayInstallationError(data.error || 'Failed to start installation');
+        }
+    })
+    .catch(error => {
+        clearTimeout(timeoutId);
+        console.error('Installation request error:', error);
+        
+        let errorMessage = 'Failed to start installation';
+        
+        if (error.name === 'AbortError') {
+            errorMessage = 'Request timeout - the server may be busy. Please try again.';
+        } else if (error.error) {
+            errorMessage = error.error;
+        } else if (error.message) {
+            errorMessage = error.message;
+        } else if (typeof error === 'string') {
+            errorMessage = error;
+        }
+        
+        displayInstallationError(errorMessage);
+    });
+}
+
+function updateInstallationProgress() {
+    fetch('/installation_progress')
+        .then(response => response.json())
+        .then(data => {
+            displayInstallationProgress(data);
+            
+            // Stop polling when installation is complete
+            if (!data.running) {
+                clearInterval(installationProgressTimer);
+                installationProgressTimer = null;
+            }
+        })
+        .catch(error => {
+            console.error('Progress update error:', error);
+            // Continue polling even if there's an error - just log it
+        });
+}
+
+function showEnhancedInstallationModal() {
+    // Remove existing modal if it exists
+    const existingModal = document.getElementById('enhancedInstallationModal');
+    if (existingModal) {
+        existingModal.remove();
+    }
+    
+    const modalHtml = `
+        <div class="modal fade" id="enhancedInstallationModal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
+            <div class="modal-dialog modal-xl">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">
+                            <img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyMCIgaGVpZ2h0PSIyMCIgZmlsbD0iY3VycmVudENvbG9yIiBjbGFzcz0iYmkgYmktdWJ1bnR1IiB2aWV3Qm94PSIwIDAgMTYgMTYiPjxwYXRoIGQ9Im0xMi4xNjYgOC45NGMtLjUyNSAxLjA5Ni0xLjY1NSAxLjg0My0yLjk1MiAxLjk5M2EyLjcgMi43IDAgMCAwIDAtLjM5M2MwLS43MS0uMTY4LTEuMTctLjY1OS0xLjU1OWwtLjg5NC0uODk0YTQuNyA0LjcgMCAwIDEtLjQ5Mi0uNTE5IDMuNDQgMy40NCAwIDAgMSAuNDkyLS41MTlsLjg5NC0uODk0Yy40OTEtLjM4OS42NTktLjg0OS42NTktMS41NTkgMC0uMTI4IDAtLjI3IDAtLjM5MyAxLjI5Ny4xNSAyLjQyNy44OTcgMi45NTIgMS45OTNsLS40OTIuNTE5YTUuMjggNS4yOCAwIDAgMCAwIDEuMDRsLjQ5Mi41MTlaIi8+PHBhdGggZD0ibTIuNzEgOS43MDNhNS4yNSA1LjI1IDAgMCAwIDUuNTkxIDEuNDU0Yy40OTMtLjg5NS40OTMtMS4zNDQgMC0xLjc1M2wtLjcwOC0uNzk0YTQuNyA0LjcgMCAwIDEtLjU3Ni0uNDI5IDMuNzQgMy43NCAwIDAgMS0uNDIzLS42NGwxLjExNy0xLjExN2E0LjcgNC43IDAgMCAxIC40MjMtLjY0IDMuNzQgMy43NCAwIDAgMSAuNTc2LS40MjlsLjcwOC0uNzk0Yy40OTMtLjQwOS40OTMtLjg1OCAwLTEuNzUzYTUuMjUgNS4yNSAwIDAgMC01LjU5MSAxLjQ1NGw2Ljk5NiA2Ljk5NloiLz48L3N2Zz4=" class="me-2"/>
+                            Ubuntu Network Tools Installation
+                        </h5>
+                    </div>
+                    <div class="modal-body">
+                        <div id="enhancedInstallationContent">
+                            <div class="alert alert-info">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <h6><i class="fas fa-info-circle me-2"></i>Network Discovery Tools:</h6>
+                                        <ul class="small mb-2">
+                                            <li>nmap - Network mapping and port scanning</li>
+                                            <li>traceroute - Network path tracing</li>
+                                            <li>mtr - Network diagnostics tool</li>
+                                            <li>arp-scan - ARP table scanner</li>
+                                            <li>fping - Fast parallel ping</li>
+                                            <li>masscan - High-speed port scanner</li>
+                                        </ul>
+                                        
+                                        <h6><i class="fas fa-chart-line me-2"></i>Traffic Analysis:</h6>
+                                        <ul class="small mb-2">
+                                            <li>tcpdump - Packet capture utility</li>
+                                            <li>tshark - Wireshark command line</li>
+                                            <li>wireshark-common - Protocol analyzers</li>
+                                        </ul>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <h6><i class="fas fa-tachometer-alt me-2"></i>Monitoring & Performance:</h6>
+                                        <ul class="small mb-2">
+                                            <li>iftop - Bandwidth usage per connection</li>
+                                            <li>nethogs - Process bandwidth monitor</li>
+                                            <li>bmon - Interface bandwidth monitor</li>
+                                            <li>vnstat - Network statistics daemon</li>
+                                            <li>htop - Interactive process viewer</li>
+                                            <li>iotop - I/O monitoring tool</li>
+                                            <li>iperf3 - Network performance testing</li>
+                                            <li>netperf - Network performance benchmark</li>
+                                            <li>speedtest-cli - Internet speed test</li>
+                                        </ul>
+                                        
+                                        <h6><i class="fas fa-shield-alt me-2"></i>Infrastructure & Security:</h6>
+                                        <ul class="small mb-0">
+                                            <li>snmp - SNMP tools and utilities</li>
+                                            <li>snmp-mibs-downloader - SNMP MIB files</li>
+                                            <li>ngrep - Network packet grep</li>
+                                            <li>p0f - Passive OS fingerprinting</li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="installation-progress">
+                                <div class="card mb-3">
+                                    <div class="card-header">
+                                        <h6 class="mb-0"><i class="fas fa-cogs me-2"></i>Overall Progress</h6>
+                                    </div>
+                                    <div class="card-body py-2">
+                                        <div id="overallProgressContainer">
+                                            <div class="progress mb-2" style="height: 25px;">
+                                                <div id="overallProgressBar" class="progress-bar progress-bar-striped progress-bar-animated" 
+                                                     role="progressbar" style="width: 0%" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">
+                                                    0%
+                                                </div>
+                                            </div>
+                                            <div id="currentPhase" class="small text-muted">Initializing installation process...</div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div id="installationLogs" class="card mb-3" style="display: none;">
+                                    <div class="card-header d-flex justify-content-between align-items-center">
+                                        <h6 class="mb-0"><i class="fas fa-terminal me-2"></i>Installation Logs</h6>
+                                        <button type="button" class="btn btn-sm btn-outline-secondary" onclick="toggleLogVisibility()" id="toggleLogsBtn">
+                                            <i class="fas fa-chevron-up"></i>
+                                        </button>
+                                    </div>
+                                    <div class="card-body p-0" id="installationLogsBody">
+                                        <div id="logsContent" style="max-height: 200px; overflow-y: auto; background: #1a1a1a; color: #00ff00; padding: 10px; font-family: 'Courier New', monospace; font-size: 12px; line-height: 1.2;">
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div id="hostStatusContainer" class="card" style="display: none;">
+                                    <div class="card-header">
+                                        <h6 class="mb-0"><i class="fas fa-server me-2"></i>Host Installation Status</h6>
+                                    </div>
+                                    <div class="card-body">
+                                        <div id="hostStatusCards" class="row">
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="installation-result" style="display: none;">
+                                <div id="installationResult"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <div class="loading-spinner">
+                            <div class="spinner-border spinner-border-sm text-primary me-2"></div>
+                            <span class="text-muted">Installing tools, please wait...</span>
+                        </div>
+                        <button type="button" class="btn btn-warning retry-button" onclick="retryInstallation()" style="display: none;">
+                            <i class="fas fa-redo me-2"></i>Retry Installation
+                        </button>
+                        <button type="button" class="btn btn-success verify-button" onclick="verifyToolInstallation()" style="display: none;">
+                            <i class="fas fa-check-double me-2"></i>Verify Installation
+                        </button>
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" onclick="closeInstallationModal()">
+                            Close
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+    const modal = document.getElementById('enhancedInstallationModal');
+    
+    // Show the modal
+    const bootstrapModal = new bootstrap.Modal(modal);
+    bootstrapModal.show();
+}
+
+function displayInstallationProgress(data) {
+    const { running, hosts, current_phase, logs, overall_progress, host_status_counts } = data;
+    
+    // Update overall progress bar
+    const progressBar = document.getElementById('overallProgressBar');
+    if (progressBar) {
+        progressBar.style.width = `${overall_progress}%`;
+        progressBar.textContent = `${overall_progress}%`;
+        progressBar.setAttribute('aria-valuenow', overall_progress);
+        
+        // Update progress bar color based on phase
+        const progressClasses = {
+            'initializing': 'bg-info',
+            'checking_tools': 'bg-warning',
+            'installing': 'bg-primary',
+            'complete': 'bg-success',
+            'error': 'bg-danger'
+        };
+        
+        progressBar.className = `progress-bar progress-bar-striped ${progressClasses[current_phase] || 'bg-primary'}`;
+        if (running) {
+            progressBar.classList.add('progress-bar-animated');
+        }
+    }
+    
+    // Update current phase
+    const phaseElement = document.getElementById('currentPhase');
+    if (phaseElement) {
+        const phaseEmojis = {
+            'initializing': '🚀',
+            'checking_tools': '🔍',
+            'installing': '🔧',
+            'complete': '✅',
+            'error': '❌'
+        };
+        
+        const phaseNames = {
+            'initializing': 'Initializing installation process',
+            'checking_tools': 'Checking existing tool installations',
+            'installing': 'Installing missing tools',
+            'complete': 'Installation process completed',
+            'error': 'Installation process encountered errors'
+        };
+        
+        let phaseText = `${phaseEmojis[current_phase] || '📊'} ${phaseNames[current_phase] || current_phase}`;
+        
+        if (host_status_counts.total > 0) {
+            phaseText += ` (${host_status_counts.complete + host_status_counts.error}/${host_status_counts.total} hosts processed)`;
+        }
+        
+        phaseElement.textContent = phaseText;
+    }
+    
+    // Update installation logs
+    const logsContainer = document.getElementById('installationLogs');
+    const logsContent = document.getElementById('logsContent');
+    if (logsContainer && logsContent && logs && logs.length > 0) {
+        logsContainer.style.display = 'block';
+        
+        let logsHtml = '';
+        logs.slice(-20).forEach(log => {  // Show last 20 log entries
+            const timestamp = new Date(log.timestamp).toLocaleTimeString();
+            const levelColors = {
+                'error': '#ff4444',
+                'warning': '#ffaa00',
+                'info': '#00ff00'
+            };
+            const color = levelColors[log.level] || '#00ff00';
+            const hostPrefix = log.host ? `[${log.host}] ` : '[SYSTEM] ';
+            logsHtml += `<div style="color: ${color}; margin-bottom: 2px;">${timestamp} ${hostPrefix}${log.message}</div>`;
+        });
+        
+        logsContent.innerHTML = logsHtml;
+        logsContent.scrollTop = logsContent.scrollHeight;
+    }
+    
+    // Update host status cards
+    updateHostStatusCards(hosts);
+    
+    // If installation is complete, show final results
+    if (!running && installationStarted) {
+        showFinalInstallationResults(data);
+        installationStarted = false;
+    }
+}
+
+function displayInstallationError(error) {
+    const progressContainer = document.querySelector('.installation-progress');
+    const resultContainer = document.querySelector('.installation-result');
+    const loadingSpinner = document.querySelector('.loading-spinner');
+    
+    // Hide progress, show results
+    if (progressContainer) progressContainer.style.display = 'none';
+    if (loadingSpinner) loadingSpinner.style.display = 'none';
+    if (resultContainer) resultContainer.style.display = 'block';
+    
+    document.getElementById('installationResult').innerHTML = `
+        <div class="alert alert-danger">
+            <h5><i class="fas fa-times-circle me-2"></i>Installation Failed to Start</h5>
+            <p><strong>Error:</strong> ${error}</p>
+            <div class="mt-3">
+                <h6>Common Causes & Solutions:</h6>
+                <ul>
+                    <li><strong>Network Issues:</strong> Check internet connectivity and DNS resolution</li>
+                    <li><strong>SSH Authentication:</strong> Verify SSH keys and credentials are correct</li>
+                    <li><strong>Host Availability:</strong> Ensure target hosts are online and accessible</li>
+                    <li><strong>Server Load:</strong> Wait a moment and try again if the server is busy</li>
+                    <li><strong>Permissions:</strong> Verify the user has sudo privileges on target hosts</li>
+                </ul>
+            </div>
+        </div>
+    `;
+    
+    // Show retry button
+    const retryButton = document.querySelector('.retry-button');
+    if (retryButton) retryButton.style.display = 'inline-block';
+    
+    // Clear any progress timer
+    if (installationProgressTimer) {
+        clearInterval(installationProgressTimer);
+        installationProgressTimer = null;
+    }
+}
+
+function toggleLogVisibility() {
+    const logsBody = document.getElementById('installationLogsBody');
+    const toggleBtn = document.getElementById('toggleLogsBtn');
+    const icon = toggleBtn.querySelector('i');
+    
+    if (logsBody.style.display === 'none') {
+        logsBody.style.display = 'block';
+        icon.className = 'fas fa-chevron-up';
+    } else {
+        logsBody.style.display = 'none';
+        icon.className = 'fas fa-chevron-down';
+    }
+}
+
+function closeInstallationModal() {
+    // Clear any running timers
+    if (installationProgressTimer) {
+        clearInterval(installationProgressTimer);
+        installationProgressTimer = null;
+    }
+    
+    // Remove the modal from DOM
+    const modal = document.getElementById('enhancedInstallationModal');
+    if (modal) {
+        modal.remove();
+    }
+    
+    installationStarted = false;
+}
+
+function showInstallationModal() {
+    // This is a compatibility function - redirect to the enhanced modal
+    showEnhancedInstallationModal();
+}
+
+function updateInstallationModal(status, message, results) {
+    const content = document.getElementById('installationContent');
+    
+    if (status === 'success') {
+        content.innerHTML = `
+            <div class="alert alert-success">
+                <h5><i class="fas fa-check-circle me-2"></i>Installation Completed Successfully!</h5>
+                <p class="mb-0">${message}</p>
+            </div>
+            
+            <div class="card">
+                <div class="card-header">
+                    <h6 class="mb-0"><i class="fas fa-server me-2"></i>Installation Results</h6>
+                </div>
+                <div class="card-body">
+                    ${generateInstallationResults(results)}
+                </div>
+            </div>
+            
+            <div class="text-center mt-3">
+                <button class="btn btn-success" onclick="verifyToolInstallation()"><i class="fas fa-check me-2"></i>Verify Installation</button>
+                <button class="btn btn-secondary ms-2" data-bs-dismiss="modal">Close</button>
+            </div>
+        `;
+    } else {
+        content.innerHTML = `
+            <div class="alert alert-danger">
+                <h5><i class="fas fa-exclamation-triangle me-2"></i>Installation Failed</h5>
+                <p class="mb-0">${message}</p>
+            </div>
+            
+            <div class="card">
+                <div class="card-header">
+                    <h6 class="mb-0"><i class="fas fa-bug me-2"></i>Error Details</h6>
+                </div>
+                <div class="card-body">
+                    ${generateInstallationResults(results)}
+                </div>
+            </div>
+            
+            <div class="text-center mt-3">
+                <button class="btn btn-warning" onclick="installUbuntuTools()"><i class="fas fa-redo me-2"></i>Retry Installation</button>
+                <button class="btn btn-secondary ms-2" data-bs-dismiss="modal">Close</button>
+            </div>
+        `;
+    }
+}
+
+function generateInstallationResults(results) {
+    if (!results || Object.keys(results).length === 0) {
+        return '<p class="text-muted">No detailed results available.</p>';
+    }
+    
+    let html = '<div class="row">';
+    
+    Object.entries(results).forEach(([hostName, success]) => {
+        const statusClass = success ? 'text-success' : 'text-danger';
+        const statusIcon = success ? 'fa-check-circle' : 'fa-times-circle';
+        const statusText = success ? 'Success' : 'Failed';
+        
+        html += `
+            <div class="col-md-6 mb-2">
+                <div class="d-flex justify-content-between align-items-center">
+                    <span><strong>${hostName}</strong></span>
+                    <span class="${statusClass}">
+                        <i class="fas ${statusIcon} me-1"></i>${statusText}
+                    </span>
+                </div>
+            </div>
+        `;
+    });
+    
+    html += '</div>';
+    
+    const successCount = Object.values(results).filter(success => success).length;
+    const totalCount = Object.keys(results).length;
+    
+    html += `
+        <hr>
+        <div class="text-center">
+            <strong>Summary: ${successCount}/${totalCount} hosts completed successfully</strong>
+        </div>
+    `;
+    
+    return html;
+}
+
+function verifyToolInstallation() {
+    // Use the enhanced modal content area
+    const content = document.getElementById('enhancedInstallationContent');
+    
+    if (!content) {
+        console.error('Enhanced installation content element not found');
+        return;
+    }
+    
+    // Hide progress and result containers, show verification
+    const progressContainer = document.querySelector('.installation-progress');
+    const resultContainer = document.querySelector('.installation-result');
+    
+    if (progressContainer) progressContainer.style.display = 'none';
+    if (resultContainer) resultContainer.style.display = 'none';
+    
+    content.innerHTML = `
+        <div class="alert alert-info">
+            <h6><i class="fas fa-clipboard-check me-2"></i>Verifying Tool Installation</h6>
+            <p class="mb-0">Checking which network analysis tools are installed on each host...</p>
+        </div>
+        
+        <div class="text-center my-4">
+            <div class="spinner-border text-primary" role="status" aria-hidden="true"></div>
+            <p class="mt-3">Verifying tool installation on all hosts...</p>
+            <small class="text-muted">This may take a few moments</small>
+        </div>
+    `;
+    
+    fetch('/verify_ubuntu_tools', { method: 'POST' })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        return response.json();
+    })
+    .then(data => {
+        if (data.success) {
+            content.innerHTML = `
+                <div class="alert alert-success">
+                    <h5><i class="fas fa-check-circle me-2"></i>Tool Verification Completed</h5>
+                    <p class="mb-0">Successfully verified tool installation status across ${data.summary.hosts_checked} hosts.</p>
+                    <p class="mb-0"><strong>Overall Success Rate:</strong> ${data.summary.overall_success_rate}% (${data.summary.total_tools_found}/${data.summary.total_tools_checked} tools available)</p>
+                </div>
+                
+                <div class="card">
+                    <div class="card-header">
+                        <h6 class="mb-0"><i class="fas fa-server me-2"></i>Host-by-Host Verification Results</h6>
+                    </div>
+                    <div class="card-body">
+                        ${generateVerificationResults(data.verification_results)}
+                    </div>
+                </div>
+            `;
+        } else {
+            content.innerHTML = `
+                <div class="alert alert-warning">
+                    <h5><i class="fas fa-exclamation-triangle me-2"></i>Verification Failed</h5>
+                    <p><strong>Error:</strong> ${data.error}</p>
+                    <div class="mt-3">
+                        <h6>Possible Issues:</h6>
+                        <ul>
+                            <li>Hosts may be offline or unreachable</li>
+                            <li>SSH authentication problems</li>
+                            <li>Network connectivity issues</li>
+                        </ul>
+                    </div>
+                </div>
+            `;
+        }
+        
+        // Update footer buttons
+        updateModalFooterForVerification();
+    })
+    .catch(error => {
+        console.error('Verification error:', error);
+        content.innerHTML = `
+            <div class="alert alert-danger">
+                <h5><i class="fas fa-times-circle me-2"></i>Verification Error</h5>
+                <p><strong>Error:</strong> ${error.message}</p>
+                <div class="mt-3">
+                    <h6>Troubleshooting:</h6>
+                    <ul>
+                        <li>Check network connectivity to the application server</li>
+                        <li>Verify that the backend service is running</li>
+                        <li>Check browser console for additional error details</li>
+                        <li>Try refreshing the page and attempting verification again</li>
+                    </ul>
+                </div>
+            </div>
+        `;
+        
+        updateModalFooterForVerification();
+    });
+}
+
+function updateModalFooterForVerification() {
+    // Hide loading spinner
+    const loadingSpinner = document.querySelector('.loading-spinner');
+    if (loadingSpinner) loadingSpinner.style.display = 'none';
+    
+    // Hide other action buttons
+    const retryButton = document.querySelector('.retry-button');
+    const verifyButton = document.querySelector('.verify-button');
+    
+    if (retryButton) retryButton.style.display = 'none';
+    if (verifyButton) verifyButton.style.display = 'none';
+    
+    // Make sure close button is visible
+    const closeButton = document.querySelector('.modal-footer .btn-secondary');
+    if (closeButton) closeButton.style.display = 'inline-block';
+}
+
+function updateHostStatusCards(hosts) {
+    const container = document.getElementById('hostStatusContainer');
+    const cardsContainer = document.getElementById('hostStatusCards');
+    
+    if (!hosts || Object.keys(hosts).length === 0) {
+        if (container) container.style.display = 'none';
+        return;
+    }
+    
+    if (container) container.style.display = 'block';
+    
+    let cardsHtml = '';
+    Object.entries(hosts).forEach(([hostname, hostData]) => {
+        const { status, progress, current_action, tools, tool_categories, installed_tools, missing_tools, error } = hostData;
+        
+        let statusClass = 'secondary';
+        let statusIcon = 'clock';
+        let statusText = 'Pending';
+        
+        switch (status) {
+            case 'checking':
+                statusClass = 'info';
+                statusIcon = 'search';
+                statusText = 'Checking';
+                break;
+            case 'checked':
+                statusClass = 'warning';
+                statusIcon = 'list';
+                statusText = 'Ready to Install';
+                break;
+            case 'installing':
+                statusClass = 'primary';
+                statusIcon = 'cog fa-spin';
+                statusText = 'Installing';
+                break;
+            case 'complete':
+                statusClass = 'success';
+                statusIcon = 'check';
+                statusText = 'Complete';
+                break;
+            case 'error':
+                statusClass = 'danger';
+                statusIcon = 'exclamation-triangle';
+                statusText = 'Error';
+                break;
+        }
+        
+        // Build tools summary
+        let toolsSummary = '';
+        if (tool_categories) {
+            toolsSummary = '<div class="small mt-2">';
+            Object.entries(tool_categories).forEach(([category, categoryData]) => {
+                const { total, installed, missing } = categoryData;
+                const percentage = total > 0 ? Math.round((installed / total) * 100) : 0;
+                const categoryClass = percentage === 100 ? 'success' : percentage > 50 ? 'warning' : 'danger';
+                
+                const categoryName = category.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+                
+                toolsSummary += `
+                    <div class="d-flex justify-content-between align-items-center mb-1">
+                        <span>${categoryName}:</span>
+                        <span class="badge badge-${categoryClass}">${installed}/${total}</span>
+                    </div>
+                `;
+            });
+            toolsSummary += '</div>';
+        } else if (installed_tools && missing_tools) {
+            const total = installed_tools.length + missing_tools.length;
+            toolsSummary = `
+                <div class="small mt-2">
+                    <div class="d-flex justify-content-between">
+                        <span>Installed:</span>
+                        <span class="badge badge-success">${installed_tools.length}</span>
+                    </div>
+                    <div class="d-flex justify-content-between">
+                        <span>Missing:</span>
+                        <span class="badge badge-danger">${missing_tools.length}</span>
+                    </div>
+                </div>
+            `;
+        }
+        
+        cardsHtml += `
+            <div class="col-md-6 col-xl-4 mb-3">
+                <div class="card h-100">
+                    <div class="card-body py-2">
+                        <h6 class="card-title mb-1 d-flex justify-content-between align-items-center">
+                            <span><i class="fas fa-${statusIcon} me-1"></i> ${hostname}</span>
+                            <span class="badge bg-${statusClass}">${statusText}</span>
+                        </h6>
+                        
+                        <div class="progress mb-2" style="height: 8px;">
+                            <div class="progress-bar bg-${statusClass} ${status === 'installing' || status === 'checking' ? 'progress-bar-striped progress-bar-animated' : ''}" 
+                                 style="width: ${progress || 0}%"></div>
+                        </div>
+                        
+                        <div class="small text-muted mb-1">${current_action || 'Waiting...'}</div>
+                        ${toolsSummary}
+                        ${error ? `<div class="small text-danger mt-1">Error: ${error}</div>` : ''}
+                    </div>
+                </div>
+            </div>
+        `;
+    });
+    
+    if (cardsContainer) {
+        cardsContainer.innerHTML = cardsHtml;
+    }
+}
+
+function showFinalInstallationResults(data) {
+    const { hosts, host_status_counts, current_phase } = data;
+    
+    const progressContainer = document.querySelector('.installation-progress');
+    const resultContainer = document.querySelector('.installation-result');
+    const loadingSpinner = document.querySelector('.loading-spinner');
+    
+    // Hide progress, show results
+    if (progressContainer) progressContainer.style.display = 'none';
+    if (loadingSpinner) loadingSpinner.style.display = 'none';
+    if (resultContainer) resultContainer.style.display = 'block';
+    
+    const successfulHosts = host_status_counts.complete || 0;
+    const totalHosts = host_status_counts.total || 0;
+    const errorHosts = host_status_counts.error || 0;
+    const successRate = totalHosts > 0 ? Math.round((successfulHosts / totalHosts) * 100) : 0;
+    
+    let resultHtml = `
+        <div class="alert alert-${successRate === 100 ? 'success' : successRate > 70 ? 'warning' : 'danger'}">
+            <h5><i class="fas fa-${successRate === 100 ? 'check-circle' : successRate > 70 ? 'exclamation-triangle' : 'times-circle'} me-2"></i>
+                Installation ${successRate === 100 ? 'Completed Successfully' : successRate > 70 ? 'Mostly Successful' : 'Completed with Errors'}
+            </h5>
+            <p><strong>Success Rate:</strong> ${successRate}% (${successfulHosts}/${totalHosts} hosts)</p>
+            ${errorHosts > 0 ? `<p class="text-danger"><strong>Failed Hosts:</strong> ${errorHosts}</p>` : ''}
+        </div>
+        
+        <div class="card">
+            <div class="card-header">
+                <h6 class="mb-0"><i class="fas fa-list-check me-2"></i>Detailed Host Results</h6>
+            </div>
+            <div class="card-body">
+                <div class="row">
+    `;
+    
+    Object.entries(hosts).forEach(([hostname, hostData]) => {
+        const { status, installed_tools, missing_tools, error, tool_categories } = hostData;
+        
+        const isSuccess = status === 'complete';
+        const statusClass = isSuccess ? 'success' : 'danger';
+        const statusIcon = isSuccess ? 'check-circle' : 'times-circle';
+        
+        let toolsInfo = '';
+        if (tool_categories) {
+            const totalTools = Object.values(tool_categories).reduce((sum, cat) => sum + cat.total, 0);
+            const installedToolsCount = Object.values(tool_categories).reduce((sum, cat) => sum + cat.installed, 0);
+            toolsInfo = `${installedToolsCount}/${totalTools} tools available`;
+            
+            // Add category breakdown
+            const categoryBreakdown = Object.entries(tool_categories)
+                .map(([cat, data]) => `${cat.replace(/_/g, ' ')}: ${data.installed}/${data.total}`)
+                .join(', ');
+            toolsInfo += `<br><small class="text-muted">${categoryBreakdown}</small>`;
+        } else if (installed_tools && missing_tools) {
+            const totalTools = installed_tools.length + missing_tools.length;
+            toolsInfo = `${installed_tools.length}/${totalTools} tools available`;
+        }
+        
+        resultHtml += `
+            <div class="col-md-6 mb-3">
+                <div class="card border-${statusClass} h-100">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <div>
+                                <h6 class="card-title mb-1">
+                                    <i class="fas fa-${statusIcon} text-${statusClass} me-2"></i>${hostname}
+                                </h6>
+                                ${toolsInfo ? `<div class="small">${toolsInfo}</div>` : ''}
+                            </div>
+                            <span class="badge bg-${statusClass}">
+                                ${isSuccess ? 'Success' : 'Failed'}
+                            </span>
+                        </div>
+                        ${error ? `<div class="alert alert-danger alert-sm py-1 px-2 mb-0"><small>Error: ${error}</small></div>` : ''}
+                    </div>
+                </div>
+            </div>
+        `;
+    });
+    
+    resultHtml += `
+                </div>
+            </div>
+        </div>
+    `;
+    
+    document.getElementById('installationResult').innerHTML = resultHtml;
+    
+    // Show appropriate buttons
+    if (successfulHosts > 0) {
+        const verifyButton = document.querySelector('.verify-button');
+        if (verifyButton) verifyButton.style.display = 'inline-block';
+    }
+    if (errorHosts > 0) {
+        const retryButton = document.querySelector('.retry-button');
+        if (retryButton) retryButton.style.display = 'inline-block';
+    }
+    
+    // Hide loading spinner
+    const spinner = document.querySelector('.loading-spinner');
+    if (spinner) spinner.style.display = 'none';
+}
+
+function generateVerificationResults(results) {
+    if (!results) {
+        return '<p class="text-muted">No verification results available.</p>';
+    }
+    
+    let html = '';
+    
+    Object.entries(results).forEach(([hostName, toolResults]) => {
+        const installedCount = Object.values(toolResults).filter(installed => installed).length;
+        const totalTools = Object.keys(toolResults).length;
+        const percentage = ((installedCount / totalTools) * 100).toFixed(0);
+        
+        html += `
+            <div class="card mb-3">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <strong>${hostName}</strong>
+                    <span class="badge ${installedCount === totalTools ? 'bg-success' : 'bg-warning'}">
+                        ${installedCount}/${totalTools} tools (${percentage}%)
+                    </span>
+                </div>
+                <div class="card-body">
+                    <div class="row small">
+        `;
+        
+        Object.entries(toolResults).forEach(([tool, installed]) => {
+            const statusClass = installed ? 'text-success' : 'text-danger';
+            const statusIcon = installed ? 'fa-check' : 'fa-times';
+            
+            html += `
+                <div class="col-md-4 mb-1">
+                    <span class="${statusClass}">
+                        <i class="fas ${statusIcon} me-1"></i>${tool}
+                    </span>
+                </div>
+            `;
+        });
+        
+        html += `
+                    </div>
+                </div>
+            </div>
+        `;
+    });
+    
+    return html;
+}
 </script>
 {% endblock %}
