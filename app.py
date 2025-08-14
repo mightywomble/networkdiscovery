@@ -1640,6 +1640,386 @@ def update_host():
             'error': str(e)
         }), 500
 
+# Host Backup and Import Endpoints
+@app.route('/api/backup_hosts', methods=['GET'])
+def backup_hosts():
+    """Export all host configurations as a JSON backup file"""
+    try:
+        hosts = host_manager.get_all_hosts()
+        
+        # Prepare backup data
+        backup_data = {
+            'backup_timestamp': datetime.now().isoformat(),
+            'application': 'NetworkMap Host Configuration',
+            'version': '1.0',
+            'host_count': len(hosts),
+            'hosts': []
+        }
+        
+        # Clean host data for backup (remove runtime fields like status, last_seen)
+        for host in hosts:
+            clean_host = {
+                'name': host.get('name'),
+                'ip_address': host.get('ip_address'),
+                'username': host.get('username', 'root'),
+                'ssh_port': host.get('ssh_port', 22),
+                'description': host.get('description', ''),
+                'created_at': host.get('created_at'),
+                'updated_at': host.get('updated_at')
+            }
+            backup_data['hosts'].append(clean_host)
+        
+        from flask import Response
+        return Response(
+            json.dumps(backup_data, indent=2, default=str),
+            mimetype='application/json',
+            headers={
+                'Content-Disposition': f'attachment; filename=networkmap_hosts_backup_{datetime.now().strftime("%Y%m%d_%H%M%S")}.json'
+            }
+        )
+        
+    except Exception as e:
+        print(f"Error creating host backup: {e}")
+        return jsonify({
+            'success': False,
+            'error': f'Backup failed: {str(e)}'
+        }), 500
+
+@app.route('/api/import_hosts', methods=['POST'])
+def import_hosts():
+    """Import host configurations from a JSON backup file"""
+    try:
+        # Check if request has file or JSON data
+        import_data = None
+        
+        if request.is_json:
+            # JSON data in request body
+            import_data = request.get_json()
+        elif 'file' in request.files:
+            # File upload
+            file = request.files['file']
+            if file.filename == '':
+                return jsonify({
+                    'success': False,
+                    'error': 'No file selected'
+                }), 400
+            
+            if not file.filename.endswith('.json'):
+                return jsonify({
+                    'success': False,
+                    'error': 'File must be a JSON file'
+                }), 400
+            
+            try:
+                file_content = file.read().decode('utf-8')
+                import_data = json.loads(file_content)
+            except json.JSONDecodeError as e:
+                return jsonify({
+                    'success': False,
+                    'error': f'Invalid JSON file: {str(e)}'
+                }), 400
+        else:
+            return jsonify({
+                'success': False,
+                'error': 'No import data provided. Send JSON data or upload a file.'
+            }), 400
+        
+        # Validate backup data structure
+        if not isinstance(import_data, dict) or 'hosts' not in import_data:
+            return jsonify({
+                'success': False,
+                'error': 'Invalid backup format. Missing hosts data.'
+            }), 400
+        
+        hosts_to_import = import_data.get('hosts', [])
+        if not isinstance(hosts_to_import, list):
+            return jsonify({
+                'success': False,
+                'error': 'Invalid backup format. Hosts must be a list.'
+            }), 400
+        
+        # Import mode: 'merge' (default) or 'replace'
+        import_mode = request.args.get('mode', 'merge')
+        
+        results = {
+            'imported': 0,
+            'updated': 0,
+            'skipped': 0,
+            'errors': [],
+            'details': []
+        }
+        
+        # If replace mode, backup existing hosts first
+        if import_mode == 'replace':
+            existing_hosts = host_manager.get_all_hosts()
+            print(f"Replace mode: Backing up {len(existing_hosts)} existing hosts")
+            
+            # Delete all existing hosts
+            try:
+                with db.get_connection() as conn:
+                    conn.execute("DELETE FROM hosts")
+                    conn.commit()
+                print("Cleared all existing hosts for replace mode")
+            except Exception as e:
+                return jsonify({
+                    'success': False,
+                    'error': f'Failed to clear existing hosts: {str(e)}'
+                }), 500
+        
+        # Process each host in the import data
+        for i, host_data in enumerate(hosts_to_import):
+            try:
+                # Validate required fields
+                name = host_data.get('name', '').strip()
+                ip_address = host_data.get('ip_address', '').strip()
+                username = host_data.get('username', 'root').strip()
+                ssh_port = int(host_data.get('ssh_port', 22))
+                description = host_data.get('description', '').strip()
+                
+                if not name or not ip_address:
+                    results['errors'].append(f"Host {i+1}: Missing required fields (name, ip_address)")
+                    results['skipped'] += 1
+                    continue
+                
+                # Validate SSH port
+                if ssh_port < 1 or ssh_port > 65535:
+                    results['errors'].append(f"Host {i+1} ({name}): Invalid SSH port {ssh_port}")
+                    results['skipped'] += 1
+                    continue
+                
+                # Check if host already exists (by IP or name)
+                existing_host = None
+                if import_mode == 'merge':
+                    try:
+                        existing_hosts = host_manager.get_all_hosts()
+                        for host in existing_hosts:
+                            if (host.get('ip_address') == ip_address or 
+                                host.get('name') == name):
+                                existing_host = host
+                                break
+                    except Exception as e:
+                        print(f"Warning: Could not check existing hosts: {e}")
+                
+                if existing_host and import_mode == 'merge':
+                    # Update existing host
+                    try:
+                        with db.get_connection() as conn:
+                            conn.execute("""
+                                UPDATE hosts 
+                                SET name = ?, ip_address = ?, username = ?, ssh_port = ?, 
+                                    description = ?, updated_at = CURRENT_TIMESTAMP
+                                WHERE id = ?
+                            """, (name, ip_address, username, ssh_port, description, existing_host['id']))
+                            conn.commit()
+                        
+                        results['updated'] += 1
+                        results['details'].append(f"Updated: {name} ({ip_address})")
+                        print(f"Updated host: {name} ({ip_address})")
+                        
+                    except Exception as e:
+                        results['errors'].append(f"Host {name}: Update failed - {str(e)}")
+                        results['skipped'] += 1
+                else:
+                    # Add new host
+                    try:
+                        host_id = host_manager.add_host(name, ip_address, username, ssh_port, description)
+                        results['imported'] += 1
+                        results['details'].append(f"Added: {name} ({ip_address})")
+                        print(f"Added host: {name} ({ip_address})")
+                        
+                    except Exception as e:
+                        results['errors'].append(f"Host {name}: Import failed - {str(e)}")
+                        results['skipped'] += 1
+                        
+            except Exception as e:
+                results['errors'].append(f"Host {i+1}: Processing failed - {str(e)}")
+                results['skipped'] += 1
+        
+        # Prepare response
+        total_processed = results['imported'] + results['updated'] + results['skipped']
+        success_rate = ((results['imported'] + results['updated']) / total_processed * 100) if total_processed > 0 else 0
+        
+        response_data = {
+            'success': True,
+            'message': f'Import completed: {results["imported"]} added, {results["updated"]} updated, {results["skipped"]} skipped',
+            'import_mode': import_mode,
+            'results': results,
+            'summary': {
+                'total_hosts_in_backup': len(hosts_to_import),
+                'total_processed': total_processed,
+                'success_count': results['imported'] + results['updated'],
+                'success_rate': round(success_rate, 1)
+            },
+            'timestamp': datetime.now().isoformat()
+        }
+        
+        # Return appropriate status code
+        if results['errors'] and (results['imported'] + results['updated']) == 0:
+            # All imports failed
+            response_data['success'] = False
+            return jsonify(response_data), 500
+        elif results['errors']:
+            # Some imports failed
+            return jsonify(response_data), 207  # Multi-Status
+        else:
+            # All imports successful
+            return jsonify(response_data), 200
+            
+    except Exception as e:
+        print(f"Error importing hosts: {e}")
+        return jsonify({
+            'success': False,
+            'error': f'Import failed: {str(e)}'
+        }), 500
+
+@app.route('/api/validate_backup', methods=['POST'])
+def validate_backup_file():
+    """Validate a backup file without importing it"""
+    try:
+        # Get backup data
+        backup_data = None
+        
+        if request.is_json:
+            backup_data = request.get_json()
+        elif 'file' in request.files:
+            file = request.files['file']
+            if file.filename == '':
+                return jsonify({
+                    'success': False,
+                    'error': 'No file selected'
+                }), 400
+            
+            try:
+                file_content = file.read().decode('utf-8')
+                backup_data = json.loads(file_content)
+            except json.JSONDecodeError as e:
+                return jsonify({
+                    'success': False,
+                    'error': f'Invalid JSON file: {str(e)}'
+                }), 400
+        else:
+            return jsonify({
+                'success': False,
+                'error': 'No backup data provided'
+            }), 400
+        
+        # Validate backup structure
+        validation_results = {
+            'valid': True,
+            'issues': [],
+            'warnings': [],
+            'stats': {
+                'total_hosts': 0,
+                'valid_hosts': 0,
+                'invalid_hosts': 0,
+                'duplicate_names': 0,
+                'duplicate_ips': 0
+            },
+            'host_details': []
+        }
+        
+        if not isinstance(backup_data, dict):
+            validation_results['valid'] = False
+            validation_results['issues'].append('Backup data must be a JSON object')
+            return jsonify(validation_results), 400
+        
+        if 'hosts' not in backup_data:
+            validation_results['valid'] = False
+            validation_results['issues'].append('Missing hosts data in backup')
+            return jsonify(validation_results), 400
+        
+        hosts_data = backup_data.get('hosts', [])
+        if not isinstance(hosts_data, list):
+            validation_results['valid'] = False
+            validation_results['issues'].append('Hosts data must be a list')
+            return jsonify(validation_results), 400
+        
+        validation_results['stats']['total_hosts'] = len(hosts_data)
+        
+        # Track duplicates
+        seen_names = set()
+        seen_ips = set()
+        
+        # Validate each host
+        for i, host in enumerate(hosts_data):
+            host_issues = []
+            
+            if not isinstance(host, dict):
+                host_issues.append('Host data must be an object')
+            else:
+                # Check required fields
+                name = host.get('name', '').strip()
+                ip_address = host.get('ip_address', '').strip()
+                
+                if not name:
+                    host_issues.append('Missing or empty name')
+                elif name in seen_names:
+                    host_issues.append(f'Duplicate name: {name}')
+                    validation_results['stats']['duplicate_names'] += 1
+                else:
+                    seen_names.add(name)
+                
+                if not ip_address:
+                    host_issues.append('Missing or empty IP address')
+                elif ip_address in seen_ips:
+                    host_issues.append(f'Duplicate IP address: {ip_address}')
+                    validation_results['stats']['duplicate_ips'] += 1
+                else:
+                    seen_ips.add(ip_address)
+                
+                # Validate SSH port
+                ssh_port = host.get('ssh_port', 22)
+                try:
+                    ssh_port = int(ssh_port)
+                    if ssh_port < 1 or ssh_port > 65535:
+                        host_issues.append(f'Invalid SSH port: {ssh_port} (must be 1-65535)')
+                except (ValueError, TypeError):
+                    host_issues.append(f'SSH port must be a number: {ssh_port}')
+                
+                # Optional field validation
+                username = host.get('username', 'root')
+                if not username.strip():
+                    validation_results['warnings'].append(f'Host {i+1} ({name}): Empty username, will default to "root"')
+            
+            validation_results['host_details'].append({
+                'index': i + 1,
+                'name': host.get('name', 'N/A'),
+                'ip_address': host.get('ip_address', 'N/A'),
+                'valid': len(host_issues) == 0,
+                'issues': host_issues
+            })
+            
+            if len(host_issues) == 0:
+                validation_results['stats']['valid_hosts'] += 1
+            else:
+                validation_results['stats']['invalid_hosts'] += 1
+                validation_results['valid'] = False
+        
+        # Add overall validation issues
+        if validation_results['stats']['duplicate_names'] > 0:
+            validation_results['issues'].append(f'Found {validation_results["stats"]["duplicate_names"]} duplicate host names')
+        
+        if validation_results['stats']['duplicate_ips'] > 0:
+            validation_results['issues'].append(f'Found {validation_results["stats"]["duplicate_ips"]} duplicate IP addresses')
+        
+        # Add backup metadata if available
+        if 'backup_timestamp' in backup_data:
+            validation_results['backup_info'] = {
+                'timestamp': backup_data.get('backup_timestamp'),
+                'application': backup_data.get('application'),
+                'version': backup_data.get('version'),
+                'host_count': backup_data.get('host_count')
+            }
+        
+        return jsonify(validation_results)
+        
+    except Exception as e:
+        print(f"Error validating backup: {e}")
+        return jsonify({
+            'success': False,
+            'error': f'Validation failed: {str(e)}'
+        }), 500
+
 # Agent Management API Endpoints
 @app.route('/api/agent/register', methods=['POST'])
 def agent_register():
