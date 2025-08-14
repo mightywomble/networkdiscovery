@@ -139,6 +139,54 @@
                 </div>
             </div>
         </div>
+</div>
+</div>
+
+<!-- Device Edit Modal -->
+<div class="modal fade" id="deviceEditModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Edit Device</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="deviceEditForm">
+                    <input type="hidden" id="editDeviceId" value="">
+                    
+                    <div class="mb-3">
+                        <label for="editDeviceName" class="form-label">Device Name</label>
+                        <input type="text" class="form-control" id="editDeviceName" placeholder="Enter device name">
+                        <div class="form-text">This will be displayed as the device label in the diagram</div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="editDeviceType" class="form-label">Device Type</label>
+                        <select class="form-select" id="editDeviceType">
+                            <option value="server">🖥️ Server - Physical and virtual servers</option>
+                            <option value="router">📡 Router - Network routing devices</option>
+                            <option value="switch">🔗 Switch - Network switching devices</option>
+                            <option value="cloud">☁️ Cloud - Cloud services and external resources</option>
+                            <option value="vpn">🛡️ VPN - VPN endpoints and tunnels</option>
+                            <option value="workstation">💻 Workstation - Client computers</option>
+                            <option value="firewall">🔥 Firewall - Network security devices</option>
+                            <option value="gateway">🚪 Gateway - Network gateway devices</option>
+                        </select>
+                        <div class="form-text">This determines the icon shown in the diagram</div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="editDeviceNotes" class="form-label">Notes</label>
+                        <textarea class="form-control" id="editDeviceNotes" rows="3" placeholder="Add any notes about this device..."></textarea>
+                        <div class="form-text">Optional notes about this device</div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="saveDeviceChanges()">Save Changes</button>
+            </div>
+        </div>
     </div>
 </div>
 
@@ -909,10 +957,13 @@ function showDeviceDetails(device) {
     
     deviceInfoCards.innerHTML = `
         <div class="card border-primary mb-3">
-            <div class="card-header bg-primary text-white">
+            <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
                 <h6 class="mb-0">
                     <i class="${deviceConfig.icon} me-2"></i>${device.label || device.ip}
                 </h6>
+                <button class="btn btn-light btn-sm" onclick="openDeviceEditModal('${device.id}')" title="Edit Device">
+                    <i class="fas fa-edit"></i>
+                </button>
             </div>
             <div class="card-body">
                 <div class="mb-2"><strong>IP Address:</strong><br><code class="text-primary">${device.ip}</code></div>
@@ -1927,6 +1978,145 @@ function renderDiagram(svg, structure) {
     container.appendChild(svg);
     
     console.log('Network diagram rendered successfully');
+}
+
+// ============================================
+// DEVICE EDIT FUNCTIONALITY
+// ============================================
+
+// Open device edit modal
+function openDeviceEditModal(deviceId) {
+    if (!networkStructure || !networkStructure.devices[deviceId]) {
+        showMessage('Device not found!', 'error');
+        return;
+    }
+    
+    const device = networkStructure.devices[deviceId];
+    
+    // Populate modal fields
+    document.getElementById('editDeviceId').value = deviceId;
+    document.getElementById('editDeviceName').value = device.label || device.ip || '';
+    document.getElementById('editDeviceType').value = device.deviceType || 'server';
+    document.getElementById('editDeviceNotes').value = device.notes || '';
+    
+    // Show modal
+    const modal = new bootstrap.Modal(document.getElementById('deviceEditModal'));
+    modal.show();
+}
+
+// Save device changes
+function saveDeviceChanges() {
+    const deviceId = document.getElementById('editDeviceId').value;
+    const deviceName = document.getElementById('editDeviceName').value.trim();
+    const deviceType = document.getElementById('editDeviceType').value;
+    const deviceNotes = document.getElementById('editDeviceNotes').value.trim();
+    
+    if (!deviceId || !networkStructure || !networkStructure.devices[deviceId]) {
+        showMessage('Device not found!', 'error');
+        return;
+    }
+    
+    if (!deviceName) {
+        showMessage('Device name is required!', 'warning');
+        return;
+    }
+    
+    const device = networkStructure.devices[deviceId];
+    const originalLabel = device.label;
+    const originalType = device.deviceType;
+    
+    // Update device in memory
+    device.label = deviceName;
+    device.deviceType = deviceType;
+    device.notes = deviceNotes;
+    
+    // Create update data
+    const updateData = {
+        device_id: deviceId,
+        label: deviceName,
+        device_type: deviceType,
+        notes: deviceNotes,
+        ip: device.ip
+    };
+    
+    // Save to server
+    fetch('/api/update_device', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(updateData)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Update the diagram if the type changed
+            if (originalType !== deviceType) {
+                updateDeviceIcon(deviceId, deviceType);
+            }
+            
+            // Update the label if it changed
+            if (originalLabel !== deviceName) {
+                updateDeviceLabel(deviceId, deviceName);
+            }
+            
+            // Refresh the device details panel if this device is selected
+            if (selectedDevice && selectedDevice.id === deviceId) {
+                showDeviceDetails(device);
+            }
+            
+            // Hide modal
+            const modal = bootstrap.Modal.getInstance(document.getElementById('deviceEditModal'));
+            modal.hide();
+            
+            showMessage('Device updated successfully!', 'success');
+            console.log('Device updated:', updateData);
+        } else {
+            showMessage(`Failed to update device: ${data.error || 'Unknown error'}`, 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error updating device:', error);
+        showMessage('Failed to save device changes', 'error');
+    });
+}
+
+// Update device icon in the diagram
+function updateDeviceIcon(deviceId, newDeviceType) {
+    const deviceElement = document.querySelector(`[data-device-id="${deviceId}"]`);
+    if (!deviceElement) return;
+    
+    const device = networkStructure.devices[deviceId];
+    const deviceConfig = deviceIcons[newDeviceType] || deviceIcons.server;
+    
+    // Update circle stroke color
+    const circle = deviceElement.querySelector('circle');
+    if (circle) {
+        circle.setAttribute('stroke', deviceConfig.color);
+    }
+    
+    // Update icon symbol and color
+    const iconText = deviceElement.querySelector('text');
+    if (iconText) {
+        iconText.textContent = getDeviceIconSymbol(newDeviceType);
+        iconText.setAttribute('fill', deviceConfig.color);
+    }
+    
+    console.log(`Updated device ${deviceId} icon to ${newDeviceType}`);
+}
+
+// Update device label in the diagram
+function updateDeviceLabel(deviceId, newLabel) {
+    const deviceElement = document.querySelector(`[data-device-id="${deviceId}"]`);
+    if (!deviceElement) return;
+    
+    // Update the label text (second text element)
+    const labels = deviceElement.querySelectorAll('text');
+    if (labels.length > 1) {
+        labels[1].textContent = newLabel;
+    }
+    
+    console.log(`Updated device ${deviceId} label to "${newLabel}"`);
 }
 </script>
 {% endblock %}

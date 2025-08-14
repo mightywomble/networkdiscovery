@@ -256,6 +256,72 @@
         </div>
     </div>
 </div>
+
+<!-- Host Edit Modal -->
+<div class="modal fade" id="hostEditModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Edit Host</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="hostEditForm">
+                    <input type="hidden" id="editHostId" value="">
+                    
+                    <div class="mb-3">
+                        <label for="editHostName" class="form-label">Host Name</label>
+                        <input type="text" class="form-control" id="editHostName" placeholder="Enter host name" required>
+                        <div class="form-text">A friendly name for this host</div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="editHostIpAddress" class="form-label">IP Address</label>
+                        <input type="text" class="form-control" id="editHostIpAddress" placeholder="192.168.1.100" required>
+                        <div class="form-text">IPv4 address of the host</div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="editHostDeviceType" class="form-label">Device Type</label>
+                        <select class="form-select" id="editHostDeviceType">
+                            <option value="server">🖥️ Server - Physical and virtual servers</option>
+                            <option value="router">📡 Router - Network routing devices</option>
+                            <option value="switch">🔗 Switch - Network switching devices</option>
+                            <option value="cloud">☁️ Cloud - Cloud services and external resources</option>
+                            <option value="vpn">🛡️ VPN - VPN endpoints and tunnels</option>
+                            <option value="workstation">💻 Workstation - Client computers</option>
+                            <option value="firewall">🔥 Firewall - Network security devices</option>
+                            <option value="gateway">🚪 Gateway - Network gateway devices</option>
+                        </select>
+                        <div class="form-text">This determines the icon shown in network diagrams</div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="editHostUsername" class="form-label">SSH Username</label>
+                        <input type="text" class="form-control" id="editHostUsername" placeholder="root">
+                        <div class="form-text">Username for SSH connections</div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="editHostSshPort" class="form-label">SSH Port</label>
+                        <input type="number" class="form-control" id="editHostSshPort" min="1" max="65535" value="22">
+                        <div class="form-text">SSH port (default: 22)</div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="editHostDescription" class="form-label">Description</label>
+                        <textarea class="form-control" id="editHostDescription" rows="3" placeholder="Optional description of this host..."></textarea>
+                        <div class="form-text">Optional notes about this host</div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="saveHostChanges()">Save Changes</button>
+            </div>
+        </div>
+    </div>
+</div>
 {% endblock %}
 
 {% block scripts %}
@@ -321,13 +387,48 @@ function showHostDetails(hostId) {
     .then(response => response.json())
     .then(data => {
         const host = data.host;
+        
+        // Get device metadata to show device type
+        return fetch(`/api/device_metadata/${host.ip_address}`)
+        .then(metaResponse => {
+            let deviceType = 'server'; // default
+            if (metaResponse.ok) {
+                return metaResponse.json().then(metaData => {
+                    if (metaData.success) {
+                        deviceType = metaData.device.device_type || 'server';
+                    }
+                    return { host, data, deviceType };
+                });
+            }
+            return { host, data, deviceType };
+        });
+    })
+    .then(({ host, data, deviceType }) => {
+        // Device type icons mapping
+        const deviceTypeIcons = {
+            server: '🖥️ Server',
+            router: '📡 Router', 
+            switch: '🔗 Switch',
+            cloud: '☁️ Cloud',
+            vpn: '🛡️ VPN',
+            workstation: '💻 Workstation',
+            firewall: '🔥 Firewall',
+            gateway: '🚪 Gateway'
+        };
+        
         content.innerHTML = `
             <div class="row">
                 <div class="col-md-6">
-                    <h6>Host Information</h6>
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <h6 class="mb-0">Host Information</h6>
+                        <button class="btn btn-sm btn-outline-secondary" onclick="openHostEditModal(${host.id})" title="Edit Host">
+                            <i class="fas fa-edit"></i> Edit
+                        </button>
+                    </div>
                     <table class="table table-sm">
                         <tr><th>Name:</th><td>${host.name}</td></tr>
                         <tr><th>IP Address:</th><td><code>${host.ip_address}</code></td></tr>
+                        <tr><th>Device Type:</th><td>${deviceTypeIcons[deviceType] || '🖥️ Server'}</td></tr>
                         <tr><th>Username:</th><td>${host.username}</td></tr>
                         <tr><th>SSH Port:</th><td>${host.ssh_port}</td></tr>
                         <tr><th>Status:</th><td><span class="status-${host.status}">${host.status}</span></td></tr>
@@ -347,7 +448,7 @@ function showHostDetails(hostId) {
                     </table>
                     
                     <div class="mt-3">
-                        <button class="btn btn-sm btn-outline-primary" onclick="testHost(${hostId})">
+                        <button class="btn btn-sm btn-outline-primary" onclick="testHost(${host.id})">
                             <i class="fas fa-heartbeat me-1"></i>Test Connection
                         </button>
                     </div>
@@ -380,5 +481,195 @@ document.getElementById('ip_address').addEventListener('input', function(e) {
 
 // Auto-focus first input
 document.getElementById('name').focus();
+
+// ====================================================
+// HOST EDIT FUNCTIONALITY
+// ====================================================
+
+// Open host edit modal
+function openHostEditModal(hostId) {
+    // Fetch host details to populate the edit modal
+    fetch(`/api/host_stats/${hostId}`)
+    .then(response => response.json())
+    .then(data => {
+        const host = data.host;
+        
+        // Get device metadata to get device type
+        return fetch(`/api/device_metadata/${host.ip_address}`)
+        .then(metaResponse => {
+            let deviceType = 'server'; // default
+            if (metaResponse.ok) {
+                return metaResponse.json().then(metaData => {
+                    if (metaData.success) {
+                        deviceType = metaData.device.device_type || 'server';
+                    }
+                    return { host, deviceType };
+                });
+            }
+            return { host, deviceType };
+        });
+    })
+    .then(({ host, deviceType }) => {
+        // Populate modal fields
+        document.getElementById('editHostId').value = host.id;
+        document.getElementById('editHostName').value = host.name || '';
+        document.getElementById('editHostIpAddress').value = host.ip_address || '';
+        document.getElementById('editHostDeviceType').value = deviceType || 'server';
+        document.getElementById('editHostUsername').value = host.username || 'root';
+        document.getElementById('editHostSshPort').value = host.ssh_port || 22;
+        document.getElementById('editHostDescription').value = host.description || '';
+        
+        // Show modal
+        const modal = new bootstrap.Modal(document.getElementById('hostEditModal'));
+        modal.show();
+    })
+    .catch(error => {
+        console.error('Error loading host details:', error);
+        showMessage('Failed to load host details for editing', 'error');
+    });
+}
+
+// Save host changes
+function saveHostChanges() {
+    const hostId = document.getElementById('editHostId').value;
+    const hostName = document.getElementById('editHostName').value.trim();
+    const hostIpAddress = document.getElementById('editHostIpAddress').value.trim();
+    const deviceType = document.getElementById('editHostDeviceType').value;
+    const username = document.getElementById('editHostUsername').value.trim();
+    const sshPort = parseInt(document.getElementById('editHostSshPort').value);
+    const description = document.getElementById('editHostDescription').value.trim();
+    
+    // Validation
+    if (!hostId) {
+        showMessage('Host ID is missing!', 'error');
+        return;
+    }
+    
+    if (!hostName) {
+        showMessage('Host name is required!', 'warning');
+        return;
+    }
+    
+    if (!hostIpAddress) {
+        showMessage('IP address is required!', 'warning');
+        return;
+    }
+    
+    // Validate IP address format
+    const ipRegex = /^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$/;
+    if (!ipRegex.test(hostIpAddress)) {
+        showMessage('Please enter a valid IPv4 address!', 'warning');
+        return;
+    }
+    
+    if (!username) {
+        showMessage('SSH username is required!', 'warning');
+        return;
+    }
+    
+    if (!sshPort || sshPort < 1 || sshPort > 65535) {
+        showMessage('SSH port must be between 1 and 65535!', 'warning');
+        return;
+    }
+    
+    // Prepare update data
+    const updateData = {
+        host_id: hostId,
+        name: hostName,
+        ip_address: hostIpAddress,
+        username: username,
+        ssh_port: sshPort,
+        description: description
+    };
+    
+    // Save host changes to server
+    fetch('/api/update_host', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(updateData)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Also save device metadata for device type
+            const deviceUpdateData = {
+                device_id: hostIpAddress, // Use IP as device ID
+                label: hostName,
+                device_type: deviceType,
+                notes: description,
+                ip: hostIpAddress
+            };
+            
+            return fetch('/api/update_device', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(deviceUpdateData)
+            })
+            .then(response => response.json())
+            .then(deviceData => {
+                if (deviceData.success) {
+                    console.log('Device metadata updated successfully');
+                } else {
+                    console.warn('Host updated but device metadata update failed:', deviceData.error);
+                }
+                
+                // Hide modal
+                const modal = bootstrap.Modal.getInstance(document.getElementById('hostEditModal'));
+                modal.hide();
+                
+                showMessage('Host updated successfully!', 'success');
+                
+                // Refresh the page to show updated data
+                setTimeout(() => {
+                    window.location.reload();
+                }, 1000);
+                
+                return data;
+            });
+        } else {
+            throw new Error(data.error || 'Failed to update host');
+        }
+    })
+    .catch(error => {
+        console.error('Error updating host:', error);
+        showMessage(`Failed to update host: ${error.message}`, 'error');
+    });
+}
+
+// Utility function to show messages
+function showMessage(message, type = 'info') {
+    // Create message element
+    const messageDiv = document.createElement('div');
+    messageDiv.className = `alert alert-${type === 'info' ? 'primary' : type === 'success' ? 'success' : type === 'warning' ? 'warning' : 'danger'} alert-dismissible fade show position-fixed`;
+    messageDiv.style.cssText = 'top: 20px; right: 20px; z-index: 9999; max-width: 400px;';
+    messageDiv.innerHTML = `
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    
+    // Add to page
+    document.body.appendChild(messageDiv);
+    
+    // Auto-remove after 4 seconds
+    setTimeout(() => {
+        if (messageDiv.parentNode) {
+            messageDiv.remove();
+        }
+    }, 4000);
+}
+
+// Format bytes utility function
+function formatBytes(bytes) {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+}
+
 </script>
 {% endblock %}

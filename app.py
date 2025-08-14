@@ -1343,6 +1343,298 @@ def delete_diagram_layout(layout_name):
             'error': str(e)
         }), 500
 
+@app.route('/api/update_device', methods=['POST'])
+def update_device():
+    """Update device information (name, type, notes)"""
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({
+                'success': False,
+                'error': 'No data provided'
+            }), 400
+        
+        device_id = data.get('device_id')
+        label = data.get('label', '').strip()
+        device_type = data.get('device_type', 'server')
+        notes = data.get('notes', '').strip()
+        ip = data.get('ip', '')
+        
+        # Validate required fields
+        if not device_id:
+            return jsonify({
+                'success': False,
+                'error': 'Device ID is required'
+            }), 400
+        
+        if not label:
+            return jsonify({
+                'success': False,
+                'error': 'Device name/label is required'
+            }), 400
+        
+        # For now, we'll store device metadata in a simple way
+        # Since the current system primarily uses IP-based identification,
+        # we'll need to update the topology data or create a device metadata table
+        
+        try:
+            # First, try to update if this is a known host
+            if ip:
+                # Check if this is a managed host by IP
+                hosts = host_manager.get_all_hosts()
+                matching_host = None
+                for host in hosts:
+                    if host.get('ip_address') == ip:
+                        matching_host = host
+                        break
+                
+                if matching_host:
+                    # Update the host name if it's a managed host
+                    try:
+                        # Update host in the database using proper connection pattern
+                        with db.get_connection() as conn:
+                            conn.execute("""
+                                UPDATE hosts 
+                                SET name = ?, description = ?
+                                WHERE ip_address = ?
+                            """, (label, notes, ip))
+                            conn.commit()
+                        
+                        print(f"Updated managed host: {ip} -> {label}")
+                    except Exception as e:
+                        print(f"Could not update managed host: {e}")
+            
+            # Store/update device metadata in a device_metadata table
+            with db.get_connection() as conn:
+                # Create the table if it doesn't exist
+                conn.execute("""
+                    CREATE TABLE IF NOT EXISTS device_metadata (
+                        device_id TEXT PRIMARY KEY,
+                        ip_address TEXT,
+                        label TEXT,
+                        device_type TEXT,
+                        notes TEXT,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    )
+                """)
+                
+                # Insert or update device metadata
+                conn.execute("""
+                    INSERT OR REPLACE INTO device_metadata 
+                    (device_id, ip_address, label, device_type, notes, updated_at)
+                    VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+                """, (device_id, ip, label, device_type, notes))
+                
+                conn.commit()
+            
+            print(f"Updated device metadata: {device_id} ({ip}) -> {label} [{device_type}]")
+            
+            return jsonify({
+                'success': True,
+                'message': f'Device "{label}" updated successfully',
+                'device': {
+                    'id': device_id,
+                    'label': label,
+                    'device_type': device_type,
+                    'notes': notes,
+                    'ip': ip
+                },
+                'timestamp': datetime.now().isoformat()
+            })
+            
+        except Exception as db_error:
+            print(f"Database error updating device: {db_error}")
+            return jsonify({
+                'success': False,
+                'error': f'Database error: {str(db_error)}'
+            }), 500
+        
+    except Exception as e:
+        print(f"Error in update_device: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@app.route('/api/device_metadata/<device_id>', methods=['GET'])
+def get_device_metadata(device_id):
+    """Get device metadata by device ID"""
+    try:
+        # Query device metadata using proper connection pattern
+        with db.get_connection() as conn:
+            cursor = conn.execute(
+                "SELECT * FROM device_metadata WHERE device_id = ?", 
+                (device_id,)
+            )
+            result = cursor.fetchone()
+            
+            if result:
+                device_data = {
+                    'device_id': result['device_id'],
+                    'ip_address': result['ip_address'],
+                    'label': result['label'],
+                    'device_type': result['device_type'],
+                    'notes': result['notes'],
+                    'created_at': result['created_at'],
+                    'updated_at': result['updated_at']
+                }
+                
+                return jsonify({
+                    'success': True,
+                    'device': device_data
+                })
+            else:
+                return jsonify({
+                    'success': False,
+                    'message': f'Device metadata for "{device_id}" not found'
+                }), 404
+            
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@app.route('/api/all_device_metadata', methods=['GET'])
+def get_all_device_metadata():
+    """Get all device metadata"""
+    try:
+        # Query all device metadata using proper connection pattern
+        with db.get_connection() as conn:
+            cursor = conn.execute(
+                "SELECT * FROM device_metadata ORDER BY updated_at DESC"
+            )
+            results = cursor.fetchall()
+            
+            devices = []
+            for result in results:
+                devices.append({
+                    'device_id': result['device_id'],
+                    'ip_address': result['ip_address'],
+                    'label': result['label'],
+                    'device_type': result['device_type'],
+                    'notes': result['notes'],
+                    'created_at': result['created_at'],
+                    'updated_at': result['updated_at']
+                })
+            
+            return jsonify({
+                'success': True,
+                'devices': devices,
+                'count': len(devices)
+            })
+        
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@app.route('/api/update_host', methods=['POST'])
+def update_host():
+    """Update host information (name, IP, username, SSH port, description)"""
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({
+                'success': False,
+                'error': 'No data provided'
+            }), 400
+        
+        host_id = data.get('host_id')
+        name = data.get('name', '').strip()
+        ip_address = data.get('ip_address', '').strip()
+        username = data.get('username', 'root').strip()
+        ssh_port = data.get('ssh_port', 22)
+        description = data.get('description', '').strip()
+        
+        # Validate required fields
+        if not host_id:
+            return jsonify({
+                'success': False,
+                'error': 'Host ID is required'
+            }), 400
+        
+        if not name:
+            return jsonify({
+                'success': False,
+                'error': 'Host name is required'
+            }), 400
+        
+        if not ip_address:
+            return jsonify({
+                'success': False,
+                'error': 'IP address is required'
+            }), 400
+        
+        # Validate SSH port
+        try:
+            ssh_port = int(ssh_port)
+            if ssh_port < 1 or ssh_port > 65535:
+                raise ValueError("SSH port out of range")
+        except (ValueError, TypeError):
+            return jsonify({
+                'success': False,
+                'error': 'SSH port must be a number between 1 and 65535'
+            }), 400
+        
+        try:
+            # Update host in database
+            with db.get_connection() as conn:
+                # Check if host exists
+                cursor = conn.execute(
+                    "SELECT id FROM hosts WHERE id = ?", 
+                    (host_id,)
+                )
+                existing_host = cursor.fetchone()
+                
+                if not existing_host:
+                    return jsonify({
+                        'success': False,
+                        'error': f'Host with ID {host_id} not found'
+                    }), 404
+                
+                # Update the host
+                conn.execute("""
+                    UPDATE hosts 
+                    SET name = ?, ip_address = ?, username = ?, ssh_port = ?, 
+                        description = ?, updated_at = CURRENT_TIMESTAMP
+                    WHERE id = ?
+                """, (name, ip_address, username, ssh_port, description, host_id))
+                
+                conn.commit()
+            
+            print(f"Updated host {host_id}: {name} ({ip_address})")
+            
+            return jsonify({
+                'success': True,
+                'message': f'Host "{name}" updated successfully',
+                'host': {
+                    'id': host_id,
+                    'name': name,
+                    'ip_address': ip_address,
+                    'username': username,
+                    'ssh_port': ssh_port,
+                    'description': description
+                },
+                'timestamp': datetime.now().isoformat()
+            })
+            
+        except Exception as db_error:
+            print(f"Database error updating host: {db_error}")
+            return jsonify({
+                'success': False,
+                'error': f'Database error: {str(db_error)}'
+            }), 500
+        
+    except Exception as e:
+        print(f"Error in update_host: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
 def update_scan_status(phase, message, progress=None, current_host=None, step=None):
     """Helper to update scan status with consistent format"""
     global scan_status
