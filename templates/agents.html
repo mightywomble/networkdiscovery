@@ -84,6 +84,9 @@
             <button type="button" class="btn btn-outline-info" onclick="showAgentLogs()">
                 <i class="fas fa-file-alt"></i> View Logs
             </button>
+            <button type="button" class="btn btn-outline-warning" onclick="showAgentCleanupTools()">
+                <i class="fas fa-broom"></i> Cleanup Tools
+            </button>
         </div>
     </div>
 </div>
@@ -358,6 +361,148 @@
                     <i class="fas fa-save"></i> Save Configuration
                 </button>
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Agent Cleanup Tools Modal -->
+<div class="modal fade" id="agentCleanupModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="fas fa-broom"></i> Agent Database Cleanup Tools</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-warning" role="alert">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <strong>Warning:</strong> These tools permanently remove agent records from the database. Use with caution!
+                </div>
+                
+                <!-- Cleanup Options -->
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="card border-warning">
+                            <div class="card-header bg-warning text-dark">
+                                <h6 class="mb-0"><i class="fas fa-copy"></i> Remove Duplicates</h6>
+                            </div>
+                            <div class="card-body">
+                                <p class="text-muted">Remove duplicate agent entries (keeps the most recent one for each host).</p>
+                                <button class="btn btn-warning" onclick="cleanupDuplicateAgents()" id="cleanup-duplicates-btn">
+                                    <i class="fas fa-broom"></i> Remove Duplicates
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <div class="card border-danger">
+                            <div class="card-header bg-danger text-white">
+                                <h6 class="mb-0"><i class="fas fa-clock"></i> Remove Stale Agents</h6>
+                            </div>
+                            <div class="card-body">
+                                <p class="text-muted">Remove agents that haven't sent heartbeats recently.</p>
+                                <div class="input-group mb-2">
+                                    <input type="number" class="form-control" id="stale-hours" value="24" min="1" max="168">
+                                    <span class="input-group-text">hours</span>
+                                </div>
+                                <button class="btn btn-danger" onclick="cleanupStaleAgents()" id="cleanup-stale-btn">
+                                    <i class="fas fa-trash-alt"></i> Remove Stale Agents
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <hr class="my-4">
+                
+                <!-- Targeted Removal -->
+                <div class="row">
+                    <div class="col-12">
+                        <div class="card border-info">
+                            <div class="card-header bg-info text-white">
+                                <h6 class="mb-0"><i class="fas fa-crosshairs"></i> Remove Specific Agent</h6>
+                            </div>
+                            <div class="card-body">
+                                <p class="text-muted">Remove a specific agent by hostname or IP address (useful after uninstalling agents).</p>
+                                <form class="row g-3">
+                                    <div class="col-md-6">
+                                        <label class="form-label">Hostname</label>
+                                        <input type="text" class="form-control" id="remove-hostname" placeholder="e.g., server01">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label">IP Address</label>
+                                        <input type="text" class="form-control" id="remove-ip" placeholder="e.g., 192.168.1.100">
+                                    </div>
+                                    <div class="col-12">
+                                        <div class="form-text">You can specify either hostname or IP address (or both for more precise matching).</div>
+                                    </div>
+                                </form>
+                                <button class="btn btn-info mt-3" onclick="removeAgentsByHost()" id="remove-by-host-btn">
+                                    <i class="fas fa-minus-circle"></i> Remove Agent(s)
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <hr class="my-4">
+                
+                <!-- Current Agent Statistics -->
+                <div class="card">
+                    <div class="card-header">
+                        <h6 class="mb-0"><i class="fas fa-chart-bar"></i> Current Agent Statistics</h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="row text-center">
+                            <div class="col-3">
+                                <div class="border-end">
+                                    <h5 class="text-primary mb-1" id="stats-total-agents">-</h5>
+                                    <small class="text-muted">Total Agents</small>
+                                </div>
+                            </div>
+                            <div class="col-3">
+                                <div class="border-end">
+                                    <h5 class="text-success mb-1" id="stats-online-agents">-</h5>
+                                    <small class="text-muted">Online</small>
+                                </div>
+                            </div>
+                            <div class="col-3">
+                                <div class="border-end">
+                                    <h5 class="text-danger mb-1" id="stats-offline-agents">-</h5>
+                                    <small class="text-muted">Offline</small>
+                                </div>
+                            </div>
+                            <div class="col-3">
+                                <h5 class="text-warning mb-1" id="stats-stale-agents">-</h5>
+                                <small class="text-muted">Stale (24h+)</small>
+                            </div>
+                        </div>
+                        <div class="mt-3">
+                            <button class="btn btn-outline-primary btn-sm" onclick="refreshCleanupStats()">
+                                <i class="fas fa-sync-alt"></i> Refresh Stats
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Cleanup Results -->
+                <div class="mt-4" id="cleanup-results" style="display: none;">
+                    <div class="card">
+                        <div class="card-header">
+                            <h6 class="mb-0"><i class="fas fa-info-circle"></i> Cleanup Results</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="cleanup-output" id="cleanup-output" style="background: #f8f9fa; padding: 1rem; border-radius: 0.375rem; font-family: monospace; font-size: 0.875rem; max-height: 200px; overflow-y: auto;">
+                                <!-- Results will appear here -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
             </div>
         </div>
     </div>
@@ -1235,6 +1380,200 @@ async function saveAgentConfig() {
     } finally {
         saveBtn.innerHTML = originalText;
         saveBtn.disabled = false;
+    }
+}
+
+// Agent Cleanup Tools Functions
+function showAgentCleanupTools() {
+    const modal = new bootstrap.Modal(document.getElementById('agentCleanupModal'));
+    modal.show();
+    
+    // Refresh statistics when modal opens
+    refreshCleanupStats();
+}
+
+function refreshCleanupStats() {
+    // Update statistics in the cleanup modal
+    const totalAgents = agents.length;
+    const onlineAgents = agents.filter(a => a.heartbeat_status === 'online').length;
+    const offlineAgents = agents.filter(a => a.heartbeat_status === 'offline').length;
+    
+    // Calculate stale agents (24+ hours since last heartbeat)
+    const now = new Date();
+    const staleAgents = agents.filter(agent => {
+        if (!agent.last_heartbeat) return true;
+        try {
+            const lastHeartbeat = new Date(agent.last_heartbeat.replace(' ', 'T'));
+            const hoursSince = (now - lastHeartbeat) / (1000 * 60 * 60);
+            return hoursSince >= 24;
+        } catch {
+            return true;
+        }
+    }).length;
+    
+    document.getElementById('stats-total-agents').textContent = totalAgents;
+    document.getElementById('stats-online-agents').textContent = onlineAgents;
+    document.getElementById('stats-offline-agents').textContent = offlineAgents;
+    document.getElementById('stats-stale-agents').textContent = staleAgents;
+}
+
+function showCleanupResult(success, message, details = '') {
+    const resultsContainer = document.getElementById('cleanup-results');
+    const outputContainer = document.getElementById('cleanup-output');
+    
+    resultsContainer.style.display = 'block';
+    
+    const timestamp = new Date().toLocaleTimeString();
+    const statusIcon = success ? '✅' : '❌';
+    const statusClass = success ? 'text-success' : 'text-danger';
+    
+    const resultHtml = `
+        <div class="mb-2">
+            <span class="text-muted">[${timestamp}]</span>
+            <span class="${statusClass}">${statusIcon} ${message}</span>
+            ${details ? `<br><small class="text-muted ms-4">${details}</small>` : ''}
+        </div>
+    `;
+    
+    outputContainer.innerHTML += resultHtml;
+    outputContainer.scrollTop = outputContainer.scrollHeight;
+    
+    // Refresh agent data and stats after cleanup
+    if (success) {
+        setTimeout(() => {
+            refreshData();
+            refreshCleanupStats();
+        }, 1000);
+    }
+}
+
+async function cleanupDuplicateAgents() {
+    const btn = document.getElementById('cleanup-duplicates-btn');
+    const originalText = btn.innerHTML;
+    
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Removing...';
+    btn.disabled = true;
+    
+    try {
+        const response = await fetch('/api/agent/cleanup/duplicates', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            showCleanupResult(true, data.message, 
+                `Removed ${data.removed_count} duplicate agent entries`);
+        } else {
+            showCleanupResult(false, 'Failed to remove duplicates', data.error);
+        }
+    } catch (error) {
+        showCleanupResult(false, 'Error removing duplicates', error.message);
+    } finally {
+        btn.innerHTML = originalText;
+        btn.disabled = false;
+    }
+}
+
+async function cleanupStaleAgents() {
+    const hours = parseInt(document.getElementById('stale-hours').value) || 24;
+    
+    if (hours < 1 || hours > 168) {
+        alert('Hours must be between 1 and 168 (7 days)');
+        return;
+    }
+    
+    if (!confirm(`Are you sure you want to remove agents that haven't sent heartbeats in the last ${hours} hours?`)) {
+        return;
+    }
+    
+    const btn = document.getElementById('cleanup-stale-btn');
+    const originalText = btn.innerHTML;
+    
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Removing...';
+    btn.disabled = true;
+    
+    try {
+        const response = await fetch('/api/agent/cleanup/stale', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ hours: hours })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            showCleanupResult(true, data.message, 
+                `Removed ${data.removed_count} stale agent entries`);
+        } else {
+            showCleanupResult(false, 'Failed to remove stale agents', data.error);
+        }
+    } catch (error) {
+        showCleanupResult(false, 'Error removing stale agents', error.message);
+    } finally {
+        btn.innerHTML = originalText;
+        btn.disabled = false;
+    }
+}
+
+async function removeAgentsByHost() {
+    const hostname = document.getElementById('remove-hostname').value.trim();
+    const ipAddress = document.getElementById('remove-ip').value.trim();
+    
+    if (!hostname && !ipAddress) {
+        alert('Please specify either hostname or IP address');
+        return;
+    }
+    
+    const criteria = [];
+    if (hostname) criteria.push(`hostname="${hostname}"`);
+    if (ipAddress) criteria.push(`ip_address="${ipAddress}"`);
+    
+    const confirmMessage = `Are you sure you want to remove all agents matching ${criteria.join(' or ')}?`;
+    if (!confirm(confirmMessage)) {
+        return;
+    }
+    
+    const btn = document.getElementById('remove-by-host-btn');
+    const originalText = btn.innerHTML;
+    
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Removing...';
+    btn.disabled = true;
+    
+    try {
+        const response = await fetch('/api/agent/remove_by_host', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                hostname: hostname || null,
+                ip_address: ipAddress || null
+            })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            showCleanupResult(true, data.message, 
+                `Removed ${data.removed_count} agent entries`);
+            
+            // Clear the form
+            document.getElementById('remove-hostname').value = '';
+            document.getElementById('remove-ip').value = '';
+        } else {
+            showCleanupResult(false, 'Failed to remove agents', data.error);
+        }
+    } catch (error) {
+        showCleanupResult(false, 'Error removing agents', error.message);
+    } finally {
+        btn.innerHTML = originalText;
+        btn.disabled = false;
     }
 }
 
