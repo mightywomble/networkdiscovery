@@ -424,6 +424,40 @@
     white-space: pre-wrap;
     word-wrap: break-word;
 }
+
+/* Modal z-index layering */
+.modal {
+    z-index: 1050;
+}
+
+#agentStatusModal {
+    z-index: 1060 !important;
+}
+
+#agentConfigModal {
+    z-index: 1060 !important;
+}
+
+#agentControlModal {
+    z-index: 1055 !important;
+}
+
+/* Ensure modal backdrops don't interfere */
+.modal-backdrop {
+    z-index: 1040;
+}
+
+#agentStatusModal ~ .modal-backdrop {
+    z-index: 1059 !important;
+}
+
+#agentConfigModal ~ .modal-backdrop {
+    z-index: 1059 !important;
+}
+
+#agentControlModal ~ .modal-backdrop {
+    z-index: 1054 !important;
+}</style>
 </style>
 
 {% endblock %}
