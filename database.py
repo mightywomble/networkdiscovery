@@ -699,6 +699,128 @@ class Database:
             conn.execute('DELETE FROM agents WHERE agent_id = ?', (agent_id,))
             conn.commit()
     
+    def remove_agents_by_host(self, hostname=None, ip_address=None):
+        """Remove agents by hostname or IP address"""
+        if not hostname and not ip_address:
+            return 0
+        
+        with self.get_connection() as conn:
+            if hostname and ip_address:
+                # Remove by both hostname and IP
+                cursor = conn.execute('SELECT agent_id FROM agents WHERE hostname = ? OR ip_address = ?', (hostname, ip_address))
+            elif hostname:
+                # Remove by hostname only
+                cursor = conn.execute('SELECT agent_id FROM agents WHERE hostname = ?', (hostname,))
+            else:
+                # Remove by IP only
+                cursor = conn.execute('SELECT agent_id FROM agents WHERE ip_address = ?', (ip_address,))
+            
+            agent_ids = [row[0] for row in cursor.fetchall()]
+            
+            # Remove all related data for each agent
+            for agent_id in agent_ids:
+                conn.execute('DELETE FROM agent_logs WHERE agent_id = ?', (agent_id,))
+                conn.execute('DELETE FROM agent_scan_results WHERE agent_id = ?', (agent_id,))
+                conn.execute('DELETE FROM agent_configs WHERE agent_id = ?', (agent_id,))
+            
+            # Remove the agents themselves
+            if hostname and ip_address:
+                conn.execute('DELETE FROM agents WHERE hostname = ? OR ip_address = ?', (hostname, ip_address))
+            elif hostname:
+                conn.execute('DELETE FROM agents WHERE hostname = ?', (hostname,))
+            else:
+                conn.execute('DELETE FROM agents WHERE ip_address = ?', (ip_address,))
+            
+            conn.commit()
+            return len(agent_ids)
+    
+    def cleanup_duplicate_agents(self):
+        """Remove duplicate agent entries, keeping the most recent one for each hostname/IP combination"""
+        with self.get_connection() as conn:
+            # Find duplicates by hostname
+            cursor = conn.execute('''
+                SELECT hostname, COUNT(*) as count
+                FROM agents 
+                GROUP BY hostname 
+                HAVING COUNT(*) > 1
+            ''')
+            hostname_duplicates = cursor.fetchall()
+            
+            # Find duplicates by IP address
+            cursor = conn.execute('''
+                SELECT ip_address, COUNT(*) as count
+                FROM agents 
+                GROUP BY ip_address 
+                HAVING COUNT(*) > 1
+            ''')
+            ip_duplicates = cursor.fetchall()
+            
+            removed_count = 0
+            
+            # Remove hostname duplicates, keep the most recent
+            for hostname, count in hostname_duplicates:
+                cursor = conn.execute('''
+                    SELECT agent_id, created_at 
+                    FROM agents 
+                    WHERE hostname = ? 
+                    ORDER BY created_at DESC
+                ''', (hostname,))
+                agents = cursor.fetchall()
+                
+                # Keep the first (most recent), remove the rest
+                for agent_id, created_at in agents[1:]:
+                    conn.execute('DELETE FROM agent_logs WHERE agent_id = ?', (agent_id,))
+                    conn.execute('DELETE FROM agent_scan_results WHERE agent_id = ?', (agent_id,))
+                    conn.execute('DELETE FROM agent_configs WHERE agent_id = ?', (agent_id,))
+                    conn.execute('DELETE FROM agents WHERE agent_id = ?', (agent_id,))
+                    removed_count += 1
+            
+            # Remove IP duplicates, keep the most recent
+            for ip_address, count in ip_duplicates:
+                cursor = conn.execute('''
+                    SELECT agent_id, created_at 
+                    FROM agents 
+                    WHERE ip_address = ? 
+                    ORDER BY created_at DESC
+                ''', (ip_address,))
+                agents = cursor.fetchall()
+                
+                # Keep the first (most recent), remove the rest
+                for agent_id, created_at in agents[1:]:
+                    # Check if this agent wasn't already removed by hostname cleanup
+                    cursor = conn.execute('SELECT 1 FROM agents WHERE agent_id = ?', (agent_id,))
+                    if cursor.fetchone():
+                        conn.execute('DELETE FROM agent_logs WHERE agent_id = ?', (agent_id,))
+                        conn.execute('DELETE FROM agent_scan_results WHERE agent_id = ?', (agent_id,))
+                        conn.execute('DELETE FROM agent_configs WHERE agent_id = ?', (agent_id,))
+                        conn.execute('DELETE FROM agents WHERE agent_id = ?', (agent_id,))
+                        removed_count += 1
+            
+            conn.commit()
+            return removed_count
+    
+    def cleanup_stale_agents(self, hours=24):
+        """Remove agents that haven't sent a heartbeat in the specified hours"""
+        cutoff = datetime.now() - timedelta(hours=hours)
+        
+        with self.get_connection() as conn:
+            # Find stale agents
+            cursor = conn.execute('''
+                SELECT agent_id FROM agents 
+                WHERE last_heartbeat IS NULL OR last_heartbeat < ?
+            ''', (cutoff,))
+            agent_ids = [row[0] for row in cursor.fetchall()]
+            
+            # Remove all related data for each stale agent
+            for agent_id in agent_ids:
+                conn.execute('DELETE FROM agent_logs WHERE agent_id = ?', (agent_id,))
+                conn.execute('DELETE FROM agent_scan_results WHERE agent_id = ?', (agent_id,))
+                conn.execute('DELETE FROM agent_configs WHERE agent_id = ?', (agent_id,))
+                conn.execute('DELETE FROM agents WHERE agent_id = ?', (agent_id,))
+            
+            conn.commit()
+            return len(agent_ids)
+    
     # Agent configuration management
     def save_agent_config(self, agent_id, server_url, scan_interval=300, heartbeat_interval=60,
                          log_collection_enabled=True, log_paths='/var/log', scan_enabled=True):

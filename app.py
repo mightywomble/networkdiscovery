@@ -2374,6 +2374,143 @@ def get_agent_stats():
             'error': str(e)
         }), 500
 
+# Agent cleanup endpoints
+@app.route('/api/agent/cleanup/duplicates', methods=['POST'])
+def cleanup_duplicate_agents():
+    """Remove duplicate agent entries"""
+    try:
+        removed_count = db.cleanup_duplicate_agents()
+        
+        return jsonify({
+            'success': True,
+            'message': f'Removed {removed_count} duplicate agent entries',
+            'removed_count': removed_count,
+            'timestamp': datetime.now().isoformat()
+        })
+        
+    except Exception as e:
+        print(f"Error cleaning up duplicate agents: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@app.route('/api/agent/cleanup/stale', methods=['POST'])
+def cleanup_stale_agents():
+    """Remove agents that haven't sent heartbeats recently"""
+    try:
+        hours = int(request.json.get('hours', 24)) if request.is_json else 24
+        removed_count = db.cleanup_stale_agents(hours)
+        
+        return jsonify({
+            'success': True,
+            'message': f'Removed {removed_count} stale agent entries (older than {hours} hours)',
+            'removed_count': removed_count,
+            'hours': hours,
+            'timestamp': datetime.now().isoformat()
+        })
+        
+    except Exception as e:
+        print(f"Error cleaning up stale agents: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@app.route('/api/agent/remove', methods=['POST'])
+def remove_agent_by_id():
+    """Remove a specific agent by agent_id"""
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({
+                'success': False,
+                'error': 'No data provided'
+            }), 400
+        
+        agent_id = data.get('agent_id')
+        if not agent_id:
+            return jsonify({
+                'success': False,
+                'error': 'agent_id is required'
+            }), 400
+        
+        # Get agent info before removing
+        agent = db.get_agent(agent_id)
+        if not agent:
+            return jsonify({
+                'success': False,
+                'error': f'Agent {agent_id} not found'
+            }), 404
+        
+        # Remove the agent
+        db.remove_agent(agent_id)
+        
+        return jsonify({
+            'success': True,
+            'message': f'Removed agent {agent.get("hostname", "unknown")} ({agent_id})',
+            'removed_agent': {
+                'agent_id': agent_id,
+                'hostname': agent.get('hostname'),
+                'ip_address': agent.get('ip_address')
+            },
+            'timestamp': datetime.now().isoformat()
+        })
+        
+    except Exception as e:
+        print(f"Error removing agent: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@app.route('/api/agent/remove_by_host', methods=['POST'])
+def remove_agents_by_host():
+    """Remove agents by hostname or IP address"""
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({
+                'success': False,
+                'error': 'No data provided'
+            }), 400
+        
+        hostname = data.get('hostname')
+        ip_address = data.get('ip_address')
+        
+        if not hostname and not ip_address:
+            return jsonify({
+                'success': False,
+                'error': 'Either hostname or ip_address is required'
+            }), 400
+        
+        # Remove agents
+        removed_count = db.remove_agents_by_host(hostname, ip_address)
+        
+        criteria = []
+        if hostname:
+            criteria.append(f'hostname="{hostname}"')
+        if ip_address:
+            criteria.append(f'ip_address="{ip_address}"')
+        
+        return jsonify({
+            'success': True,
+            'message': f'Removed {removed_count} agent entries matching {" or ".join(criteria)}',
+            'removed_count': removed_count,
+            'criteria': {
+                'hostname': hostname,
+                'ip_address': ip_address
+            },
+            'timestamp': datetime.now().isoformat()
+        })
+        
+    except Exception as e:
+        print(f"Error removing agents by host: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
 # SSH-based Agent Deployment Endpoints
 @app.route('/api/hosts', methods=['GET'])
 def get_all_hosts():
