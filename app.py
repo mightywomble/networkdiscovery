@@ -2575,23 +2575,52 @@ def deploy_agent_to_host_ssh(host, server_url):
 #!/bin/bash
 set -e
 
+# Set environment variables for non-interactive installation
+export DEBIAN_FRONTEND=noninteractive
+export NEEDRESTART_MODE=a
+export NEEDRESTART_SUSPEND=1
+
+echo "Starting NetworkMap agent deployment..."
+
 # Create directories
-sudo mkdir -p /opt/networkmap-agent /etc/networkmap /var/log
+echo "Creating directories..."
+sudo mkdir -p /opt/networkmap-agent /etc/networkmap-agent /var/log/networkmap-agent
 
 # Download agent script
+echo "Downloading agent script..."
 curl -f -o /tmp/networkmap_agent.py {server_url}/static/networkmap_agent.py
 sudo cp /tmp/networkmap_agent.py /opt/networkmap-agent/networkmap_agent.py
 sudo chmod +x /opt/networkmap-agent/networkmap_agent.py
 
-# Install Python dependencies
-sudo apt-get update
-sudo apt-get install -y python3-pip python3-requests
-sudo pip3 install requests
+# Update package lists quietly
+echo "Updating package lists..."
+sudo apt-get update -qq >/dev/null 2>&1
+
+# Install required packages with proper flags for non-interactive mode
+echo "Installing required packages..."
+sudo apt-get install -y -qq \
+    --no-install-recommends \
+    --no-install-suggests \
+    -o Dpkg::Options::="--force-confdef" \
+    -o Dpkg::Options::="--force-confold" \
+    python3-full \
+    python3-pip \
+    python3-venv \
+    python3-requests \
+    curl \
+    >/dev/null 2>&1
+
+# Create virtual environment for the agent
+echo "Setting up Python virtual environment..."
+sudo python3 -m venv /opt/networkmap-agent/venv
+sudo /opt/networkmap-agent/venv/bin/pip install --quiet --no-cache-dir requests psutil
 
 # Create configuration
-sudo python3 /opt/networkmap-agent/networkmap_agent.py --create-config --server-url {server_url} --username $(whoami)
+echo "Creating agent configuration..."
+sudo /opt/networkmap-agent/venv/bin/python /opt/networkmap-agent/networkmap_agent.py --create-config --server-url {server_url} --username $(whoami)
 
-# Create systemd service
+# Create systemd service with virtual environment
+echo "Creating systemd service..."
 sudo tee /etc/systemd/system/networkmap-agent.service >/dev/null << 'SERVICEEOF'
 [Unit]
 Description=NetworkMap Monitoring Agent
@@ -2603,28 +2632,56 @@ Type=simple
 User=root
 Group=root
 WorkingDirectory=/opt/networkmap-agent
-ExecStart=/usr/bin/python3 /opt/networkmap-agent/networkmap_agent.py
+ExecStart=/opt/networkmap-agent/venv/bin/python /opt/networkmap-agent/networkmap_agent.py
 Restart=always
 RestartSec=10
+Environment=PATH=/opt/networkmap-agent/venv/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 
 # Logging
 StandardOutput=journal
 StandardError=journal
 SyslogIdentifier=networkmap-agent
 
+# Security settings
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ReadWritePaths=/var/log/networkmap-agent /etc/networkmap-agent
+
 [Install]
 WantedBy=multi-user.target
 SERVICEEOF
 
+# Set proper permissions
+echo "Setting permissions..."
+sudo chown -R root:root /opt/networkmap-agent
+sudo chown -R root:root /etc/networkmap-agent
+sudo chown -R root:root /var/log/networkmap-agent
+sudo chmod 755 /opt/networkmap-agent
+sudo chmod 755 /etc/networkmap-agent
+sudo chmod 755 /var/log/networkmap-agent
+
 # Reload systemd and start service
+echo "Starting NetworkMap agent service..."
 sudo systemctl daemon-reload
-sudo systemctl enable networkmap-agent
+sudo systemctl enable networkmap-agent >/dev/null 2>&1
 sudo systemctl start networkmap-agent
+
+# Wait a moment and check if service started successfully
+sleep 3
+if sudo systemctl is-active --quiet networkmap-agent; then
+    echo "✓ NetworkMap agent service started successfully"
+else
+    echo "⚠ Warning: NetworkMap agent service may not have started properly"
+    sudo systemctl status networkmap-agent --no-pager -l || true
+fi
 
 # Cleanup
 rm -f /tmp/networkmap_agent.py
 
-echo "Agent deployment completed successfully"
+echo "Agent deployment completed successfully!"
+echo "Service status: $(sudo systemctl is-active networkmap-agent)"
+echo "To check logs: sudo journalctl -u networkmap-agent -f"
 """
         
         # Execute deployment via SSH
