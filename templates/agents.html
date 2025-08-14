@@ -755,24 +755,48 @@ async function deploySingleAgent(hostId) {
 }
 
 async function deployAgentToHost(host) {
-    const response = await fetch('/api/deploy_agent', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-            host_id: host.id,
-            server_url: window.location.origin
-        })
-    });
-    
-    const data = await response.json();
-    
-    if (!data.success) {
-        throw new Error(data.error || 'Deployment failed');
+    try {
+        const response = await fetch('/api/deploy_agent', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                host_id: host.id,
+                server_url: window.location.origin
+            })
+        });
+        
+        // Check if response is ok before trying to parse JSON
+        if (!response.ok) {
+            // Try to get text response for better error info
+            let errorText;
+            try {
+                errorText = await response.text();
+                // Try to parse as JSON first
+                const errorData = JSON.parse(errorText);
+                throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+            } catch (jsonError) {
+                // If not JSON, show the raw text
+                throw new Error(`HTTP ${response.status}: ${errorText || response.statusText}`);
+            }
+        }
+        
+        const data = await response.json();
+        
+        if (!data.success) {
+            throw new Error(data.error || 'Deployment failed');
+        }
+        
+        return data;
+        
+    } catch (error) {
+        // Re-throw with more context if it's a network error
+        if (error.name === 'TypeError' && error.message.includes('fetch')) {
+            throw new Error(`Network error: Cannot connect to server. ${error.message}`);
+        }
+        throw error;
     }
-    
-    return data;
 }
 
 function showAgentControl(hostname, ipAddress) {

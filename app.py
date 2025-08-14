@@ -2570,6 +2570,34 @@ def deploy_agent_to_host_ssh(host, server_url):
     try:
         print(f"Deploying agent to {host['name']} ({host['ip_address']})")
         
+        # Validate host information
+        if not host.get('ip_address'):
+            return {
+                'success': False,
+                'error': 'Host IP address is required',
+                'output': ''
+            }
+        
+        if not host.get('name'):
+            return {
+                'success': False,
+                'error': 'Host name is required',
+                'output': ''
+            }
+        
+        # Test SSH connectivity first
+        print(f"Testing SSH connectivity to {host['ip_address']}...")
+        test_result, test_error = host_manager.execute_command(host, 'echo "SSH connection test successful"', timeout=10)
+        
+        if not test_result or not test_result.get('success'):
+            return {
+                'success': False,
+                'error': f'SSH connection failed: {test_error or "Connection timeout"}',
+                'output': f'Cannot connect to {host["name"]} ({host["ip_address"]}) via SSH. Please check: 1) Host is online, 2) SSH service is running, 3) SSH keys are properly configured, 4) Username is correct ({host.get("username", "root")})'
+            }
+        
+        print(f"SSH connectivity confirmed. Proceeding with deployment...")
+        
         # Create deployment script commands
         deployment_script = f"""
 #!/bin/bash
