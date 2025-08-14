@@ -25,7 +25,7 @@ import hashlib
 
 VERSION = "1.0.0"
 CONFIG_FILE = "/etc/networkmap/agent.conf"
-LOG_FILE = "/var/log/networkmap-agent.log"
+# LOG_FILE = "/var/log/networkmap-agent.log"  # Not used when running under systemd
 PID_FILE = "/var/run/networkmap-agent.pid"
 
 class NetworkMapAgent:
@@ -63,33 +63,52 @@ class NetworkMapAgent:
         """Setup full logging configuration after config is loaded"""
         log_level = self.config.get('log_level', 'INFO')
         
-        # Create log directory if it doesn't exist
-        log_dir = os.path.dirname(LOG_FILE)
-        try:
-            os.makedirs(log_dir, exist_ok=True)
-        except PermissionError:
-            self.logger.warning(f"Cannot create log directory {log_dir}, using console logging only")
-            return
-        
         # Update logger level
         self.logger.setLevel(getattr(logging, log_level.upper()))
         
-        # Add file handler if not already present
-        has_file_handler = any(isinstance(h, logging.FileHandler) for h in self.logger.handlers)
-        if not has_file_handler:
-            try:
-                file_handler = logging.FileHandler(LOG_FILE)
-                file_handler.setLevel(getattr(logging, log_level.upper()))
-                
-                formatter = logging.Formatter(
-                    '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-                )
-                file_handler.setFormatter(formatter)
-                
-                self.logger.addHandler(file_handler)
-                self.logger.info(f"Log file handler added: {LOG_FILE}")
-            except PermissionError:
-                self.logger.warning(f"Cannot write to log file {LOG_FILE}, using console logging only")
+        # When running under systemd, we only use console/stdout logging
+        # systemd will capture stdout/stderr and send to journal via StandardOutput=journal
+        # Check if we're running under systemd by looking for JOURNAL_STREAM env var
+        running_under_systemd = os.environ.get('JOURNAL_STREAM') is not None
+        
+        if running_under_systemd:
+            # Running under systemd - only use console logging, systemd will handle journal
+            self.logger.info("Running under systemd - using journal logging via stdout/stderr")
+            # Update console handler log level to match config
+            for handler in self.logger.handlers:
+                if isinstance(handler, logging.StreamHandler) and not isinstance(handler, logging.FileHandler):
+                    handler.setLevel(getattr(logging, log_level.upper()))
+        else:
+            # Not running under systemd - try to add file handler if possible
+            has_file_handler = any(isinstance(h, logging.FileHandler) for h in self.logger.handlers)
+            if not has_file_handler:
+                try:
+                    # Try to create log file in /var/log first, fallback to /tmp
+                    log_files_to_try = ["/var/log/networkmap-agent.log", "/tmp/networkmap-agent.log"]
+                    
+                    for log_file in log_files_to_try:
+                        try:
+                            # Create log directory if it doesn't exist
+                            log_dir = os.path.dirname(log_file)
+                            os.makedirs(log_dir, exist_ok=True)
+                            
+                            file_handler = logging.FileHandler(log_file)
+                            file_handler.setLevel(getattr(logging, log_level.upper()))
+                            
+                            formatter = logging.Formatter(
+                                '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+                            )
+                            file_handler.setFormatter(formatter)
+                            
+                            self.logger.addHandler(file_handler)
+                            self.logger.info(f"Log file handler added: {log_file}")
+                            break  # Success, exit the loop
+                        except (PermissionError, OSError) as e:
+                            if log_file == log_files_to_try[-1]:  # Last attempt
+                                self.logger.warning(f"Cannot write to any log file locations, using console logging only: {e}")
+                            continue  # Try next location
+                except Exception as e:
+                    self.logger.warning(f"Failed to setup file logging: {e}")
     
     def load_config(self):
         """Load agent configuration"""

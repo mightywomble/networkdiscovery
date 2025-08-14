@@ -2636,17 +2636,21 @@ ExecStart=/opt/networkmap-agent/venv/bin/python /opt/networkmap-agent/networkmap
 Restart=always
 RestartSec=10
 Environment=PATH=/opt/networkmap-agent/venv/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+Environment=PYTHONUNBUFFERED=1
 
-# Logging
+# Logging - use systemd journal instead of file logging
 StandardOutput=journal
 StandardError=journal
 SyslogIdentifier=networkmap-agent
 
-# Security settings
+# Security settings - less restrictive to allow proper operation
 NoNewPrivileges=true
 PrivateTmp=true
-ProtectSystem=strict
-ReadWritePaths=/var/log/networkmap-agent /etc/networkmap-agent
+ProtectHome=true
+ProtectKernelTunables=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+ReadWritePaths=/var/log/networkmap-agent /etc/networkmap-agent /opt/networkmap-agent
 
 [Install]
 WantedBy=multi-user.target
