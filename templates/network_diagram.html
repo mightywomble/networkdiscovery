@@ -904,6 +904,9 @@ function showDeviceDetails(device) {
     
     const deviceConfig = deviceIcons[device.deviceType] || deviceIcons.server;
     
+    // Get connection details for this device
+    const connectionDetails = getDeviceConnections(device.id);
+    
     deviceInfoCards.innerHTML = `
         <div class="card border-primary mb-3">
             <div class="card-header bg-primary text-white">
@@ -925,13 +928,10 @@ function showDeviceDetails(device) {
         <!-- Connection Information -->
         <div class="card border-info mb-3">
             <div class="card-header bg-info text-white">
-                <h6 class="mb-0"><i class="fas fa-network-wired me-2"></i>Network Connections</h6>
+                <h6 class="mb-0"><i class="fas fa-network-wired me-2"></i>Network Connections (${connectionDetails.length})</h6>
             </div>
             <div class="card-body">
-                <div class="text-center text-muted">
-                    <i class="fas fa-link fa-2x mb-2"></i>
-                    <p class="small mb-0">Connection details would appear here</p>
-                </div>
+                ${generateConnectionsHTML(connectionDetails, device.id)}
             </div>
         </div>
         
@@ -946,6 +946,165 @@ function showDeviceDetails(device) {
                     <div class="mb-2"><strong>Position:</strong> ${Math.round(device.x)}, ${Math.round(device.y)}</div>
                     ${device.type ? `<div class="mb-2"><strong>Original Type:</strong> ${device.type}</div>` : ''}
                 </div>
+            </div>
+        </div>
+    `;
+}
+
+// Get all connections for a specific device
+function getDeviceConnections(deviceId) {
+    if (!networkStructure || !networkStructure.connections) return [];
+    
+    const connections = [];
+    
+    networkStructure.connections.forEach(connection => {
+        if (connection.from === deviceId || connection.to === deviceId) {
+            // Determine the connected device (the "other" device)
+            const connectedDeviceId = connection.from === deviceId ? connection.to : connection.from;
+            const connectedDevice = networkStructure.devices[connectedDeviceId];
+            
+            if (connectedDevice) {
+                connections.push({
+                    ...connection,
+                    connectedDevice: connectedDevice,
+                    direction: connection.from === deviceId ? 'outgoing' : 'incoming',
+                    isLocal: connectedDevice.segment === networkStructure.devices[deviceId].segment
+                });
+            }
+        }
+    });
+    
+    return connections;
+}
+
+// Generate HTML for connections display
+function generateConnectionsHTML(connections, deviceId) {
+    if (connections.length === 0) {
+        return `
+            <div class="text-center text-muted">
+                <i class="fas fa-unlink fa-2x mb-2"></i>
+                <p class="small mb-0">No network connections found</p>
+                <small class="text-muted">This device appears to be isolated or connections are not detected</small>
+            </div>
+        `;
+    }
+    
+    // Group connections by type
+    const localConnections = connections.filter(conn => conn.isLocal);
+    const remoteConnections = connections.filter(conn => !conn.isLocal);
+    const vpnConnections = connections.filter(conn => conn.type === 'vpn');
+    
+    let html = '';
+    
+    // Local connections
+    if (localConnections.length > 0) {
+        html += `
+            <div class="mb-3">
+                <h6 class="text-success mb-2">
+                    <i class="fas fa-home me-1"></i>Local Network Connections (${localConnections.length})
+                </h6>
+                <div class="connection-list">
+        `;
+        localConnections.forEach(conn => {
+            html += generateConnectionItem(conn, 'success');
+        });
+        html += '</div></div>';
+    }
+    
+    // Remote connections
+    if (remoteConnections.length > 0 && vpnConnections.length === 0) {
+        html += `
+            <div class="mb-3">
+                <h6 class="text-primary mb-2">
+                    <i class="fas fa-globe me-1"></i>Remote Connections (${remoteConnections.length})
+                </h6>
+                <div class="connection-list">
+        `;
+        remoteConnections.forEach(conn => {
+            html += generateConnectionItem(conn, 'primary');
+        });
+        html += '</div></div>';
+    }
+    
+    // VPN connections
+    if (vpnConnections.length > 0) {
+        html += `
+            <div class="mb-3">
+                <h6 class="text-warning mb-2">
+                    <i class="fas fa-shield-alt me-1"></i>VPN Connections (${vpnConnections.length})
+                </h6>
+                <div class="connection-list">
+        `;
+        vpnConnections.forEach(conn => {
+            html += generateConnectionItem(conn, 'warning');
+        });
+        html += '</div></div>';
+    }
+    
+    // Connection summary
+    html += `
+        <div class="border-top pt-2 mt-3">
+            <small class="text-muted">
+                <i class="fas fa-info-circle me-1"></i>
+                Total: ${connections.length} connection${connections.length !== 1 ? 's' : ''} • 
+                Local: ${localConnections.length} • 
+                Remote: ${remoteConnections.length} • 
+                VPN: ${vpnConnections.length}
+            </small>
+        </div>
+    `;
+    
+    return html;
+}
+
+// Generate HTML for individual connection item
+function generateConnectionItem(connection, badgeColor) {
+    const device = connection.connectedDevice;
+    const deviceConfig = deviceIcons[device.deviceType] || deviceIcons.server;
+    
+    // Determine connection icon and description
+    let connectionIcon = 'fas fa-link';
+    let connectionDesc = 'Standard';
+    
+    switch (connection.type) {
+        case 'vpn':
+            connectionIcon = 'fas fa-shield-alt';
+            connectionDesc = 'VPN';
+            break;
+        case 'inter-segment':
+            connectionIcon = 'fas fa-route';
+            connectionDesc = 'Inter-Network';
+            break;
+        default:
+            connectionIcon = 'fas fa-link';
+            connectionDesc = 'Direct';
+    }
+    
+    return `
+        <div class="connection-item d-flex align-items-center mb-2 p-2 border border-${badgeColor} rounded bg-light">
+            <div class="me-2">
+                <i class="${deviceConfig.icon} text-${deviceConfig.color.replace('#', '')} fa-lg"></i>
+            </div>
+            <div class="flex-grow-1">
+                <div class="fw-bold text-truncate" style="max-width: 200px;" title="${device.label || device.ip}">
+                    ${device.label || device.ip}
+                </div>
+                <div class="small text-muted">
+                    <code class="small">${device.ip}</code> • 
+                    <span class="text-capitalize">${device.deviceType}</span>
+                    ${device.segment !== networkStructure.devices[Object.keys(networkStructure.devices).find(id => networkStructure.devices[id] === device)].segment ? 
+                        ' • <span class="text-warning">Different Network</span>' : ''}
+                </div>
+                <div class="small">
+                    <i class="${connectionIcon} me-1"></i>${connectionDesc}
+                    ${connection.protocol ? ` • ${connection.protocol.toUpperCase()}` : ''}
+                    ${connection.direction === 'outgoing' ? 
+                        '<i class="fas fa-arrow-right text-success ms-1" title="Outgoing"></i>' : 
+                        '<i class="fas fa-arrow-left text-info ms-1" title="Incoming"></i>'}
+                </div>
+            </div>
+            <div class="text-end">
+                <span class="badge bg-${badgeColor} small">${device.segment}</span>
             </div>
         </div>
     `;
