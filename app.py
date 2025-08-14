@@ -2892,6 +2892,38 @@ def run_scan():
         # Clear the callback
         scanner.set_progress_callback(None)
 
+@app.route('/api/test_host/<int:host_id>', methods=['POST'])
+def test_host_connectivity(host_id):
+    """Test connectivity to a specific host"""
+    try:
+        host = host_manager.get_host(host_id)
+        if not host:
+            return jsonify({
+                'success': False,
+                'error': 'Host not found'
+            }), 404
+        
+        # Test connectivity
+        result = host_manager.test_connectivity(host)
+        
+        return jsonify({
+            'success': True,
+            'host_id': host_id,
+            'host_name': host['name'],
+            'ip_address': host['ip_address'],
+            'status': result['status'],
+            'ping_success': result['ping'],
+            'ssh_success': result['ssh'],
+            'timestamp': datetime.now().isoformat()
+        })
+        
+    except Exception as e:
+        print(f"Error testing host connectivity: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
 if __name__ == '__main__':
     # Initialize database
     db.init_db()

@@ -403,18 +403,71 @@ function testHost(hostId) {
     testBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
     statusElement.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Testing...';
     
-    // This would be implemented as a separate API endpoint
-    // For now, we'll simulate the test
-    setTimeout(() => {
+    // Call the API to test connectivity
+    fetch(`/api/test_host/${hostId}`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
         testBtn.disabled = false;
         testBtn.innerHTML = '<i class="fas fa-heartbeat"></i>';
         
-        // In a real implementation, you'd call an API to test connectivity
-        // statusElement.innerHTML = '<i class="fas fa-check-circle text-success"></i> Online';
-        
-        // For now, just trigger a page refresh to show updated status
-        window.location.reload();
-    }, 2000);
+        if (data.success) {
+            // Update status based on test results
+            let statusHtml = '';
+            let statusClass = '';
+            
+            switch (data.status) {
+                case 'online':
+                    statusHtml = '<i class="fas fa-check-circle text-success"></i> Online';
+                    statusClass = 'status-online';
+                    break;
+                case 'ping_only':
+                    statusHtml = '<i class="fas fa-exclamation-triangle text-warning"></i> Ping Only';
+                    statusClass = 'status-ping_only';
+                    break;
+                case 'offline':
+                    statusHtml = '<i class="fas fa-times-circle text-danger"></i> Offline';
+                    statusClass = 'status-offline';
+                    break;
+                default:
+                    statusHtml = '<i class="fas fa-question-circle text-secondary"></i> Unknown';
+                    statusClass = 'status-unknown';
+            }
+            
+            statusElement.innerHTML = statusHtml;
+            statusElement.className = statusClass;
+            
+            // Show detailed results in console for debugging
+            console.log(`Host ${data.host_name} (${data.ip_address}):`, {
+                status: data.status,
+                ping: data.ping_success,
+                ssh: data.ssh_success
+            });
+            
+            // Optional: Show a brief success message
+            if (data.status === 'online') {
+                console.log(`✅ ${data.host_name}: Both ping and SSH successful`);
+            } else if (data.status === 'ping_only') {
+                console.log(`⚠️ ${data.host_name}: Ping successful, SSH failed`);
+            } else {
+                console.log(`❌ ${data.host_name}: Both ping and SSH failed`);
+            }
+        } else {
+            // Handle API error
+            statusElement.innerHTML = '<i class="fas fa-exclamation-triangle text-danger"></i> Test Failed';
+            console.error('Host test failed:', data.error);
+        }
+    })
+    .catch(error => {
+        testBtn.disabled = false;
+        testBtn.innerHTML = '<i class="fas fa-heartbeat"></i>';
+        statusElement.innerHTML = '<i class="fas fa-exclamation-triangle text-danger"></i> Error';
+        console.error('Error testing host connectivity:', error);
+    });
 }
 
 function testAllHosts() {
