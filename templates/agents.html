@@ -174,6 +174,195 @@
     </div>
 </div>
 
+<!-- Enhanced Agent Status Dashboard Modal -->
+<div class="modal fade" id="agentStatusModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="fas fa-heartbeat"></i> Agent Health Dashboard</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <strong>Host:</strong> <span id="status-host-name"></span> (<span id="status-host-ip"></span>)
+                </div>
+                
+                <!-- Status Overview Cards -->
+                <div class="row mb-4">
+                    <div class="col-md-3">
+                        <div class="card border-0 bg-light">
+                            <div class="card-body text-center p-3">
+                                <div class="status-indicator mb-2" id="service-status-indicator">
+                                    <i class="fas fa-circle text-secondary fa-2x"></i>
+                                </div>
+                                <h6 class="card-title mb-1">Service Status</h6>
+                                <small class="text-muted" id="service-status-text">Checking...</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card border-0 bg-light">
+                            <div class="card-body text-center p-3">
+                                <div class="status-indicator mb-2" id="heartbeat-status-indicator">
+                                    <i class="fas fa-heart text-secondary fa-2x"></i>
+                                </div>
+                                <h6 class="card-title mb-1">Heartbeat</h6>
+                                <small class="text-muted" id="heartbeat-status-text">Checking...</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card border-0 bg-light">
+                            <div class="card-body text-center p-3">
+                                <div class="status-indicator mb-2" id="scanning-status-indicator">
+                                    <i class="fas fa-search text-secondary fa-2x"></i>
+                                </div>
+                                <h6 class="card-title mb-1">Scanning</h6>
+                                <small class="text-muted" id="scanning-status-text">Checking...</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card border-0 bg-light">
+                            <div class="card-body text-center p-3">
+                                <div class="status-indicator mb-2" id="logs-status-indicator">
+                                    <i class="fas fa-file-alt text-secondary fa-2x"></i>
+                                </div>
+                                <h6 class="card-title mb-1">Log Collection</h6>
+                                <small class="text-muted" id="logs-status-text">Checking...</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Detailed Status Information -->
+                <div class="accordion" id="statusAccordion">
+                    <div class="accordion-item">
+                        <h2 class="accordion-header" id="systemInfoHeading">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#systemInfoCollapse">
+                                <i class="fas fa-server me-2"></i> System Information
+                            </button>
+                        </h2>
+                        <div id="systemInfoCollapse" class="accordion-collapse collapse" data-bs-parent="#statusAccordion">
+                            <div class="accordion-body">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <small class="text-muted">Agent Version:</small><br>
+                                        <strong id="agent-version">-</strong>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <small class="text-muted">Platform:</small><br>
+                                        <strong id="agent-platform">-</strong>
+                                    </div>
+                                </div>
+                                <div class="row mt-3">
+                                    <div class="col-md-6">
+                                        <small class="text-muted">Last Heartbeat:</small><br>
+                                        <strong id="last-heartbeat">-</strong>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <small class="text-muted">Last Scan:</small><br>
+                                        <strong id="last-scan">-</strong>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="accordion-item">
+                        <h2 class="accordion-header" id="serviceDetailsHeading">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#serviceDetailsCollapse">
+                                <i class="fas fa-cogs me-2"></i> Service Details
+                            </button>
+                        </h2>
+                        <div id="serviceDetailsCollapse" class="accordion-collapse collapse" data-bs-parent="#statusAccordion">
+                            <div class="accordion-body">
+                                <div class="service-output" style="background: #f8f9fa; padding: 1rem; border-radius: 0.375rem; font-family: monospace; font-size: 0.875rem; max-height: 300px; overflow-y: auto;" id="service-details-output">
+                                    <div class="text-center text-muted">Click "Refresh Status" to load service details</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-primary" onclick="refreshAgentStatus()" id="refresh-status-btn">
+                    <i class="fas fa-sync-alt"></i> Refresh Status
+                </button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Agent Configuration Editor Modal -->
+<div class="modal fade" id="agentConfigModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="fas fa-cog"></i> Agent Configuration</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <strong>Host:</strong> <span id="config-host-name"></span> (<span id="config-host-ip"></span>)
+                </div>
+                
+                <form id="agentConfigForm">
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Scan Interval (seconds)</label>
+                            <input type="number" class="form-control" id="scan-interval" min="60" max="86400" required>
+                            <div class="form-text">How often to perform network scans (60-86400 seconds)</div>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Heartbeat Interval (seconds)</label>
+                            <input type="number" class="form-control" id="heartbeat-interval" min="30" max="300" required>
+                            <div class="form-text">How often to send heartbeats (30-300 seconds)</div>
+                        </div>
+                    </div>
+                    
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" id="scan-enabled">
+                                <label class="form-check-label" for="scan-enabled">
+                                    Enable Network Scanning
+                                </label>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" id="log-collection-enabled">
+                                <label class="form-check-label" for="log-collection-enabled">
+                                    Enable Log Collection
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Log Paths</label>
+                        <textarea class="form-control" id="log-paths" rows="3" placeholder="/var/log,/var/log/syslog,/var/log/auth.log"></textarea>
+                        <div class="form-text">Comma-separated list of log paths to monitor</div>
+                    </div>
+                    
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle"></i>
+                        <strong>Note:</strong> Configuration changes will be applied to the agent immediately and may take up to the heartbeat interval to take effect.
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-primary" onclick="saveAgentConfig()" id="save-config-btn">
+                    <i class="fas fa-save"></i> Save Configuration
+                </button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- Agent Control Modal -->
 <div class="modal fade" id="agentControlModal" tabindex="-1">
     <div class="modal-dialog">
@@ -197,11 +386,11 @@
                         <i class="fas fa-stop"></i> Stop Agent
                     </button>
                     <hr>
-                    <button class="btn btn-info" onclick="checkAgentStatus()" id="status-agent-btn">
-                        <i class="fas fa-info-circle"></i> Check Status
+                    <button class="btn btn-info" onclick="showEnhancedAgentStatus()" id="status-agent-btn">
+                        <i class="fas fa-heartbeat"></i> Health Dashboard
                     </button>
-                    <button class="btn btn-secondary" onclick="viewAgentConfig()" id="config-agent-btn">
-                        <i class="fas fa-cog"></i> View Configuration
+                    <button class="btn btn-secondary" onclick="showEditableAgentConfig()" id="config-agent-btn">
+                        <i class="fas fa-edit"></i> Edit Configuration
                     </button>
                 </div>
                 <div class="mt-3" id="agent-status-output" style="font-family: monospace; font-size: 0.875rem; background: #f8f9fa; padding: 0.5rem; border-radius: 0.375rem; display: none;">
@@ -693,5 +882,303 @@ async function loadAgentLogs() {
         container.innerHTML = '<div class="alert alert-danger">Error loading logs: ' + error.message + '</div>';
     }
 }
+
+// Enhanced Agent Status Dashboard Functions
+function showEnhancedAgentStatus() {
+    if (!window.currentControlHost) return;
+    
+    const { hostname, ipAddress } = window.currentControlHost;
+    
+    // Set host info
+    document.getElementById('status-host-name').textContent = hostname;
+    document.getElementById('status-host-ip').textContent = ipAddress;
+    
+    // Reset status indicators
+    resetStatusIndicators();
+    
+    // Show modal
+    const modal = new bootstrap.Modal(document.getElementById('agentStatusModal'));
+    modal.show();
+    
+    // Find agent data
+    const agent = agents.find(a => a.ip_address === ipAddress || a.hostname === hostname);
+    if (agent) {
+        updateStatusIndicators(agent);
+    }
+}
+
+function resetStatusIndicators() {
+    // Reset all status indicators to checking state
+    const indicators = [
+        { id: 'service-status', icon: 'fas fa-circle', color: 'text-secondary', text: 'Checking...' },
+        { id: 'heartbeat-status', icon: 'fas fa-heart', color: 'text-secondary', text: 'Checking...' },
+        { id: 'scanning-status', icon: 'fas fa-search', color: 'text-secondary', text: 'Checking...' },
+        { id: 'logs-status', icon: 'fas fa-file-alt', color: 'text-secondary', text: 'Checking...' }
+    ];
+    
+    indicators.forEach(indicator => {
+        const iconElement = document.querySelector(`#${indicator.id}-indicator i`);
+        const textElement = document.getElementById(`${indicator.id}-text`);
+        
+        if (iconElement) {
+            iconElement.className = `${indicator.icon} ${indicator.color} fa-2x`;
+        }
+        if (textElement) {
+            textElement.textContent = indicator.text;
+        }
+    });
+    
+    // Reset system info
+    document.getElementById('agent-version').textContent = '-';
+    document.getElementById('agent-platform').textContent = '-';
+    document.getElementById('last-heartbeat').textContent = '-';
+    document.getElementById('last-scan').textContent = '-';
+}
+
+function updateStatusIndicators(agent) {
+    // Update service status
+    updateStatusIndicator(
+        'service-status',
+        agent.heartbeat_status === 'online' ? 'success' : agent.heartbeat_status === 'warning' ? 'warning' : 'danger',
+        agent.heartbeat_status === 'online' ? 'Active' : agent.heartbeat_status === 'warning' ? 'Warning' : 'Inactive',
+        'fas fa-circle'
+    );
+    
+    // Update heartbeat status
+    const minutesSince = agent.minutes_since_heartbeat;
+    updateStatusIndicator(
+        'heartbeat-status',
+        minutesSince <= 2 ? 'success' : minutesSince <= 5 ? 'warning' : 'danger',
+        minutesSince !== null ? `${minutesSince}m ago` : 'Never',
+        'fas fa-heart'
+    );
+    
+    // Update scanning status (assume enabled if heartbeat is good)
+    updateStatusIndicator(
+        'scanning-status',
+        agent.heartbeat_status === 'online' ? 'success' : 'secondary',
+        agent.heartbeat_status === 'online' ? 'Active' : 'Unknown',
+        'fas fa-search'
+    );
+    
+    // Update log collection status
+    updateStatusIndicator(
+        'logs-status',
+        agent.heartbeat_status === 'online' ? 'success' : 'secondary',
+        agent.heartbeat_status === 'online' ? 'Collecting' : 'Inactive',
+        'fas fa-file-alt'
+    );
+    
+    // Update system info
+    document.getElementById('agent-version').textContent = agent.agent_version || '-';
+    document.getElementById('agent-platform').textContent = agent.platform || '-';
+    document.getElementById('last-heartbeat').textContent = 
+        agent.last_heartbeat ? new Date(agent.last_heartbeat).toLocaleString() : '-';
+    document.getElementById('last-scan').textContent = 
+        agent.last_scan ? new Date(agent.last_scan).toLocaleString() : '-';
+}
+
+function updateStatusIndicator(statusId, status, text, icon) {
+    const iconElement = document.querySelector(`#${statusId}-indicator i`);
+    const textElement = document.getElementById(`${statusId}-text`);
+    
+    let colorClass = 'text-secondary';
+    switch (status) {
+        case 'success':
+            colorClass = 'text-success';
+            break;
+        case 'warning':
+            colorClass = 'text-warning';
+            break;
+        case 'danger':
+            colorClass = 'text-danger';
+            break;
+    }
+    
+    if (iconElement) {
+        iconElement.className = `${icon} ${colorClass} fa-2x`;
+    }
+    if (textElement) {
+        textElement.textContent = text;
+    }
+}
+
+async function refreshAgentStatus() {
+    if (!window.currentControlHost) return;
+    
+    const refreshBtn = document.getElementById('refresh-status-btn');
+    const originalText = refreshBtn.innerHTML;
+    
+    refreshBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Refreshing...';
+    refreshBtn.disabled = true;
+    
+    try {
+        // Get fresh agent status
+        const { hostname, ipAddress } = window.currentControlHost;
+        
+        // Execute status check command
+        const response = await fetch('/api/control_agent', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                hostname: hostname,
+                ip_address: ipAddress,
+                action: 'status'
+            })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            // Update service details output
+            document.getElementById('service-details-output').textContent = data.output || 'No status output received';
+        }
+        
+        // Refresh the data
+        await refreshData();
+        
+        // Update status indicators with fresh data
+        const agent = agents.find(a => a.ip_address === ipAddress || a.hostname === hostname);
+        if (agent) {
+            updateStatusIndicators(agent);
+        }
+        
+    } catch (error) {
+        console.error('Error refreshing agent status:', error);
+        document.getElementById('service-details-output').textContent = 'Error: ' + error.message;
+    } finally {
+        refreshBtn.innerHTML = originalText;
+        refreshBtn.disabled = false;
+    }
+}
+
+// Enhanced Agent Configuration Functions
+function showEditableAgentConfig() {
+    if (!window.currentControlHost) return;
+    
+    const { hostname, ipAddress } = window.currentControlHost;
+    
+    // Set host info
+    document.getElementById('config-host-name').textContent = hostname;
+    document.getElementById('config-host-ip').textContent = ipAddress;
+    
+    // Find agent data
+    const agent = agents.find(a => a.ip_address === ipAddress || a.hostname === hostname);
+    if (!agent) {
+        alert('Agent not found. Please ensure the agent is deployed and running.');
+        return;
+    }
+    
+    // Load current configuration
+    loadAgentConfiguration(agent.agent_id);
+    
+    // Show modal
+    const modal = new bootstrap.Modal(document.getElementById('agentConfigModal'));
+    modal.show();
+}
+
+async function loadAgentConfiguration(agentId) {
+    try {
+        const response = await fetch(`/api/agent/config/${agentId}`);
+        const data = await response.json();
+        
+        if (data.success) {
+            const config = data.config;
+            
+            // Populate form fields
+            document.getElementById('scan-interval').value = config.scan_interval || 300;
+            document.getElementById('heartbeat-interval').value = config.heartbeat_interval || 60;
+            document.getElementById('scan-enabled').checked = config.scan_enabled !== false;
+            document.getElementById('log-collection-enabled').checked = config.log_collection_enabled !== false;
+            document.getElementById('log-paths').value = config.log_paths || '/var/log,/var/log/syslog,/var/log/auth.log';
+        } else {
+            console.error('Failed to load agent configuration:', data.error);
+            // Set default values
+            document.getElementById('scan-interval').value = 300;
+            document.getElementById('heartbeat-interval').value = 60;
+            document.getElementById('scan-enabled').checked = true;
+            document.getElementById('log-collection-enabled').checked = true;
+            document.getElementById('log-paths').value = '/var/log,/var/log/syslog,/var/log/auth.log';
+        }
+    } catch (error) {
+        console.error('Error loading agent configuration:', error);
+    }
+}
+
+async function saveAgentConfig() {
+    if (!window.currentControlHost) return;
+    
+    const { hostname, ipAddress } = window.currentControlHost;
+    const agent = agents.find(a => a.ip_address === ipAddress || a.hostname === hostname);
+    
+    if (!agent) {
+        alert('Agent not found');
+        return;
+    }
+    
+    const saveBtn = document.getElementById('save-config-btn');
+    const originalText = saveBtn.innerHTML;
+    
+    saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
+    saveBtn.disabled = true;
+    
+    try {
+        // Validate form
+        const scanInterval = parseInt(document.getElementById('scan-interval').value);
+        const heartbeatInterval = parseInt(document.getElementById('heartbeat-interval').value);
+        
+        if (scanInterval < 60 || scanInterval > 86400) {
+            alert('Scan interval must be between 60 and 86400 seconds');
+            return;
+        }
+        
+        if (heartbeatInterval < 30 || heartbeatInterval > 300) {
+            alert('Heartbeat interval must be between 30 and 300 seconds');
+            return;
+        }
+        
+        // Prepare configuration data
+        const configData = {
+            scan_interval: scanInterval,
+            heartbeat_interval: heartbeatInterval,
+            scan_enabled: document.getElementById('scan-enabled').checked,
+            log_collection_enabled: document.getElementById('log-collection-enabled').checked,
+            log_paths: document.getElementById('log-paths').value.trim()
+        };
+        
+        // Save configuration
+        const response = await fetch(`/api/agent/config/${agent.agent_id}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(configData)
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            alert('Agent configuration saved successfully! Changes will take effect within the heartbeat interval.');
+            
+            // Close modal
+            const modal = bootstrap.Modal.getInstance(document.getElementById('agentConfigModal'));
+            modal.hide();
+            
+            // Refresh data
+            setTimeout(refreshData, 1000);
+        } else {
+            alert('Failed to save configuration: ' + data.error);
+        }
+        
+    } catch (error) {
+        alert('Error saving configuration: ' + error.message);
+    } finally {
+        saveBtn.innerHTML = originalText;
+        saveBtn.disabled = false;
+    }
+}
+
 </script>
 {% endblock %}
