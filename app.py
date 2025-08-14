@@ -102,13 +102,23 @@ def get_scan_status():
 
 @app.route('/network_map')
 def network_map():
-    """Network visualization page"""
+    """Network map visualization"""
     return render_template('network_map.html')
 
 @app.route('/enhanced_topology')
 def enhanced_topology():
-    """Enhanced network topology analysis page"""
-    return render_template('enhanced_topology.html')
+    """Enhanced network topology visualization with comprehensive interconnections"""
+    return render_template('enhanced_network_topology.html')
+
+@app.route('/d3_topology')
+def d3_topology():
+    """D3.js-based network topology visualization with better control"""
+    return render_template('d3_network_topology.html')
+
+@app.route('/network_diagram')
+def network_diagram():
+    """Traditional network diagram with device icons and structured layout"""
+    return render_template('network_diagram.html')
 
 @app.route('/build_topology', methods=['POST'])
 def build_topology():
@@ -1230,6 +1240,108 @@ def network_data():
         
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
+# Network diagram layout management endpoints
+@app.route('/api/diagram_layout', methods=['GET'])
+def get_diagram_layout():
+    """Get the current network diagram layout"""
+    try:
+        layout_name = request.args.get('name', 'default')
+        layout = db.get_diagram_layout(layout_name)
+        
+        if layout:
+            return jsonify({
+                'success': True,
+                'layout': layout,
+                'timestamp': datetime.now().isoformat()
+            })
+        else:
+            return jsonify({
+                'success': False,
+                'message': f'Layout "{layout_name}" not found'
+            }), 404
+            
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@app.route('/api/diagram_layout', methods=['POST'])
+def save_diagram_layout():
+    """Save network diagram layout"""
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({
+                'success': False,
+                'error': 'No data provided'
+            }), 400
+        
+        layout_name = data.get('layout_name', 'default')
+        layout_data = data.get('layout_data', {})
+        created_by = data.get('created_by', 'user')
+        
+        # Validate layout data structure
+        if 'devices' not in layout_data:
+            return jsonify({
+                'success': False,
+                'error': 'Layout data must include device positions'
+            }), 400
+        
+        # Save the layout
+        db.save_diagram_layout(layout_name, layout_data, created_by)
+        
+        return jsonify({
+            'success': True,
+            'message': f'Layout "{layout_name}" saved successfully',
+            'timestamp': datetime.now().isoformat()
+        })
+        
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@app.route('/api/diagram_layouts', methods=['GET'])
+def get_all_diagram_layouts():
+    """Get list of all available diagram layouts"""
+    try:
+        layouts = db.get_all_diagram_layouts()
+        return jsonify({
+            'success': True,
+            'layouts': layouts,
+            'count': len(layouts),
+            'timestamp': datetime.now().isoformat()
+        })
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@app.route('/api/diagram_layout/<layout_name>', methods=['DELETE'])
+def delete_diagram_layout(layout_name):
+    """Delete a diagram layout"""
+    try:
+        success = db.delete_diagram_layout(layout_name)
+        if success:
+            return jsonify({
+                'success': True,
+                'message': f'Layout "{layout_name}" deleted successfully'
+            })
+        else:
+            return jsonify({
+                'success': False,
+                'message': f'Layout "{layout_name}" not found or cannot be deleted'
+            }), 404
+            
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
 
 def update_scan_status(phase, message, progress=None, current_host=None, step=None):
     """Helper to update scan status with consistent format"""

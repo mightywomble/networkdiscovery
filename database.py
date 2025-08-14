@@ -130,6 +130,18 @@ class Database:
                 )
             ''')
             
+            # Network diagram layouts
+            conn.execute('''
+                CREATE TABLE IF NOT EXISTS diagram_layouts (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    layout_name TEXT DEFAULT 'default',
+                    layout_data TEXT,
+                    created_by TEXT DEFAULT 'system',
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            ''')
+            
             conn.commit()
     
     # Host management
@@ -475,3 +487,64 @@ class Database:
                         result['analysis_data'] = {}
                     results.append(result)
                 return results
+    
+    # Network diagram layout management
+    def save_diagram_layout(self, layout_name='default', layout_data=None, created_by='system'):
+        """Save network diagram layout"""
+        with self.get_connection() as conn:
+            # Check if layout exists
+            cursor = conn.execute('SELECT id FROM diagram_layouts WHERE layout_name = ?', (layout_name,))
+            existing = cursor.fetchone()
+            
+            if existing:
+                # Update existing layout
+                conn.execute('''
+                    UPDATE diagram_layouts 
+                    SET layout_data = ?, updated_at = CURRENT_TIMESTAMP
+                    WHERE layout_name = ?
+                ''', (json.dumps(layout_data), layout_name))
+            else:
+                # Insert new layout
+                conn.execute('''
+                    INSERT INTO diagram_layouts (layout_name, layout_data, created_by)
+                    VALUES (?, ?, ?)
+                ''', (layout_name, json.dumps(layout_data), created_by))
+            
+            conn.commit()
+    
+    def get_diagram_layout(self, layout_name='default'):
+        """Get network diagram layout"""
+        with self.get_connection() as conn:
+            cursor = conn.execute('''
+                SELECT * FROM diagram_layouts WHERE layout_name = ?
+                ORDER BY updated_at DESC LIMIT 1
+            ''', (layout_name,))
+            row = cursor.fetchone()
+            if row:
+                result = dict(row)
+                try:
+                    result['layout_data'] = json.loads(result['layout_data']) if result['layout_data'] else {}
+                except json.JSONDecodeError:
+                    result['layout_data'] = {}
+                return result
+            return None
+    
+    def get_all_diagram_layouts(self):
+        """Get all available network diagram layouts"""
+        with self.get_connection() as conn:
+            cursor = conn.execute('''
+                SELECT layout_name, created_by, created_at, updated_at 
+                FROM diagram_layouts 
+                ORDER BY updated_at DESC
+            ''')
+            return [dict(row) for row in cursor.fetchall()]
+    
+    def delete_diagram_layout(self, layout_name):
+        """Delete a network diagram layout"""
+        if layout_name == 'default':
+            return False  # Don't allow deletion of default layout
+            
+        with self.get_connection() as conn:
+            cursor = conn.execute('DELETE FROM diagram_layouts WHERE layout_name = ?', (layout_name,))
+            conn.commit()
+            return cursor.rowcount > 0

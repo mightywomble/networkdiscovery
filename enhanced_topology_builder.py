@@ -1,554 +1,716 @@
 #!/usr/bin/env python3
 """
 Enhanced Topology Builder
-Creates comprehensive network diagrams with infrastructure elements like routers, gateways, subnets, and VPN connections
+Comprehensive network topology analysis and visualization data generator.
+
+This module processes enhanced network scan data to create rich topology information
+including server interconnections, protocol analysis, internet services mapping,
+and device role classification.
 """
 
-import ipaddress
 import json
-from datetime import datetime, timedelta
-from collections import defaultdict, Counter
+import ipaddress
 import re
+from typing import Dict, List, Any, Tuple, Set, Optional
+from collections import defaultdict, Counter
+from datetime import datetime, timedelta
+import socket
+import logging
 
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 class EnhancedTopologyBuilder:
-    def __init__(self, database, host_manager):
-        self.db = database
+    """
+    Enhanced Network Topology Builder
+    
+    Creates comprehensive network topology data from enhanced scan results,
+    including device classification, protocol analysis, and interconnection mapping.
+    """
+    
+    def __init__(self, db_manager, host_manager):
+        self.db = db_manager
         self.host_manager = host_manager
-        self.network_topology = {
-            'nodes': [],
-            'edges': [],
-            'subnets': [],
-            'gateways': [],
-            'infrastructure': []
+        
+        # Network classification patterns
+        self.private_ranges = [
+            ipaddress.IPv4Network('192.168.0.0/16'),
+            ipaddress.IPv4Network('10.0.0.0/8'),
+            ipaddress.IPv4Network('172.16.0.0/12')
+        ]
+        
+        self.cgnat_ranges = [
+            ipaddress.IPv4Network('100.64.0.0/10')
+        ]
+        
+        # Port to service mapping
+        self.port_services = {
+            22: 'ssh',
+            23: 'telnet',
+            25: 'smtp',
+            53: 'dns',
+            80: 'http',
+            110: 'pop3',
+            143: 'imap',
+            443: 'https',
+            993: 'imaps',
+            995: 'pop3s',
+            3306: 'mysql',
+            5432: 'postgresql',
+            6379: 'redis',
+            27017: 'mongodb',
+            3389: 'rdp',
+            5900: 'vnc'
         }
-    
-    def build_comprehensive_topology(self):
-        """Build a comprehensive network topology with infrastructure elements"""
-        print("Building comprehensive network topology...")
         
-        # Get all hosts and their discovery data
-        hosts = self.host_manager.get_all_hosts()
-        
-        # Analyze network infrastructure
-        network_analysis = self._analyze_network_infrastructure(hosts)
-        
-        # Build network topology
-        topology = self._build_network_topology(hosts, network_analysis)
-        
-        # Add infrastructure nodes
-        topology = self._add_infrastructure_nodes(topology, network_analysis)
-        
-        # Add routing connections
-        topology = self._add_routing_connections(topology, network_analysis)
-        
-        # Add subnet groupings
-        topology = self._add_subnet_groupings(topology, network_analysis)
-        
-        # Add VPN connections
-        topology = self._add_vpn_connections(topology, network_analysis)
-        
-        # Store the topology
-        self.db.save_topology_analysis('enhanced_topology', topology)
-        
-        return topology
-    
-    def _analyze_network_infrastructure(self, hosts):
-        """Analyze network infrastructure from discovery data"""
-        infrastructure = {
-            'subnets': defaultdict(set),
-            'gateways': {},
-            'routers': set(),
-            'dns_servers': set(),
-            'dhcp_servers': set(),
-            'vpn_endpoints': set(),
-            'internet_gateways': set(),
-            'bridges': set(),
-            'vlans': defaultdict(list),
-            'routes': defaultdict(list),
-            'arp_tables': defaultdict(list)
+        # Known cloud/internet service domains and IPs
+        self.internet_services = {
+            'google.com': 'search',
+            'googleapis.com': 'api',
+            'amazonaws.com': 'cloud',
+            'azure.com': 'cloud',
+            'cloudfront.net': 'cdn',
+            'github.com': 'development',
+            'stackoverflow.com': 'development',
+            'docker.com': 'containerization',
+            'ubuntu.com': 'os',
+            'cloudflare.com': 'dns/cdn'
         }
+        
+    def build_comprehensive_topology(self) -> Dict[str, Any]:
+        """
+        Build comprehensive network topology from all available data sources.
+        
+        Returns:
+            Dict containing nodes, edges, and analysis metadata
+        """
+        logger.info("Building comprehensive network topology...")
+        
+        try:
+            # Gather all data sources
+            hosts = self.host_manager.get_all_hosts()
+            enhanced_scan_data = self._get_enhanced_scan_data()
+            network_connections = self._get_network_connections()
+            
+            # Build topology components
+            nodes = self._build_nodes(hosts, enhanced_scan_data)
+            edges = self._build_edges(network_connections, enhanced_scan_data, nodes)
+            
+            # Enhance with analysis
+            nodes = self._enhance_nodes_with_analysis(nodes, edges)
+            edges = self._enhance_edges_with_analysis(edges, nodes)
+            
+            # Add internet and cloud services
+            internet_nodes, internet_edges = self._discover_internet_services(enhanced_scan_data)
+            nodes.extend(internet_nodes)
+            edges.extend(internet_edges)
+            
+            # Generate statistics
+            statistics = self._generate_topology_statistics(nodes, edges)
+            
+            topology = {
+                'nodes': nodes,
+                'edges': edges,
+                'statistics': statistics,
+                'metadata': {
+                    'generated_at': datetime.now().isoformat(),
+                    'data_sources': ['hosts', 'enhanced_scans', 'network_connections'],
+                    'total_nodes': len(nodes),
+                    'total_edges': len(edges)
+                }
+            }
+            
+            # Store topology analysis in database
+            self._store_topology_analysis(topology)
+            
+            logger.info(f"Generated comprehensive topology: {len(nodes)} nodes, {len(edges)} edges")
+            return topology
+            
+        except Exception as e:
+            logger.error(f"Error building comprehensive topology: {str(e)}")
+            return self._get_fallback_topology()
+    
+    def _get_enhanced_scan_data(self) -> List[Dict]:
+        """Retrieve enhanced scan data from database."""
+        try:
+            # Try to get enhanced scan results table first
+            query = """
+                SELECT host_id, scan_type, scan_data, created_at
+                FROM enhanced_scan_results 
+                WHERE created_at > ? 
+                ORDER BY created_at DESC
+            """
+            
+            cutoff_date = (datetime.now() - timedelta(hours=24)).isoformat()
+            
+            try:
+                with self.db.get_connection() as conn:
+                    cursor = conn.execute(query, (cutoff_date,))
+                    results = [dict(row) for row in cursor.fetchall()]
+            except:
+                # Fallback to empty list if table doesn't exist
+                results = []
+            
+            scan_data = []
+            for result in results:
+                try:
+                    data = json.loads(result['scan_data'])
+                    data['host_id'] = result['host_id']
+                    data['scan_type'] = result['scan_type']
+                    data['scan_time'] = result['created_at']
+                    scan_data.append(data)
+                except (json.JSONDecodeError, KeyError):
+                    continue
+            
+            return scan_data
+            
+        except Exception as e:
+            logger.warning(f"Error retrieving enhanced scan data: {str(e)}")
+            return []
+    
+    def _get_network_connections(self) -> List[Dict]:
+        """Retrieve network connection data from database."""
+        try:
+            query = """
+                SELECT source_host_id, dest_host_id, dest_ip, dest_port, 
+                       protocol, connection_count, first_seen, last_seen
+                FROM network_connections 
+                WHERE last_seen > ? 
+                ORDER BY connection_count DESC
+            """
+            
+            cutoff_date = (datetime.now() - timedelta(hours=24)).isoformat()
+            
+            try:
+                with self.db.get_connection() as conn:
+                    cursor = conn.execute(query, (cutoff_date,))
+                    return [dict(row) for row in cursor.fetchall()]
+            except:
+                return []
+            
+        except Exception as e:
+            logger.warning(f"Error retrieving network connections: {str(e)}")
+            return []
+    
+    def _build_nodes(self, hosts: List[Dict], scan_data: List[Dict]) -> List[Dict]:
+        """Build comprehensive node list with enhanced attributes."""
+        nodes = []
+        scan_data_by_host = defaultdict(list)
+        
+        # Group scan data by host
+        for data in scan_data:
+            scan_data_by_host[data.get('host_id')].append(data)
         
         for host in hosts:
-            if host.get('status') != 'online':
+            host_scan_data = scan_data_by_host.get(host['id'], [])
+            
+            # Determine device type and role
+            device_type, device_subtype = self._classify_device(host, host_scan_data)
+            
+            # Extract services and protocols
+            services = self._extract_services(host_scan_data)
+            protocols = self._extract_protocols(host_scan_data)
+            
+            # Classify network group
+            network_group = self._classify_network_group(host['ip_address'])
+            
+            # Determine status
+            status = self._determine_node_status(host, host_scan_data)
+            
+            node = {
+                'id': str(host['id']),
+                'label': host['name'],
+                'ip': host['ip_address'],
+                'type': device_type,
+                'subtype': device_subtype,
+                'status': status,
+                'group': network_group,
+                'protocols': protocols,
+                'services': services,
+                'connections': 0,  # Will be calculated later
+                'metadata': {
+                    'hostname': host.get('hostname', ''),
+                    'os': self._detect_os(host_scan_data),
+                    'last_seen': host.get('last_seen').isoformat() if host.get('last_seen') else None,
+                    'scan_count': len(host_scan_data),
+                    'open_ports': self._get_open_ports(host_scan_data)
+                }
+            }
+            
+            nodes.append(node)
+        
+        return nodes
+    
+    def _build_edges(self, connections: List[Dict], scan_data: List[Dict], nodes: List[Dict]) -> List[Dict]:
+        """Build comprehensive edge list with enhanced attributes."""
+        edges = []
+        node_lookup = {node['id']: node for node in nodes}
+        
+        for conn in connections:
+            source_id = str(conn['source_host_id'])
+            dest_id = str(conn.get('dest_host_id', ''))
+            
+            # Skip if we don't have the source node
+            if source_id not in node_lookup:
                 continue
-                
-            print(f"Analyzing infrastructure for {host['name']}")
             
-            # Get discovery data for this host
-            discovery_data = self.db.get_network_discovery(host['id'], hours=48)
+            # Handle external connections
+            if not dest_id or dest_id not in node_lookup:
+                # Create external node if needed
+                external_node = self._create_external_node(conn.get('dest_ip', ''))
+                if external_node:
+                    nodes.append(external_node)
+                    node_lookup[external_node['id']] = external_node
+                    dest_id = external_node['id']
+                else:
+                    continue
             
-            for data in discovery_data:
-                discovery_info = data.get('discovery_data', {})
-                
-                # Analyze routing table
-                routing_table = discovery_info.get('routing_table', {})
-                self._analyze_routing_table(host, routing_table, infrastructure)
-                
-                # Analyze ARP table
-                arp_table = discovery_info.get('arp_table', [])
-                self._analyze_arp_table(host, arp_table, infrastructure)
-                
-                # Analyze network interfaces
-                interfaces = discovery_info.get('network_interfaces', {})
-                self._analyze_interfaces(host, interfaces, infrastructure)
-                
-                # Analyze network services
-                services = discovery_info.get('listening_services', [])
-                self._analyze_services(host, services, infrastructure)
-                
-                # Analyze DHCP leases
-                dhcp_leases = discovery_info.get('dhcp_leases', [])
-                if dhcp_leases:
-                    infrastructure['dhcp_servers'].add(host['ip_address'])
-                
-                # Analyze DNS configuration
-                dns_info = discovery_info.get('dns_info', {})
-                if dns_info:
-                    self._analyze_dns_info(host, dns_info, infrastructure)
-                
-                # Analyze VPN information
-                self._analyze_vpn_info(host, discovery_info, infrastructure)
+            # Determine connection type and security
+            conn_type = self._classify_connection_type(conn)
+            security_level = self._assess_connection_security(conn)
+            
+            # Get protocol details
+            protocol = conn.get('protocol', 'tcp').lower()
+            port = conn.get('dest_port', 0)
+            
+            edge = {
+                'id': f"{source_id}-{dest_id}-{port}",
+                'from': source_id,
+                'to': dest_id,
+                'type': conn_type,
+                'protocol': protocol,
+                'port': port,
+                'label': self._get_service_label(port, protocol),
+                'weight': conn.get('connection_count', 1),
+                'bandwidth': self._estimate_bandwidth(conn),
+                'security_level': security_level,
+                'metadata': {
+                    'first_seen': conn.get('first_seen'),
+                    'last_seen': conn.get('last_seen'),
+                    'connection_count': conn.get('connection_count', 1)
+                }
+            }
+            
+            edges.append(edge)
         
-        return infrastructure
+        return edges
     
-    def _analyze_routing_table(self, host, routing_table, infrastructure):
-        """Analyze routing table to identify gateways and subnets"""
-        ipv4_routes = routing_table.get('ipv4', [])
+    def _classify_device(self, host: Dict, scan_data: List[Dict]) -> Tuple[str, str]:
+        """Classify device type and subtype based on host data and scans."""
+        # Default classification - assume server unless we have evidence otherwise
+        device_type = 'server'
+        device_subtype = 'unknown'
         
-        for route in ipv4_routes:
-            destination = route.get('destination', '')
-            gateway = route.get('gateway')
-            interface = route.get('interface')
+        # Check for specific indicators in scan data
+        open_ports = self._get_open_ports(scan_data)
+        services = self._extract_services(scan_data)
+        
+        # If we have open ports data, use it for classification
+        if open_ports:
+            # Database server indicators
+            if any(port in [3306, 5432, 1521, 27017, 6379] for port in open_ports):
+                device_type = 'server'
+                device_subtype = 'database'
             
-            # Store route information
-            infrastructure['routes'][host['ip_address']].append(route)
+            # Web server indicators
+            elif any(port in [80, 443, 8080, 8443] for port in open_ports):
+                device_type = 'server'
+                device_subtype = 'web'
             
-            # Identify default gateway
-            if destination in ['0.0.0.0/0', 'default'] and gateway:
-                infrastructure['gateways'][host['ip_address']] = gateway
-                infrastructure['internet_gateways'].add(gateway)
-                
-                # Check if gateway is also a managed host
-                for other_host in self.host_manager.get_all_hosts():
-                    if other_host['ip_address'] == gateway:
-                        infrastructure['routers'].add(gateway)
+            # Mail server indicators
+            elif any(port in [25, 110, 143, 993, 995] for port in open_ports):
+                device_type = 'server'
+                device_subtype = 'mail'
             
-            # Identify subnet routes
-            if '/' in destination and gateway != '0.0.0.0':
-                try:
-                    network = ipaddress.IPv4Network(destination, strict=False)
-                    if network.is_private:
-                        infrastructure['subnets'][str(network)].add(host['ip_address'])
-                except:
-                    pass
+            # DNS server indicators
+            elif 53 in open_ports:
+                device_type = 'server'
+                device_subtype = 'dns'
+            
+            # Router/Gateway indicators (check services first)
+            elif any(service in ['router', 'gateway'] for service in services):
+                device_type = 'router'
+                device_subtype = 'gateway'
+            
+            # Workstation indicators (few ports, no server services, all high ports)
+            elif len(open_ports) < 3 and all(port > 1024 for port in open_ports):
+                device_type = 'workstation'
+                device_subtype = 'client'
+            
+            # Server with unidentified services
+            else:
+                device_type = 'server'
+                device_subtype = 'general'
+        
+        # If no open ports data available, use name/hostname hints
+        else:
+            hostname = host.get('name', '').lower()
+            if any(keyword in hostname for keyword in ['server', 'srv', 'app', 'web', 'db', 'mail', 'dns']):
+                device_type = 'server'
+                device_subtype = 'general'
+            elif any(keyword in hostname for keyword in ['router', 'gateway', 'gw']):
+                device_type = 'router'
+                device_subtype = 'gateway'
+            # Default: assume it's a server if we don't know
+            else:
+                device_type = 'server'
+                device_subtype = 'general'
+        
+        return device_type, device_subtype
     
-    def _analyze_arp_table(self, host, arp_table, infrastructure):
-        """Analyze ARP table to identify local network neighbors"""
-        for entry in arp_table:
-            infrastructure['arp_tables'][host['ip_address']].append(entry)
+    def _classify_network_group(self, ip_address: str) -> str:
+        """Classify network group based on IP address."""
+        try:
+            ip = ipaddress.IPv4Address(ip_address)
             
-            # Identify potential routers/gateways by MAC address patterns
-            mac = entry.get('mac', '').lower()
-            ip = entry.get('ip')
+            # Check private ranges
+            for network in self.private_ranges:
+                if ip in network:
+                    if network == ipaddress.IPv4Network('192.168.0.0/16'):
+                        return 'local'
+                    elif network == ipaddress.IPv4Network('10.0.0.0/8'):
+                        return 'corporate'
+                    else:
+                        return 'private'
             
-            # Common router/gateway MAC prefixes
-            router_prefixes = [
-                '00:0c:29',  # VMware
-                '00:50:56',  # VMware
-                '08:00:27',  # VirtualBox
-                '00:1b:21',  # Cisco
-                '00:23:04',  # Cisco
-                '00:24:c4',  # Mikrotik
-                '6c:3b:6b',  # Ubiquiti
-                'fc:ec:da'   # Ubiquiti
-            ]
+            # Check CGNAT
+            for network in self.cgnat_ranges:
+                if ip in network:
+                    return 'cgnat'
             
-            for prefix in router_prefixes:
-                if mac.startswith(prefix) and ip:
-                    infrastructure['routers'].add(ip)
+            # Public IP
+            return 'internet'
+            
+        except ipaddress.AddressValueError:
+            return 'unknown'
     
-    def _analyze_interfaces(self, host, interfaces_data, infrastructure):
-        """Analyze network interfaces to identify subnets and VLANs"""
-        interfaces_info = interfaces_data.get('interfaces', '')
+    def _extract_services(self, scan_data: List[Dict]) -> List[str]:
+        """Extract detected services from scan data."""
+        services = set()
         
-        # Parse interface information for IP addresses and subnets
-        ip_pattern = r'inet (\d+\.\d+\.\d+\.\d+)/(\d+)'
-        matches = re.findall(ip_pattern, interfaces_info)
+        for data in scan_data:
+            if 'open_ports' in data:
+                for port_info in data['open_ports']:
+                    if isinstance(port_info, dict) and 'service' in port_info:
+                        services.add(port_info['service'])
+            
+            if 'services' in data:
+                services.update(data['services'])
         
-        for ip_str, prefix_len in matches:
+        return list(services)
+    
+    def _extract_protocols(self, scan_data: List[Dict]) -> List[str]:
+        """Extract detected protocols from scan data."""
+        protocols = set()
+        
+        for data in scan_data:
+            if 'protocols' in data:
+                protocols.update(data['protocols'])
+            
+            if 'network_connections' in data:
+                for conn in data['network_connections']:
+                    if 'protocol' in conn:
+                        protocols.add(conn['protocol'])
+        
+        return list(protocols)
+    
+    def _get_open_ports(self, scan_data: List[Dict]) -> List[int]:
+        """Get list of open ports from scan data."""
+        ports = set()
+        
+        for data in scan_data:
+            if 'open_ports' in data:
+                for port_info in data['open_ports']:
+                    if isinstance(port_info, dict) and 'port' in port_info:
+                        ports.add(port_info['port'])
+                    elif isinstance(port_info, int):
+                        ports.add(port_info)
+        
+        return list(ports)
+    
+    def _detect_os(self, scan_data: List[Dict]) -> str:
+        """Detect operating system from scan data."""
+        for data in scan_data:
+            if 'os_detection' in data and data['os_detection']:
+                return data['os_detection']
+            
+            if 'system_info' in data and 'os' in data['system_info']:
+                return data['system_info']['os']
+        
+        return 'unknown'
+    
+    def _determine_node_status(self, host: Dict, scan_data: List[Dict]) -> str:
+        """Determine node status based on host data and recent scans."""
+        # Check if we have recent scan data
+        if scan_data:
+            recent_scan = max(scan_data, key=lambda x: x.get('scan_time', ''))
             try:
-                network = ipaddress.IPv4Network(f"{ip_str}/{prefix_len}", strict=False)
-                if network.is_private:
-                    infrastructure['subnets'][str(network)].add(host['ip_address'])
+                scan_time = datetime.fromisoformat(recent_scan['scan_time'].replace('Z', '+00:00'))
+                if datetime.now() - scan_time.replace(tzinfo=None) < timedelta(hours=1):
+                    return 'online'
+                elif datetime.now() - scan_time.replace(tzinfo=None) < timedelta(hours=6):
+                    return 'warning'
+                else:
+                    return 'offline'
             except:
                 pass
         
-        # Check for VLAN interfaces
-        vlan_pattern = r'(\w+\.\d+)'
-        vlan_matches = re.findall(vlan_pattern, interfaces_info)
-        for vlan_if in vlan_matches:
-            infrastructure['vlans'][host['ip_address']].append(vlan_if)
-        
-        # Check for bridge interfaces
-        if 'br' in interfaces_info.lower() or 'bridge' in interfaces_info.lower():
-            infrastructure['bridges'].add(host['ip_address'])
+        # Fallback to host status
+        return host.get('status', 'unknown')
     
-    def _analyze_services(self, host, services, infrastructure):
-        """Analyze running services to identify infrastructure roles"""
-        for service in services:
-            port = service.get('port')
-            service_name = service.get('service', '').lower()
-            
-            # DNS servers (port 53)
-            if port == 53:
-                infrastructure['dns_servers'].add(host['ip_address'])
-            
-            # DHCP servers (port 67)
-            elif port == 67:
-                infrastructure['dhcp_servers'].add(host['ip_address'])
-            
-            # VPN services
-            elif port in [1194, 1723, 500, 4500]:  # OpenVPN, PPTP, IPSec
-                infrastructure['vpn_endpoints'].add(host['ip_address'])
-            
-            # Router/gateway services
-            elif 'router' in service_name or 'gateway' in service_name:
-                infrastructure['routers'].add(host['ip_address'])
-    
-    def _analyze_dns_info(self, host, dns_info, infrastructure):
-        """Analyze DNS configuration"""
-        nameservers = dns_info.get('nameservers', [])
-        for ns in nameservers:
-            if self._is_local_ip(ns):
-                infrastructure['dns_servers'].add(ns)
-    
-    def _analyze_vpn_info(self, host, discovery_info, infrastructure):
-        """Analyze VPN configuration and connections"""
-        # Look for VPN-related processes and interfaces
-        processes = discovery_info.get('topology_hints', {}).get('running_services', [])
-        interfaces = discovery_info.get('network_interfaces', {}).get('interfaces', '')
+    def _create_external_node(self, ip_address: str) -> Optional[Dict]:
+        """Create node for external IP address."""
+        if not ip_address:
+            return None
         
-        vpn_indicators = ['openvpn', 'wireguard', 'ipsec', 'strongswan', 'tun', 'tap']
-        
-        for indicator in vpn_indicators:
-            if any(indicator in str(process).lower() for process in processes):
-                infrastructure['vpn_endpoints'].add(host['ip_address'])
-                break
-            if indicator in interfaces.lower():
-                infrastructure['vpn_endpoints'].add(host['ip_address'])
-                break
-    
-    def _build_network_topology(self, hosts, infrastructure):
-        """Build the basic network topology with hosts"""
-        topology = {
-            'nodes': [],
-            'edges': [],
-            'groups': {}
-        }
-        
-        # Add host nodes
-        for host in hosts:
-            ip = host['ip_address']
-            node_type = self._determine_node_type(host, infrastructure)
-            group = self._determine_network_group(ip)
-            
-            topology['nodes'].append({
-                'id': f"host_{host['id']}",
-                'label': host['name'],
-                'ip': ip,
-                'type': 'host',
-                'subtype': node_type,
-                'status': host.get('status', 'unknown'),
-                'group': group,
-                'size': self._get_node_size(node_type),
-                'shape': self._get_node_shape(node_type),
-                'color': self._get_node_color(node_type, host.get('status'))
-            })
-        
-        return topology
-    
-    def _add_infrastructure_nodes(self, topology, infrastructure):
-        """Add infrastructure nodes (gateways, routers, etc.)"""
-        
-        # Add internet gateway nodes
-        for gateway in infrastructure['internet_gateways']:
-            if not self._node_exists(topology, f"gateway_{gateway}"):
-                topology['nodes'].append({
-                    'id': f"gateway_{gateway}",
-                    'label': 'Internet Gateway',
-                    'ip': gateway,
-                    'type': 'infrastructure',
-                    'subtype': 'internet_gateway',
-                    'status': 'online',
-                    'group': 'infrastructure',
-                    'size': 40,
-                    'shape': 'diamond',
-                    'color': self._get_infrastructure_color('internet_gateway')
-                })
-        
-        # Add router nodes (that aren't already hosts)
-        for router in infrastructure['routers']:
-            if not self._is_managed_host(router) and not self._node_exists(topology, f"router_{router}"):
-                topology['nodes'].append({
-                    'id': f"router_{router}",
-                    'label': 'Router',
-                    'ip': router,
-                    'type': 'infrastructure',
-                    'subtype': 'router',
-                    'status': 'unknown',
-                    'group': 'infrastructure',
-                    'size': 35,
-                    'shape': 'square',
-                    'color': self._get_infrastructure_color('router')
-                })
-        
-        # Add subnet nodes
-        subnet_counter = 1
-        for subnet_cidr, hosts_in_subnet in infrastructure['subnets'].items():
-            if len(hosts_in_subnet) > 1:  # Only show subnets with multiple hosts
-                topology['nodes'].append({
-                    'id': f"subnet_{subnet_counter}",
-                    'label': f"Subnet\n{subnet_cidr}",
-                    'ip': subnet_cidr,
-                    'type': 'infrastructure',
-                    'subtype': 'subnet',
-                    'status': 'active',
-                    'group': 'infrastructure',
-                    'size': 25,
-                    'shape': 'ellipse',
-                    'color': self._get_infrastructure_color('subnet'),
-                    'hosts': list(hosts_in_subnet)
-                })
-                subnet_counter += 1
-        
-        # Add internet node
-        topology['nodes'].append({
-            'id': 'internet',
-            'label': 'Internet',
-            'ip': '0.0.0.0',
-            'type': 'infrastructure',
-            'subtype': 'internet',
-            'status': 'active',
-            'group': 'external',
-            'size': 50,
-            'shape': 'star',
-            'color': self._get_infrastructure_color('internet')
-        })
-        
-        return topology
-    
-    def _add_routing_connections(self, topology, infrastructure):
-        """Add routing connections between nodes"""
-        
-        # Connect hosts to their default gateways
-        for host_ip, gateway_ip in infrastructure['gateways'].items():
-            host_node = self._find_node_by_ip(topology, host_ip)
-            gateway_node = self._find_node_by_ip(topology, gateway_ip)
-            
-            if host_node and gateway_node:
-                topology['edges'].append({
-                    'id': f"route_{host_node['id']}_{gateway_node['id']}",
-                    'from': host_node['id'],
-                    'to': gateway_node['id'],
-                    'type': 'routing',
-                    'label': 'Default Route',
-                    'width': 3,
-                    'color': '#007bff',
-                    'dashes': False,
-                    'arrows': {'to': True}
-                })
-        
-        # Connect internet gateways to internet
-        for gateway in infrastructure['internet_gateways']:
-            gateway_node = self._find_node_by_ip(topology, gateway)
-            internet_node = self._find_node_by_id(topology, 'internet')
-            
-            if gateway_node and internet_node:
-                topology['edges'].append({
-                    'id': f"internet_{gateway_node['id']}",
-                    'from': gateway_node['id'],
-                    'to': 'internet',
-                    'type': 'internet',
-                    'label': 'Internet',
-                    'width': 5,
-                    'color': '#fd7e14',
-                    'dashes': False,
-                    'arrows': {'to': True}
-                })
-        
-        return topology
-    
-    def _add_subnet_groupings(self, topology, infrastructure):
-        """Add connections between hosts and subnet nodes"""
-        
-        for node in topology['nodes']:
-            if node['type'] == 'infrastructure' and node['subtype'] == 'subnet':
-                subnet_hosts = node.get('hosts', [])
-                
-                for host_ip in subnet_hosts:
-                    host_node = self._find_node_by_ip(topology, host_ip)
-                    if host_node:
-                        topology['edges'].append({
-                            'id': f"subnet_{node['id']}_{host_node['id']}",
-                            'from': node['id'],
-                            'to': host_node['id'],
-                            'type': 'subnet',
-                            'label': 'Subnet Member',
-                            'width': 2,
-                            'color': '#6c757d',
-                            'dashes': True,
-                            'arrows': {'to': False}
-                        })
-        
-        return topology
-    
-    def _add_vpn_connections(self, topology, infrastructure):
-        """Add VPN connections between endpoints"""
-        
-        vpn_endpoints = list(infrastructure['vpn_endpoints'])
-        
-        # Create VPN connections between all endpoints (mesh)
-        for i, endpoint1 in enumerate(vpn_endpoints):
-            for endpoint2 in vpn_endpoints[i+1:]:
-                node1 = self._find_node_by_ip(topology, endpoint1)
-                node2 = self._find_node_by_ip(topology, endpoint2)
-                
-                if node1 and node2:
-                    topology['edges'].append({
-                        'id': f"vpn_{node1['id']}_{node2['id']}",
-                        'from': node1['id'],
-                        'to': node2['id'],
-                        'type': 'vpn',
-                        'label': 'VPN Tunnel',
-                        'width': 4,
-                        'color': '#28a745',
-                        'dashes': [10, 5],
-                        'arrows': {'to': True, 'from': True}
-                    })
-        
-        return topology
-    
-    def _determine_node_type(self, host, infrastructure):
-        """Determine the type of network node based on its role"""
-        ip = host['ip_address']
-        
-        if ip in infrastructure['routers']:
-            return 'router'
-        elif ip in infrastructure['dns_servers']:
-            return 'dns_server'
-        elif ip in infrastructure['dhcp_servers']:
-            return 'dhcp_server'
-        elif ip in infrastructure['vpn_endpoints']:
-            return 'vpn_endpoint'
-        elif ip in infrastructure['bridges']:
-            return 'bridge'
-        else:
-            return 'server'
-    
-    def _determine_network_group(self, ip):
-        """Determine which network group an IP belongs to"""
         try:
-            ip_obj = ipaddress.IPv4Address(ip)
+            # Try to resolve hostname
+            hostname = self._reverse_dns_lookup(ip_address)
             
-            if ip_obj.is_private:
-                if ip.startswith('192.168.'):
-                    return 'local'
-                elif ip.startswith('10.'):
-                    return 'corporate'
-                elif ip.startswith('172.'):
-                    return 'private'
-                else:
-                    return 'private'
-            else:
-                return 'internet'
+            # Classify as internet service
+            service_type = self._classify_internet_service(ip_address, hostname)
+            
+            node = {
+                'id': f"ext_{ip_address.replace('.', '_')}",
+                'label': hostname or ip_address,
+                'ip': ip_address,
+                'type': 'internet' if self._is_public_ip(ip_address) else 'external',
+                'subtype': service_type,
+                'status': 'unknown',
+                'group': 'internet' if self._is_public_ip(ip_address) else 'external',
+                'protocols': [],
+                'services': [service_type] if service_type != 'unknown' else [],
+                'connections': 0,
+                'metadata': {
+                    'hostname': hostname,
+                    'resolved_at': datetime.now().isoformat()
+                }
+            }
+            
+            return node
+            
+        except Exception as e:
+            logger.warning(f"Error creating external node for {ip_address}: {str(e)}")
+            return None
+    
+    def _reverse_dns_lookup(self, ip_address: str) -> Optional[str]:
+        """Perform reverse DNS lookup for IP address."""
+        try:
+            hostname = socket.gethostbyaddr(ip_address)[0]
+            return hostname
         except:
-            return 'unknown'
+            return None
     
-    def _get_node_size(self, node_type):
-        """Get node size based on type"""
-        sizes = {
-            'router': 40,
-            'dns_server': 35,
-            'dhcp_server': 35,
-            'vpn_endpoint': 30,
-            'bridge': 30,
-            'server': 25
-        }
-        return sizes.get(node_type, 25)
-    
-    def _get_node_shape(self, node_type):
-        """Get node shape based on type"""
-        shapes = {
-            'router': 'square',
-            'dns_server': 'triangle',
-            'dhcp_server': 'triangle',
-            'vpn_endpoint': 'hexagon',
-            'bridge': 'diamond',
-            'server': 'dot'
-        }
-        return shapes.get(node_type, 'dot')
-    
-    def _get_node_color(self, node_type, status):
-        """Get node color based on type and status"""
-        base_colors = {
-            'router': {'background': '#ffc107', 'border': '#f0ad4e'},
-            'dns_server': {'background': '#17a2b8', 'border': '#138496'},
-            'dhcp_server': {'background': '#6f42c1', 'border': '#5a32a3'},
-            'vpn_endpoint': {'background': '#28a745', 'border': '#1e7e34'},
-            'bridge': {'background': '#fd7e14', 'border': '#e55a00'},
-            'server': {'background': '#007bff', 'border': '#0056b3'}
-        }
-        
-        color = base_colors.get(node_type, {'background': '#6c757d', 'border': '#545b62'})
-        
-        # Modify based on status
-        if status == 'offline':
-            color['background'] = '#f8d7da'
-            color['border'] = '#dc3545'
-        elif status == 'ping_only':
-            color['background'] = '#fff3cd'
-            color['border'] = '#ffc107'
-        
-        return color
-    
-    def _get_infrastructure_color(self, infra_type):
-        """Get color for infrastructure nodes"""
-        colors = {
-            'internet_gateway': {'background': '#fd7e14', 'border': '#e55a00'},
-            'router': {'background': '#ffc107', 'border': '#f0ad4e'},
-            'subnet': {'background': '#e9ecef', 'border': '#6c757d'},
-            'internet': {'background': '#dc3545', 'border': '#c82333'}
-        }
-        return colors.get(infra_type, {'background': '#6c757d', 'border': '#545b62'})
-    
-    def _node_exists(self, topology, node_id):
-        """Check if a node already exists"""
-        return any(node['id'] == node_id for node in topology['nodes'])
-    
-    def _is_managed_host(self, ip):
-        """Check if an IP is a managed host"""
-        hosts = self.host_manager.get_all_hosts()
-        return any(host['ip_address'] == ip for host in hosts)
-    
-    def _find_node_by_ip(self, topology, ip):
-        """Find a node by IP address"""
-        for node in topology['nodes']:
-            if node['ip'] == ip:
-                return node
-        return None
-    
-    def _find_node_by_id(self, topology, node_id):
-        """Find a node by ID"""
-        for node in topology['nodes']:
-            if node['id'] == node_id:
-                return node
-        return None
-    
-    def _is_local_ip(self, ip):
-        """Check if an IP is in local network ranges"""
+    def _is_public_ip(self, ip_address: str) -> bool:
+        """Check if IP address is public."""
         try:
-            ip_obj = ipaddress.IPv4Address(ip)
-            return ip_obj.is_private
+            ip = ipaddress.IPv4Address(ip_address)
+            return ip.is_global
         except:
             return False
+    
+    def _classify_internet_service(self, ip_address: str, hostname: str = None) -> str:
+        """Classify internet service type."""
+        if hostname:
+            hostname_lower = hostname.lower()
+            for domain, service_type in self.internet_services.items():
+                if domain in hostname_lower:
+                    return service_type
+        
+        # Default classification
+        return 'unknown'
+    
+    def _classify_connection_type(self, connection: Dict) -> str:
+        """Classify connection type based on connection data."""
+        protocol = connection.get('protocol', '').lower()
+        port = connection.get('dest_port', 0)
+        
+        if protocol in ['tcp', 'udp']:
+            if port in [80, 443, 8080, 8443]:
+                return 'web'
+            elif port == 22:
+                return 'ssh'
+            elif port in [25, 110, 143, 993, 995]:
+                return 'mail'
+            elif port in [3306, 5432, 1521, 27017]:
+                return 'database'
+            elif port == 53:
+                return 'dns'
+        
+        return protocol or 'unknown'
+    
+    def _assess_connection_security(self, connection: Dict) -> str:
+        """Assess connection security level."""
+        protocol = connection.get('protocol', '').lower()
+        port = connection.get('dest_port', 0)
+        
+        # High security (encrypted protocols)
+        if port in [22, 443, 993, 995] or 'ssl' in protocol or 'tls' in protocol:
+            return 'high'
+        
+        # Low security (unencrypted protocols)
+        elif port in [23, 21, 80, 110, 143] or protocol in ['telnet', 'ftp', 'http']:
+            return 'low'
+        
+        # Medium security (other protocols)
+        return 'medium'
+    
+    def _get_service_label(self, port: int, protocol: str) -> str:
+        """Get service label for port/protocol combination."""
+        if port in self.port_services:
+            return f"{self.port_services[port]}:{port}"
+        else:
+            return f"{protocol}:{port}"
+    
+    def _estimate_bandwidth(self, connection: Dict) -> str:
+        """Estimate bandwidth usage for connection."""
+        count = connection.get('connection_count', 1)
+        
+        if count > 1000:
+            return 'high'
+        elif count > 100:
+            return 'medium'
+        else:
+            return 'low'
+    
+    def _enhance_nodes_with_analysis(self, nodes: List[Dict], edges: List[Dict]) -> List[Dict]:
+        """Enhance nodes with connection analysis and role classification."""
+        # Count connections per node
+        connection_counts = defaultdict(int)
+        for edge in edges:
+            connection_counts[edge['from']] += 1
+            connection_counts[edge['to']] += 1
+        
+        # Update nodes with connection counts
+        for node in nodes:
+            node['connections'] = connection_counts.get(node['id'], 0)
+        
+        return nodes
+    
+    def _enhance_edges_with_analysis(self, edges: List[Dict], nodes: List[Dict]) -> List[Dict]:
+        """Enhance edges with traffic analysis and security assessment."""
+        # Currently just return edges as-is
+        return edges
+    
+    def _discover_internet_services(self, scan_data: List[Dict]) -> Tuple[List[Dict], List[Dict]]:
+        """Discover and categorize internet services from scan data."""
+        # For now, return empty lists
+        return [], []
+    
+    def _generate_topology_statistics(self, nodes: List[Dict], edges: List[Dict]) -> Dict[str, Any]:
+        """Generate comprehensive topology statistics."""
+        # Node statistics
+        node_types = Counter(node['type'] for node in nodes)
+        node_statuses = Counter(node['status'] for node in nodes)
+        network_groups = Counter(node['group'] for node in nodes)
+        
+        # Edge statistics
+        protocols = Counter(edge['protocol'] for edge in edges)
+        security_levels = Counter(edge['security_level'] for edge in edges)
+        connection_types = Counter(edge['type'] for edge in edges)
+        
+        # Connection analysis
+        total_weight = sum(edge.get('weight', 1) for edge in edges)
+        avg_connections_per_node = len(edges) / len(nodes) if nodes else 0
+        
+        # Security analysis
+        insecure_connections = len([e for e in edges if e['security_level'] == 'low'])
+        secure_connections = len([e for e in edges if e['security_level'] == 'high'])
+        
+        return {
+            'node_summary': {
+                'total': len(nodes),
+                'by_type': dict(node_types),
+                'by_status': dict(node_statuses),
+                'by_group': dict(network_groups)
+            },
+            'edge_summary': {
+                'total': len(edges),
+                'by_protocol': dict(protocols),
+                'by_security': dict(security_levels),
+                'by_type': dict(connection_types),
+                'total_weight': total_weight
+            },
+            'analysis': {
+                'avg_connections_per_node': round(avg_connections_per_node, 2),
+                'security_ratio': {
+                    'secure': secure_connections,
+                    'insecure': insecure_connections,
+                    'percentage_secure': round(secure_connections / len(edges) * 100, 1) if edges else 0
+                },
+                'internet_connectivity': len([n for n in nodes if n['group'] == 'internet']),
+                'internal_servers': len([n for n in nodes if n['type'] == 'server' and n['group'] != 'internet'])
+            }
+        }
+    
+    def _store_topology_analysis(self, topology: Dict[str, Any]) -> None:
+        """Store topology analysis in database."""
+        try:
+            # Use the database's save_topology_analysis method (it handles JSON encoding)
+            self.db.save_topology_analysis('enhanced_topology', topology)
+            
+            logger.info("Topology analysis stored in database")
+            
+        except Exception as e:
+            logger.error(f"Error storing topology analysis: {str(e)}")
+    
+    def _get_fallback_topology(self) -> Dict[str, Any]:
+        """Get fallback topology when main build fails."""
+        try:
+            hosts = self.host_manager.get_all_hosts()
+            connections = self._get_network_connections()
+            
+            # Simple topology with basic nodes and edges
+            nodes = []
+            for host in hosts:
+                nodes.append({
+                    'id': str(host['id']),
+                    'label': host['name'],
+                    'ip': host['ip_address'],
+                    'type': 'server',
+                    'subtype': 'unknown',
+                    'status': host.get('status', 'unknown'),
+                    'group': self._classify_network_group(host['ip_address']),
+                    'protocols': [],
+                    'services': [],
+                    'connections': 0
+                })
+            
+            edges = []
+            for conn in connections[:50]:  # Limit for fallback
+                if conn.get('dest_host_id'):
+                    edges.append({
+                        'id': f"{conn['source_host_id']}-{conn.get('dest_host_id')}",
+                        'from': str(conn['source_host_id']),
+                        'to': str(conn.get('dest_host_id')),
+                        'type': 'tcp',
+                        'protocol': conn.get('protocol', 'tcp'),
+                        'port': conn.get('dest_port', 0),
+                        'label': f":{conn.get('dest_port', 0)}",
+                        'weight': conn.get('connection_count', 1),
+                        'bandwidth': 'unknown',
+                        'security_level': 'medium'
+                    })
+            
+            return {
+                'nodes': nodes,
+                'edges': edges,
+                'statistics': {},
+                'metadata': {
+                    'generated_at': datetime.now().isoformat(),
+                    'fallback': True
+                }
+            }
+            
+        except Exception as e:
+            logger.error(f"Error creating fallback topology: {str(e)}")
+            return {
+                'nodes': [],
+                'edges': [],
+                'statistics': {},
+                'metadata': {
+                    'generated_at': datetime.now().isoformat(),
+                    'error': str(e)
+                }
+            }

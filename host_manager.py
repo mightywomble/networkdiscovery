@@ -173,17 +173,20 @@ class HostManager:
     
     def get_network_connections(self, host):
         """Get active network connections from a host"""
-        # Try different commands for network connections
+        # Try different commands for network connections - focus on ESTABLISHED connections
         commands = [
-            "netstat -tuln 2>/dev/null",
-            "ss -tuln 2>/dev/null",
+            "netstat -tun 2>/dev/null",  # Show all connections (not just listening)
+            "ss -tun 2>/dev/null",      # Show all connections (not just listening)
+            "netstat -tupn 2>/dev/null | grep -E '(ESTABLISHED|LISTEN)'",  # Established and listening
             "lsof -i -n 2>/dev/null"
         ]
         
         for command in commands:
             result, error = self.execute_command(host, command)
-            if result and result['success']:
-                return self._parse_network_connections(result['stdout'])
+            if result and result['success'] and result['stdout'].strip():
+                connections = self._parse_network_connections(result['stdout'])
+                if connections:  # Only return if we found connections
+                    return connections
         
         return []
     
@@ -283,18 +286,56 @@ class HostManager:
         
         return interfaces
     
-    def _parse_network_connections(self, netstat_output):
-        """Parse network connection output"""
+    def _parse_network_connections(self, output):
+        """Parse network connection output from netstat or ss"""
         connections = []
         
-        for line in netstat_output.split('\n'):
+        for line in output.split('\n'):
             line = line.strip()
-            if 'ESTABLISHED' in line or 'LISTEN' in line:
+            
+            # Skip header lines
+            if 'Local Address' in line or 'Netid' in line or not line:
+                continue
+                
+            # Handle ss output format: "tcp ESTAB 0 0 local_addr peer_addr process"
+            if line.startswith(('tcp', 'udp')) and ('ESTAB' in line or 'LISTEN' in line):
                 parts = line.split()
-                if len(parts) >= 4:
+                if len(parts) >= 5:
+                    protocol = parts[0]
+                    state = parts[1]
+                    local_addr = parts[4]  # In ss format: proto state recv-q send-q local_addr peer_addr
+                    foreign_addr = parts[5] if len(parts) > 5 else ''
+                    
+                    # Parse local address
+                    if ':' in local_addr:
+                        local_ip, local_port = local_addr.rsplit(':', 1)
+                    else:
+                        local_ip, local_port = local_addr, '0'
+                    
+                    # Parse foreign address
+                    if ':' in foreign_addr and foreign_addr != '*:*':
+                        foreign_ip, foreign_port = foreign_addr.rsplit(':', 1)
+                    else:
+                        foreign_ip, foreign_port = '0.0.0.0', '0'
+                    
+                    # Skip localhost connections
+                    if foreign_ip not in ['127.0.0.1', '::1', '0.0.0.0', '*'] and state == 'ESTAB':
+                        connections.append({
+                            'local_ip': local_ip,
+                            'local_port': local_port,
+                            'foreign_ip': foreign_ip,
+                            'foreign_port': foreign_port,
+                            'state': 'ESTABLISHED',  # Normalize to netstat format
+                            'protocol': protocol
+                        })
+            
+            # Handle netstat output format: "tcp 0 0 local_addr foreign_addr ESTABLISHED"
+            elif 'ESTABLISHED' in line or 'LISTEN' in line:
+                parts = line.split()
+                if len(parts) >= 6:
                     local_addr = parts[3]
-                    foreign_addr = parts[4] if len(parts) > 4 else ''
-                    state = parts[5] if len(parts) > 5 else 'UNKNOWN'
+                    foreign_addr = parts[4]
+                    state = parts[5]
                     
                     # Parse addresses
                     if ':' in local_addr:
@@ -307,12 +348,15 @@ class HostManager:
                     else:
                         foreign_ip, foreign_port = foreign_addr, '0'
                     
-                    connections.append({
-                        'local_ip': local_ip,
-                        'local_port': local_port,
-                        'foreign_ip': foreign_ip,
-                        'foreign_port': foreign_port,
-                        'state': state
-                    })
+                    # Skip localhost connections and only include established ones
+                    if foreign_ip not in ['127.0.0.1', '0.0.0.0'] and state == 'ESTABLISHED':
+                        connections.append({
+                            'local_ip': local_ip,
+                            'local_port': local_port,
+                            'foreign_ip': foreign_ip,
+                            'foreign_port': foreign_port,
+                            'state': state,
+                            'protocol': 'tcp'  # Default to tcp for netstat
+                        })
         
         return connections

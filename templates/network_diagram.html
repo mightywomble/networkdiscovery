@@ -1,0 +1,1773 @@
+{% extends "base.html" %}
+
+{% block title %}Network Diagram - Traditional Network Map{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <h1><i class="fas fa-project-diagram me-2"></i>Network Diagram</h1>
+        <p class="text-muted">Traditional network diagram with device icons and structured layout</p>
+    </div>
+</div>
+
+<div class="row mb-3">
+    <!-- Main Network Diagram -->
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="fas fa-network-wired me-2"></i>Network Infrastructure Diagram</h5>
+                <div class="btn-group btn-group-sm">
+                    <button class="btn btn-primary" onclick="refreshDiagram()" title="Refresh Diagram" id="refresh-btn">
+                        <i class="fas fa-sync"></i>
+                    </button>
+                    <button class="btn btn-success" onclick="toggleDragMode()" title="Toggle Drag Mode" id="drag-btn">
+                        <i class="fas fa-arrows-alt"></i> <span id="drag-mode-text">Enable Drag</span>
+                    </button>
+                    <button class="btn btn-warning" onclick="saveLayout()" title="Save Current Layout" id="save-layout-btn" disabled>
+                        <i class="fas fa-save"></i> Save Layout
+                    </button>
+                    <button class="btn btn-info" onclick="resetLayout()" title="Reset to Auto Layout" id="reset-layout-btn">
+                        <i class="fas fa-undo"></i> Reset
+                    </button>
+                    <button class="btn btn-secondary" onclick="togglePanMode()" title="Toggle Pan Mode" id="pan-btn">
+                        <i class="fas fa-hand-paper"></i> <span id="pan-mode-text">Enable Pan</span>
+                    </button>
+                    <button class="btn btn-outline-secondary" onclick="exportDiagram()" title="Export as SVG">
+                        <i class="fas fa-download"></i>
+                    </button>
+                    <button class="btn btn-outline-secondary" onclick="resetView()" title="Reset View to Show All">
+                        <i class="fas fa-expand-arrows-alt"></i>
+                    </button>
+                    <button class="btn btn-outline-secondary" onclick="showDiagramLegend()" title="Show Legend">
+                        <i class="fas fa-info-circle"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="card-body">
+                <!-- Network Diagram Container -->
+                <div id="network-diagram-container" style="height: 700px; background-color: #f8f9fa; border: 1px solid #dee2e6; border-radius: 0.375rem; position: relative; overflow: auto;">
+                    <div class="loading-overlay" id="loading-overlay" style="display: none;">
+                        <div class="d-flex flex-column align-items-center justify-content-center h-100">
+                            <div class="spinner-border text-primary mb-3" role="status"></div>
+                            <div class="text-primary">Generating network diagram...</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Device Details Panel (right side) -->
+    <div class="col-lg-4">
+        <div class="card" style="height: 784px;"> <!-- Match diagram height + header -->
+            <div class="card-header">
+                <h6 class="mb-0">
+                    <i class="fas fa-info-circle me-2"></i>Device Details
+                </h6>
+            </div>
+            <div class="card-body" style="overflow-y: auto;">
+                <div id="device-info-cards">
+                    <div class="text-center text-muted">
+                        <i class="fas fa-mouse-pointer fa-3x mb-3 text-secondary"></i>
+                        <p>Click on a device in the diagram to view details</p>
+                        <small class="text-muted">Device information will appear here when selected</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Legend Modal -->
+<div class="modal fade" id="diagramLegendModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Network Diagram Legend</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row">
+                    <div class="col-12 mb-3">
+                        <h6>Device Types</h6>
+                        <div class="d-flex align-items-center mb-2">
+                            <i class="fas fa-server text-primary fa-2x me-3"></i>
+                            <span>Servers - Physical and virtual servers</span>
+                        </div>
+                        <div class="d-flex align-items-center mb-2">
+                            <i class="fas fa-route text-warning fa-2x me-3"></i>
+                            <span>Routers - Network routing devices</span>
+                        </div>
+                        <div class="d-flex align-items-center mb-2">
+                            <i class="fas fa-network-wired text-info fa-2x me-3"></i>
+                            <span>Switches - Network switching devices</span>
+                        </div>
+                        <div class="d-flex align-items-center mb-2">
+                            <i class="fas fa-cloud text-secondary fa-2x me-3"></i>
+                            <span>Cloud - Cloud services and external resources</span>
+                        </div>
+                        <div class="d-flex align-items-center mb-2">
+                            <i class="fas fa-shield-alt text-success fa-2x me-3"></i>
+                            <span>VPN - VPN endpoints and tunnels</span>
+                        </div>
+                        <div class="d-flex align-items-center mb-2">
+                            <i class="fas fa-desktop text-success fa-2x me-3"></i>
+                            <span>Workstations - Client computers</span>
+                        </div>
+                    </div>
+                    <div class="col-12">
+                        <h6>Connection Types</h6>
+                        <div class="mb-2">
+                            <svg width="40" height="10">
+                                <line x1="0" y1="5" x2="40" y2="5" stroke="#007bff" stroke-width="3"/>
+                            </svg>
+                            <span class="ms-2">Primary network connections</span>
+                        </div>
+                        <div class="mb-2">
+                            <svg width="40" height="10">
+                                <line x1="0" y1="5" x2="40" y2="5" stroke="#6c757d" stroke-width="2" stroke-dasharray="5,5"/>
+                            </svg>
+                            <span class="ms-2">VPN connections</span>
+                        </div>
+                        <div class="mb-2">
+                            <svg width="40" height="10">
+                                <line x1="0" y1="5" x2="40" y2="5" stroke="#28a745" stroke-width="2"/>
+                            </svg>
+                            <span class="ms-2">Inter-VLAN connections</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.loading-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(255, 255, 255, 0.9);
+    z-index: 1000;
+    border-radius: 0.375rem;
+}
+
+.device-icon {
+    cursor: pointer;
+    transition: filter 0.2s ease;
+}
+
+.device-icon:hover {
+    filter: drop-shadow(0 4px 8px rgba(0,0,0,0.3));
+}
+
+.device-icon.dragging {
+    filter: drop-shadow(0 6px 12px rgba(0,0,0,0.4));
+    transform: scale(1.05);
+}
+
+.device-selected {
+    filter: drop-shadow(0 0 8px #007bff);
+}
+
+.network-segment {
+    fill: rgba(0, 123, 255, 0.1);
+    stroke: rgba(0, 123, 255, 0.3);
+    stroke-width: 2;
+    stroke-dasharray: 10,5;
+}
+
+.connection-line {
+    stroke: #007bff;
+    stroke-width: 2;
+    fill: none;
+}
+
+.vpn-connection {
+    stroke: #6c757d;
+    stroke-width: 2;
+    stroke-dasharray: 8,4;
+    fill: none;
+}
+
+.vlan-connection {
+    stroke: #28a745;
+    stroke-width: 2;
+    fill: none;
+}
+
+.device-label {
+    font-family: Arial, sans-serif;
+    font-size: 12px;
+    font-weight: bold;
+    text-anchor: middle;
+    fill: #333;
+    user-select: none;
+}
+
+.segment-label {
+    font-family: Arial, sans-serif;
+    font-size: 14px;
+    font-weight: bold;
+    text-anchor: middle;
+    fill: #007bff;
+    user-select: none;
+}
+
+.tooltip-box {
+    position: absolute;
+    background: rgba(0, 0, 0, 0.8);
+    color: white;
+    padding: 8px 12px;
+    border-radius: 4px;
+    font-size: 12px;
+    pointer-events: none;
+    z-index: 1000;
+    max-width: 250px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+}
+</style>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Network Diagram Implementation
+let diagramData = null;
+let selectedDevice = null;
+let isDragMode = false;
+let draggedDevice = null;
+let networkStructure = null;
+let customLayout = null;
+let hasCustomChanges = false;
+
+// Drag and drop state
+let dragState = {
+    isDragging: false,
+    startX: 0,
+    startY: 0,
+    element: null,
+    deviceId: null
+};
+
+// Pan state for view navigation
+let panState = {
+    isPanning: false,
+    startX: 0,
+    startY: 0,
+    viewBoxX: 0,
+    viewBoxY: 0,
+    viewBoxWidth: 800,
+    viewBoxHeight: 700
+};
+
+// Device icon mapping
+const deviceIcons = {
+    server: { icon: 'fas fa-server', color: '#007bff', size: 48 },
+    router: { icon: 'fas fa-route', color: '#fd7e14', size: 48 },
+    switch: { icon: 'fas fa-network-wired', color: '#17a2b8', size: 48 },
+    gateway: { icon: 'fas fa-door-open', color: '#fd7e14', size: 48 },
+    cloud: { icon: 'fas fa-cloud', color: '#6c757d', size: 48 },
+    vpn: { icon: 'fas fa-shield-alt', color: '#28a745', size: 48 },
+    workstation: { icon: 'fas fa-desktop', color: '#28a745', size: 42 },
+    internet: { icon: 'fas fa-globe', color: '#17a2b8', size: 48 },
+    firewall: { icon: 'fas fa-shield-alt', color: '#dc3545', size: 48 }
+};
+
+// Initialize diagram
+function initializeNetworkDiagram() {
+    console.log('Initializing Network Diagram...');
+    refreshDiagram();
+}
+
+// Refresh diagram data and redraw
+function refreshDiagram() {
+    const refreshBtn = document.getElementById('refresh-btn');
+    const loadingOverlay = document.getElementById('loading-overlay');
+    
+    // Show loading
+    if (refreshBtn) {
+        refreshBtn.disabled = true;
+        refreshBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+    }
+    if (loadingOverlay) {
+        loadingOverlay.style.display = 'flex';
+    }
+    
+    // Fetch network data
+    fetch('/api/enhanced_network_data')
+        .then(response => response.json())
+        .then(data => {
+            if (data.success && data.topology) {
+                diagramData = data.topology;
+                generateNetworkDiagram();
+            } else {
+                throw new Error(data.error || 'Failed to load data');
+            }
+        })
+        .catch(error => {
+            console.error('Error loading data:', error);
+            // Fallback to basic data
+            return fetch('/api/network_data');
+        })
+        .then(response => {
+            if (response) {
+                return response.json();
+            }
+            return null;
+        })
+        .then(data => {
+            if (data) {
+                diagramData = convertBasicToEnhanced(data);
+                generateNetworkDiagram();
+            }
+        })
+        .catch(error => {
+            console.error('Error loading fallback data:', error);
+            showError('Failed to load network data');
+        })
+        .finally(() => {
+            // Hide loading
+            if (refreshBtn) {
+                refreshBtn.disabled = false;
+                refreshBtn.innerHTML = '<i class="fas fa-sync"></i>';
+            }
+            if (loadingOverlay) {
+                loadingOverlay.style.display = 'none';
+            }
+        });
+}
+
+// Convert basic data to enhanced format
+function convertBasicToEnhanced(data) {
+    const enhanced = {
+        nodes: [],
+        edges: []
+    };
+    
+    // Convert nodes
+    if (data.nodes) {
+        enhanced.nodes = data.nodes.map(node => ({
+            id: node.id,
+            label: node.label || node.ip || 'Unknown',
+            ip: node.ip,
+            type: node.type || 'server',
+            status: node.status || 'unknown',
+            connections: 0
+        }));
+    }
+    
+    // Convert edges
+    if (data.edges) {
+        enhanced.edges = data.edges.map(edge => ({
+            id: `${edge.from}-${edge.to}`,
+            from: edge.from,
+            to: edge.to,
+            protocol: edge.protocol || 'tcp',
+            port: edge.port,
+            weight: edge.count || 1
+        }));
+    }
+    
+    return enhanced;
+}
+
+// Generate the network diagram
+function generateNetworkDiagram() {
+    if (!diagramData || !diagramData.nodes) return;
+    
+    const container = document.getElementById('network-diagram-container');
+    const width = container.clientWidth;
+    const height = container.clientHeight || 700;
+    
+    // Clear existing diagram
+    container.innerHTML = '';
+    
+    // Create SVG
+    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    svg.setAttribute('width', width);
+    svg.setAttribute('height', height);
+    svg.setAttribute('viewBox', `0 0 ${width} ${height}`);
+    svg.style.background = '#f8f9fa';
+    
+    // Analyze network structure
+    const networkStructure = analyzeNetworkStructure(diagramData, width, height);
+    
+    // Draw network segments
+    drawNetworkSegments(svg, networkStructure, width, height);
+    
+    // Draw connections
+    drawConnections(svg, networkStructure);
+    
+    // Draw devices
+    drawDevices(svg, networkStructure);
+    
+    // Add to container
+    container.appendChild(svg);
+    
+    console.log('Network diagram generated successfully');
+}
+
+// Analyze network structure to determine layout
+function analyzeNetworkStructure(data, width, height) {
+    const structure = {
+        segments: {},
+        devices: {},
+        connections: []
+    };
+    
+    // Group devices by network segment (based on IP ranges)
+    data.nodes.forEach(node => {
+        const segment = getNetworkSegment(node.ip);
+        
+        if (!structure.segments[segment]) {
+            structure.segments[segment] = {
+                name: segment,
+                devices: [],
+                type: 'lan'
+            };
+        }
+        
+        // Classify device type
+        const deviceType = classifyDevice(node);
+        
+        structure.devices[node.id] = {
+            ...node,
+            deviceType: deviceType,
+            segment: segment
+        };
+        
+        structure.segments[segment].devices.push(node.id);
+    });
+    
+    // Process connections
+    if (data.edges) {
+        data.edges.forEach(edge => {
+            const fromDevice = structure.devices[edge.from];
+            const toDevice = structure.devices[edge.to];
+            
+            if (fromDevice && toDevice) {
+                structure.connections.push({
+                    from: edge.from,
+                    to: edge.to,
+                    type: getConnectionType(fromDevice, toDevice),
+                    protocol: edge.protocol || 'tcp'
+                });
+            }
+        });
+    }
+    
+    // Layout devices
+    layoutDevices(structure, width, height);
+    
+    return structure;
+}
+
+// Get network segment from IP
+function getNetworkSegment(ip) {
+    if (!ip) return 'unknown';
+    
+    const parts = ip.split('.');
+    if (parts.length >= 1) {
+        const firstOctet = parts[0];
+        
+        // Group all 100.x.x.x networks as single 100.0.0.0/8 LAN
+        if (firstOctet === '100') {
+            return '100.0.0.0/8 LAN';
+        }
+        
+        // Group other common private networks
+        if (firstOctet === '192' && parts[1] === '168') {
+            return '192.168.0.0/16 LAN';
+        }
+        
+        if (firstOctet === '10') {
+            return '10.0.0.0/8 LAN';
+        }
+        
+        if (firstOctet === '172' && parts.length >= 2) {
+            const secondOctet = parseInt(parts[1]);
+            if (secondOctet >= 16 && secondOctet <= 31) {
+                return '172.16.0.0/12 LAN';
+            }
+        }
+    }
+    
+    if (ip.includes('::') || ip.includes(':')) {
+        return 'IPv6';
+    }
+    
+    return 'External';
+}
+
+// Classify device based on characteristics
+function classifyDevice(node) {
+    const type = node.type?.toLowerCase() || '';
+    const label = node.label?.toLowerCase() || '';
+    const ip = node.ip || '';
+    
+    // Check for specific device types
+    if (type.includes('router') || label.includes('router') || label.includes('gateway')) {
+        return 'router';
+    }
+    if (type.includes('switch') || label.includes('switch')) {
+        return 'switch';
+    }
+    if (type.includes('firewall') || label.includes('firewall')) {
+        return 'firewall';
+    }
+    if (type.includes('vpn') || label.includes('vpn')) {
+        return 'vpn';
+    }
+    if (type.includes('cloud') || ip.includes('amazonaws') || ip.includes('azure') || ip.includes('google')) {
+        return 'cloud';
+    }
+    if (type.includes('workstation') || type.includes('desktop') || type.includes('laptop')) {
+        return 'workstation';
+    }
+    if (type.includes('internet') || !ip.includes('192.168.') && !ip.includes('10.') && !ip.includes('172.')) {
+        return 'internet';
+    }
+    
+    // Default to server
+    return 'server';
+}
+
+// Determine connection type
+function getConnectionType(fromDevice, toDevice) {
+    if (fromDevice.deviceType === 'vpn' || toDevice.deviceType === 'vpn') {
+        return 'vpn';
+    }
+    
+    if (fromDevice.segment !== toDevice.segment) {
+        return 'inter-segment';
+    }
+    
+    return 'standard';
+}
+
+// Layout devices in segments with clean, hierarchical structure
+function layoutDevices(structure, width, height) {
+    const segments = Object.keys(structure.segments);
+    const margin = 40;
+    
+    // Set global boundaries for proper constraint enforcement
+    structure.globalBounds = {
+        x: 0,
+        y: 0,
+        width: width,
+        height: height
+    };
+    
+    // Prioritize segment types for better organization
+    const segmentPriority = {
+        '100.0.0.0/8 LAN': 1,
+        '192.168.0.0/16 LAN': 2,
+        '10.0.0.0/8 LAN': 3,
+        '172.16.0.0/12 LAN': 4,
+        'External': 5,
+        'IPv6': 6,
+        'unknown': 7
+    };
+    
+    // Sort segments by priority
+    segments.sort((a, b) => (segmentPriority[a] || 99) - (segmentPriority[b] || 99));
+    
+    // Use hierarchical layout: Core/LAN networks on left, External on right
+    const lanSegments = segments.filter(s => s.includes('LAN') || s === 'unknown');
+    const externalSegments = segments.filter(s => s === 'External');
+    const ipv6Segments = segments.filter(s => s === 'IPv6');
+    
+    const allOrderedSegments = [...lanSegments, ...ipv6Segments, ...externalSegments];
+    
+    // Calculate layout zones
+    const segmentSpacing = 30;
+    const availableWidth = width - (2 * margin);
+    const availableHeight = height - (2 * margin);
+    
+    // Determine layout strategy based on number of segments
+    if (allOrderedSegments.length === 1) {
+        // Single segment - use most of the space
+        layoutSingleSegment(structure, allOrderedSegments[0], margin, margin, 
+                           availableWidth, availableHeight);
+    } else if (allOrderedSegments.length === 2) {
+        // Two segments - side by side
+        const segmentWidth = (availableWidth - segmentSpacing) / 2;
+        layoutSingleSegment(structure, allOrderedSegments[0], margin, margin, 
+                           segmentWidth, availableHeight);
+        layoutSingleSegment(structure, allOrderedSegments[1], margin + segmentWidth + segmentSpacing, 
+                           margin, segmentWidth, availableHeight);
+    } else {
+        // Multiple segments - use grid but prioritize important ones
+        const rows = Math.ceil(allOrderedSegments.length / 2);
+        const segmentWidth = (availableWidth - segmentSpacing) / 2;
+        const segmentHeight = (availableHeight - ((rows - 1) * segmentSpacing)) / rows;
+        
+        allOrderedSegments.forEach((segmentName, index) => {
+            const row = Math.floor(index / 2);
+            const col = index % 2;
+            
+            const x = margin + col * (segmentWidth + segmentSpacing);
+            const y = margin + row * (segmentHeight + segmentSpacing);
+            
+            layoutSingleSegment(structure, segmentName, x, y, segmentWidth, segmentHeight);
+        });
+    }
+}
+
+// Layout a single network segment with clean device organization
+function layoutSingleSegment(structure, segmentName, x, y, width, height) {
+    const segment = structure.segments[segmentName];
+    if (!segment) return;
+    
+    const deviceMargin = 30;
+    const labelHeight = 30;
+    const availableWidth = width - (2 * deviceMargin);
+    
+    // Organize devices by type for better visual hierarchy
+    const devicesByType = {
+        router: [],
+        switch: [],
+        firewall: [],
+        server: [],
+        workstation: [],
+        cloud: [],
+        vpn: [],
+        internet: [],
+        gateway: []
+    };
+    
+    // Categorize devices
+    segment.devices.forEach(deviceId => {
+        const device = structure.devices[deviceId];
+        const type = device.deviceType || 'server';
+        if (devicesByType[type]) {
+            devicesByType[type].push(deviceId);
+        } else {
+            devicesByType.server.push(deviceId);
+        }
+    });
+    
+    // Layout devices in organized rows by type
+    let currentY = y + labelHeight + 15;
+    const deviceSize = 50;
+    const deviceSpacing = 80; // Normal spacing for better layout
+    
+    // Calculate devices per row based on available width
+    const maxDevicesPerRow = Math.max(1, Math.floor(availableWidth / deviceSpacing));
+    
+    // Process each device type
+    Object.entries(devicesByType).forEach(([type, devices]) => {
+        if (devices.length === 0) return;
+        
+        // Layout devices of this type
+        devices.forEach((deviceId, index) => {
+            const device = structure.devices[deviceId];
+            const row = Math.floor(index / maxDevicesPerRow);
+            const col = index % maxDevicesPerRow;
+            
+            // Center devices in each row
+            const devicesInThisRow = Math.min(maxDevicesPerRow, devices.length - row * maxDevicesPerRow);
+            const rowWidth = (devicesInThisRow - 1) * deviceSpacing;
+            const startX = x + deviceMargin + (availableWidth - rowWidth) / 2;
+            
+            device.x = startX + col * deviceSpacing;
+            device.y = currentY + row * (deviceSize + 20);
+            
+            // NO boundary constraints - let devices be positioned freely
+            // The SVG will be resized to accommodate all devices
+        });
+        
+        // Move to next section for next device type
+        const rowsUsed = Math.ceil(devices.length / maxDevicesPerRow);
+        currentY += rowsUsed * (deviceSize + 20) + 15;
+    });
+    
+    // Store segment layout info
+    segment.bounds = {
+        x: x,
+        y: y,
+        width: width,
+        height: height
+    };
+}
+
+// Draw network segments
+function drawNetworkSegments(svg, structure, width, height) {
+    // Network segment rectangles and labels are now hidden for cleaner appearance
+    // The segment grouping logic is still used for device organization and connections
+}
+
+// Draw connections between devices with smart routing
+function drawConnections(svg, structure) {
+    // Group connections to avoid visual clutter
+    const connectionGroups = {};
+    const drawnConnections = new Set();
+    
+    structure.connections.forEach(connection => {
+        const fromDevice = structure.devices[connection.from];
+        const toDevice = structure.devices[connection.to];
+        
+        if (!fromDevice || !toDevice || !fromDevice.x || !toDevice.x) return;
+        
+        // Create unique connection key (bidirectional)
+        const connectionKey = [connection.from, connection.to].sort().join('-');
+        if (drawnConnections.has(connectionKey)) return;
+        drawnConnections.add(connectionKey);
+        
+        // Only draw meaningful connections
+        const shouldDrawConnection = shouldShowConnection(fromDevice, toDevice, structure);
+        if (!shouldDrawConnection) return;
+        
+        // Draw clean, curved connections for better visualization
+        drawCleanConnection(svg, fromDevice, toDevice, connection.type);
+    });
+}
+
+// Determine if a connection should be shown to reduce clutter
+function shouldShowConnection(fromDevice, toDevice, structure) {
+    // Always show inter-segment connections
+    if (fromDevice.segment !== toDevice.segment) {
+        return true;
+    }
+    
+    // Show connections involving network infrastructure devices
+    const infrastructureTypes = ['router', 'switch', 'firewall', 'gateway'];
+    if (infrastructureTypes.includes(fromDevice.deviceType) || 
+        infrastructureTypes.includes(toDevice.deviceType)) {
+        return true;
+    }
+    
+    // Show VPN connections
+    if (fromDevice.deviceType === 'vpn' || toDevice.deviceType === 'vpn') {
+        return true;
+    }
+    
+    // Show connections to external/cloud services
+    if (fromDevice.segment === 'External' || toDevice.segment === 'External') {
+        return true;
+    }
+    
+    // Limit server-to-server connections within same segment
+    return false;
+}
+
+// Draw a clean, optionally curved connection
+function drawCleanConnection(svg, fromDevice, toDevice, connectionType) {
+    const x1 = fromDevice.x;
+    const y1 = fromDevice.y;
+    const x2 = toDevice.x;
+    const y2 = toDevice.y;
+    
+    // Calculate if we need a curved connection (for long distances or different segments)
+    const distance = Math.sqrt(Math.pow(x2 - x1, 2) + Math.pow(y2 - y1, 2));
+    const useCurve = distance > 200 || fromDevice.segment !== toDevice.segment;
+    
+    if (useCurve && fromDevice.segment !== toDevice.segment) {
+        // Draw curved path for inter-segment connections
+        const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        
+        // Calculate control points for smooth curve
+        const midX = (x1 + x2) / 2;
+        const midY = (y1 + y2) / 2;
+        const offsetY = -50; // Curve upward for better visibility
+        
+        const pathData = `M ${x1} ${y1} Q ${midX} ${midY + offsetY} ${x2} ${y2}`;
+        path.setAttribute('d', pathData);
+        path.setAttribute('fill', 'none');
+        
+        // Style based on connection type
+        switch (connectionType) {
+            case 'vpn':
+                path.setAttribute('class', 'vpn-connection');
+                break;
+            case 'inter-segment':
+                path.setAttribute('class', 'vlan-connection');
+                break;
+            default:
+                path.setAttribute('class', 'connection-line');
+        }
+        
+        svg.appendChild(path);
+    } else {
+        // Draw straight line for simple connections
+        const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+        line.setAttribute('x1', x1);
+        line.setAttribute('y1', y1);
+        line.setAttribute('x2', x2);
+        line.setAttribute('y2', y2);
+        
+        // Style based on connection type
+        switch (connectionType) {
+            case 'vpn':
+                line.setAttribute('class', 'vpn-connection');
+                break;
+            case 'inter-segment':
+                line.setAttribute('class', 'vlan-connection');
+                break;
+            default:
+                line.setAttribute('class', 'connection-line');
+        }
+        
+        svg.appendChild(line);
+    }
+}
+
+// Draw devices with icons
+function drawDevices(svg, structure) {
+    Object.values(structure.devices).forEach(device => {
+        if (device.x && device.y) {
+            const deviceConfig = deviceIcons[device.deviceType] || deviceIcons.server;
+            
+            // Create device group
+            const group = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+            group.setAttribute('class', 'device-icon');
+            group.setAttribute('data-device-id', device.id);
+            
+            // Device background circle
+            const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+            circle.setAttribute('cx', device.x);
+            circle.setAttribute('cy', device.y);
+            circle.setAttribute('r', deviceConfig.size / 2 + 5);
+            circle.setAttribute('fill', 'white');
+            circle.setAttribute('stroke', deviceConfig.color);
+            circle.setAttribute('stroke-width', '3');
+            group.appendChild(circle);
+            
+            // Device icon (using FontAwesome classes converted to SVG paths would be complex,
+            // so we'll use Unicode symbols or simple shapes for now)
+            const iconText = getDeviceIconSymbol(device.deviceType);
+            const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+            text.setAttribute('x', device.x);
+            text.setAttribute('y', device.y + 8);
+            text.setAttribute('text-anchor', 'middle');
+            text.setAttribute('font-size', '24');
+            text.setAttribute('fill', deviceConfig.color);
+            text.setAttribute('font-family', 'Arial, sans-serif');
+            text.textContent = iconText;
+            group.appendChild(text);
+            
+            // Device label
+            const label = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+            label.setAttribute('x', device.x);
+            label.setAttribute('y', device.y + deviceConfig.size / 2 + 20);
+            label.setAttribute('class', 'device-label');
+            label.textContent = device.label || device.ip;
+            group.appendChild(label);
+            
+            // Add click event
+            group.addEventListener('click', () => selectDevice(device));
+            group.addEventListener('mouseenter', (e) => showTooltip(e, device));
+            group.addEventListener('mouseleave', hideTooltip);
+            
+            svg.appendChild(group);
+        }
+    });
+}
+
+// Get Unicode symbol for device type
+function getDeviceIconSymbol(deviceType) {
+    const symbols = {
+        server: '🖥️',
+        router: '📡',
+        switch: '🔗',
+        gateway: '🚪',
+        cloud: '☁️',
+        vpn: '🛡️',
+        workstation: '💻',
+        internet: '🌐',
+        firewall: '🔥'
+    };
+    
+    return symbols[deviceType] || '📟';
+}
+
+// Select device and show details
+function selectDevice(device) {
+    selectedDevice = device;
+    
+    // Update visual selection
+    document.querySelectorAll('.device-icon').forEach(el => {
+        el.classList.remove('device-selected');
+    });
+    
+    document.querySelector(`[data-device-id="${device.id}"]`).classList.add('device-selected');
+    
+    // Show device details
+    showDeviceDetails(device);
+}
+
+// Show device details in panel
+function showDeviceDetails(device) {
+    const deviceInfoCards = document.getElementById('device-info-cards');
+    
+    const deviceConfig = deviceIcons[device.deviceType] || deviceIcons.server;
+    
+    deviceInfoCards.innerHTML = `
+        <div class="card border-primary mb-3">
+            <div class="card-header bg-primary text-white">
+                <h6 class="mb-0">
+                    <i class="${deviceConfig.icon} me-2"></i>${device.label || device.ip}
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="mb-2"><strong>IP Address:</strong><br><code class="text-primary">${device.ip}</code></div>
+                <div class="mb-2"><strong>Device Type:</strong><br><span class="text-capitalize">${device.deviceType}</span></div>
+                <div class="mb-2"><strong>Status:</strong><br>
+                    <span class="badge bg-${getStatusColor(device.status)}">${device.status}</span>
+                </div>
+                <div class="mb-2"><strong>Network Segment:</strong><br><small class="text-muted">${device.segment}</small></div>
+                ${device.hostname ? `<div class="mb-2"><strong>Hostname:</strong><br>${device.hostname}</div>` : ''}
+            </div>
+        </div>
+        
+        <!-- Connection Information -->
+        <div class="card border-info mb-3">
+            <div class="card-header bg-info text-white">
+                <h6 class="mb-0"><i class="fas fa-network-wired me-2"></i>Network Connections</h6>
+            </div>
+            <div class="card-body">
+                <div class="text-center text-muted">
+                    <i class="fas fa-link fa-2x mb-2"></i>
+                    <p class="small mb-0">Connection details would appear here</p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Additional Info -->
+        <div class="card border-secondary">
+            <div class="card-header bg-secondary text-white">
+                <h6 class="mb-0"><i class="fas fa-cog me-2"></i>Additional Information</h6>
+            </div>
+            <div class="card-body">
+                <div class="small text-muted">
+                    <div class="mb-2"><strong>Device ID:</strong> ${device.id}</div>
+                    <div class="mb-2"><strong>Position:</strong> ${Math.round(device.x)}, ${Math.round(device.y)}</div>
+                    ${device.type ? `<div class="mb-2"><strong>Original Type:</strong> ${device.type}</div>` : ''}
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+// Show tooltip
+function showTooltip(event, device) {
+    const tooltip = document.createElement('div');
+    tooltip.className = 'tooltip-box';
+    tooltip.innerHTML = `
+        <strong>${device.label || device.ip}</strong><br>
+        Type: ${device.deviceType}<br>
+        Status: ${device.status}<br>
+        Network: ${device.segment}
+    `;
+    
+    tooltip.style.left = event.pageX + 10 + 'px';
+    tooltip.style.top = event.pageY - 10 + 'px';
+    
+    document.body.appendChild(tooltip);
+    
+    // Store reference for removal
+    event.target.tooltip = tooltip;
+}
+
+// Hide tooltip
+function hideTooltip(event) {
+    if (event.target.tooltip) {
+        document.body.removeChild(event.target.tooltip);
+        event.target.tooltip = null;
+    }
+}
+
+// Export diagram as SVG
+function exportDiagram() {
+    const svg = document.querySelector('#network-diagram-container svg');
+    if (!svg) return;
+    
+    const svgData = new XMLSerializer().serializeToString(svg);
+    const svgBlob = new Blob([svgData], { type: "image/svg+xml;charset=utf-8" });
+    const svgUrl = URL.createObjectURL(svgBlob);
+    
+    const link = document.createElement('a');
+    link.href = svgUrl;
+    link.download = `network-diagram-${new Date().toISOString().split('T')[0]}.svg`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    URL.revokeObjectURL(svgUrl);
+}
+
+// Show legend modal
+function showDiagramLegend() {
+    const modal = new bootstrap.Modal(document.getElementById('diagramLegendModal'));
+    modal.show();
+}
+
+// Show error message
+function showError(message) {
+    const container = document.getElementById('network-diagram-container');
+    container.innerHTML = `
+        <div class="alert alert-danger m-3">
+            <i class="fas fa-exclamation-triangle me-2"></i>
+            ${message}
+        </div>
+    `;
+}
+
+// Utility function for status colors
+function getStatusColor(status) {
+    const colors = {
+        online: 'success',
+        offline: 'danger',
+        warning: 'warning',
+        unknown: 'secondary'
+    };
+    return colors[status] || 'secondary';
+}
+
+// Initialize when page loads
+document.addEventListener('DOMContentLoaded', function() {
+    initializeNetworkDiagram();
+});
+
+// Handle window resize
+window.addEventListener('resize', function() {
+    if (diagramData) {
+        setTimeout(generateNetworkDiagram, 100);
+    }
+});
+
+// ============================================
+// PAN FUNCTIONALITY
+// ============================================
+
+let isPanMode = false;
+
+// Toggle pan mode
+function togglePanMode() {
+    isPanMode = !isPanMode;
+    const panBtn = document.getElementById('pan-btn');
+    const panModeText = document.getElementById('pan-mode-text');
+    
+    if (isPanMode) {
+        panBtn.classList.remove('btn-secondary');
+        panBtn.classList.add('btn-warning');
+        panModeText.textContent = 'Disable Pan';
+        
+        // Disable drag mode if active
+        if (isDragMode) {
+            toggleDragMode();
+        }
+        
+        // Enable panning
+        enablePanning();
+        
+        showMessage('Pan mode enabled! Click and drag to navigate the view.', 'info');
+    } else {
+        panBtn.classList.remove('btn-warning');
+        panBtn.classList.add('btn-secondary');
+        panModeText.textContent = 'Enable Pan';
+        
+        // Disable panning
+        disablePanning();
+        
+        showMessage('Pan mode disabled.', 'info');
+    }
+}
+
+// Enable panning
+function enablePanning() {
+    const container = document.getElementById('network-diagram-container');
+    container.style.cursor = 'grab';
+    
+    container.addEventListener('mousedown', startPan);
+    document.addEventListener('mousemove', panView);
+    document.addEventListener('mouseup', endPan);
+    
+    // Also add mouse wheel support for zooming/panning
+    container.addEventListener('wheel', handleWheel, { passive: false });
+}
+
+// Disable panning
+function disablePanning() {
+    const container = document.getElementById('network-diagram-container');
+    container.style.cursor = 'default';
+    
+    container.removeEventListener('mousedown', startPan);
+    document.removeEventListener('mousemove', panView);
+    document.removeEventListener('mouseup', endPan);
+    container.removeEventListener('wheel', handleWheel);
+}
+
+// Start panning
+function startPan(event) {
+    if (!isPanMode) return;
+    
+    // Don't pan if clicking on a device
+    if (event.target.closest('.device-icon')) return;
+    
+    event.preventDefault();
+    
+    const container = document.getElementById('network-diagram-container');
+    container.style.cursor = 'grabbing';
+    
+    panState.isPanning = true;
+    panState.startX = event.clientX;
+    panState.startY = event.clientY;
+    
+    // Get current viewBox values
+    const svg = document.querySelector('#network-diagram-container svg');
+    const viewBox = svg.getAttribute('viewBox').split(' ').map(Number);
+    panState.viewBoxX = viewBox[0];
+    panState.viewBoxY = viewBox[1];
+    panState.viewBoxWidth = viewBox[2];
+    panState.viewBoxHeight = viewBox[3];
+}
+
+// Pan the view
+function panView(event) {
+    if (!panState.isPanning || !isPanMode) return;
+    
+    event.preventDefault();
+    
+    const deltaX = event.clientX - panState.startX;
+    const deltaY = event.clientY - panState.startY;
+    
+    // Calculate new viewBox position (invert delta for natural panning)
+    const newViewBoxX = panState.viewBoxX - deltaX;
+    const newViewBoxY = panState.viewBoxY - deltaY;
+    
+    // Update viewBox
+    const svg = document.querySelector('#network-diagram-container svg');
+    svg.setAttribute('viewBox', `${newViewBoxX} ${newViewBoxY} ${panState.viewBoxWidth} ${panState.viewBoxHeight}`);
+}
+
+// End panning
+function endPan(event) {
+    if (!panState.isPanning) return;
+    
+    const container = document.getElementById('network-diagram-container');
+    container.style.cursor = 'grab';
+    
+    panState.isPanning = false;
+}
+
+// Handle mouse wheel for zooming and panning
+function handleWheel(event) {
+    if (!isPanMode) return;
+    
+    event.preventDefault();
+    
+    const svg = document.querySelector('#network-diagram-container svg');
+    const viewBox = svg.getAttribute('viewBox').split(' ').map(Number);
+    let [x, y, width, height] = viewBox;
+    
+    if (event.ctrlKey || event.metaKey) {
+        // Zoom with Ctrl/Cmd + wheel
+        const zoomFactor = event.deltaY > 0 ? 1.1 : 0.9;
+        const rect = svg.getBoundingClientRect();
+        const mouseX = event.clientX - rect.left;
+        const mouseY = event.clientY - rect.top;
+        
+        // Calculate mouse position in SVG coordinates
+        const svgMouseX = x + (mouseX / rect.width) * width;
+        const svgMouseY = y + (mouseY / rect.height) * height;
+        
+        // Calculate new dimensions
+        const newWidth = width * zoomFactor;
+        const newHeight = height * zoomFactor;
+        
+        // Adjust position to zoom towards mouse cursor
+        const newX = svgMouseX - (svgMouseX - x) * zoomFactor;
+        const newY = svgMouseY - (svgMouseY - y) * zoomFactor;
+        
+        svg.setAttribute('viewBox', `${newX} ${newY} ${newWidth} ${newHeight}`);
+    } else {
+        // Pan with regular wheel
+        const panSpeed = 20;
+        const newX = x + (event.deltaX * panSpeed / 100);
+        const newY = y + (event.deltaY * panSpeed / 100);
+        
+        svg.setAttribute('viewBox', `${newX} ${newY} ${width} ${height}`);
+    }
+}
+
+// Reset view to fit all devices
+function resetView() {
+    if (!networkStructure) return;
+    
+    const svg = document.querySelector('#network-diagram-container svg');
+    if (!svg) return;
+    
+    // Find bounds of all devices
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    let deviceCount = 0;
+    
+    Object.values(networkStructure.devices).forEach(device => {
+        if (device.x !== undefined && device.y !== undefined) {
+            const deviceConfig = deviceIcons[device.deviceType] || deviceIcons.server;
+            const radius = (deviceConfig.size / 2) + 30;
+            
+            minX = Math.min(minX, device.x - radius);
+            minY = Math.min(minY, device.y - radius);
+            maxX = Math.max(maxX, device.x + radius);
+            maxY = Math.max(maxY, device.y + radius);
+            deviceCount++;
+        }
+    });
+    
+    if (deviceCount === 0) return;
+    
+    // Add padding
+    const padding = 50;
+    minX = Math.max(0, minX - padding);
+    minY = Math.max(0, minY - padding);
+    maxX += padding;
+    maxY += padding;
+    
+    const width = maxX - minX;
+    const height = maxY - minY;
+    
+    // Set viewBox to show all devices
+    svg.setAttribute('viewBox', `${minX} ${minY} ${width} ${height}`);
+    
+    showMessage('View reset to show all devices.', 'info');
+}
+
+// ============================================
+// DRAG AND DROP FUNCTIONALITY
+// ============================================
+
+// Toggle drag mode
+function toggleDragMode() {
+    isDragMode = !isDragMode;
+    const dragBtn = document.getElementById('drag-btn');
+    const dragModeText = document.getElementById('drag-mode-text');
+    const saveLayoutBtn = document.getElementById('save-layout-btn');
+    
+    if (isDragMode) {
+        dragBtn.classList.remove('btn-success');
+        dragBtn.classList.add('btn-danger');
+        dragModeText.textContent = 'Disable Drag';
+        
+        // Disable pan mode if active
+        if (isPanMode) {
+            togglePanMode();
+        }
+        
+        // Enable dragging on all device icons
+        enableDragging();
+        
+        // Show instructions
+        showMessage('Drag mode enabled! Drag devices to reposition them.', 'info');
+    } else {
+        dragBtn.classList.remove('btn-danger');
+        dragBtn.classList.add('btn-success');
+        dragModeText.textContent = 'Enable Drag';
+        
+        // Disable dragging
+        disableDragging();
+        
+        showMessage('Drag mode disabled.', 'info');
+    }
+    
+    // Enable/disable save button based on custom changes
+    saveLayoutBtn.disabled = !hasCustomChanges;
+}
+
+// Enable dragging on device icons
+function enableDragging() {
+    const deviceIcons = document.querySelectorAll('.device-icon');
+    
+    deviceIcons.forEach(icon => {
+        icon.style.cursor = 'move';
+        icon.addEventListener('mousedown', startDrag);
+    });
+    
+    // Add global mouse event listeners
+    document.addEventListener('mousemove', drag);
+    document.addEventListener('mouseup', endDrag);
+}
+
+// Disable dragging
+function disableDragging() {
+    const deviceIcons = document.querySelectorAll('.device-icon');
+    
+    deviceIcons.forEach(icon => {
+        icon.style.cursor = 'pointer';
+        icon.removeEventListener('mousedown', startDrag);
+    });
+    
+    // Remove global mouse event listeners
+    document.removeEventListener('mousemove', drag);
+    document.removeEventListener('mouseup', endDrag);
+}
+
+// Start dragging
+function startDrag(event) {
+    if (!isDragMode) return;
+    
+    event.preventDefault();
+    event.stopPropagation();
+    
+    const deviceElement = event.currentTarget;
+    const deviceId = deviceElement.getAttribute('data-device-id');
+    
+    // Get SVG coordinates
+    const svg = document.querySelector('#network-diagram-container svg');
+    const rect = svg.getBoundingClientRect();
+    
+    dragState.isDragging = true;
+    dragState.element = deviceElement;
+    dragState.deviceId = deviceId;
+    dragState.startX = event.clientX - rect.left;
+    dragState.startY = event.clientY - rect.top;
+    
+    // Visual feedback
+    deviceElement.style.opacity = '0.7';
+    deviceElement.style.transform = 'scale(1.1)';
+    
+    console.log(`Started dragging device ${deviceId}`);
+}
+
+// Drag the element
+function drag(event) {
+    if (!dragState.isDragging || !isDragMode) return;
+    
+    event.preventDefault();
+    
+    const svg = document.querySelector('#network-diagram-container svg');
+    const rect = svg.getBoundingClientRect();
+    
+    const currentX = event.clientX - rect.left;
+    const currentY = event.clientY - rect.top;
+    
+    // No boundary constraints - allow free positioning
+    // The SVG will be dynamically resized to accommodate all devices
+    
+    // Update device position in the structure
+    if (networkStructure && networkStructure.devices[dragState.deviceId]) {
+        networkStructure.devices[dragState.deviceId].x = currentX;
+        networkStructure.devices[dragState.deviceId].y = currentY;
+        
+        // Update visual position
+        updateDeviceVisualPosition(dragState.deviceId, currentX, currentY);
+        
+        // Mark as having custom changes
+        hasCustomChanges = true;
+        
+        // Update connections
+        redrawConnections();
+        
+        // Dynamically resize SVG to accommodate all devices
+        resizeSVGToFitDevices();
+    }
+}
+
+// End dragging
+function endDrag(event) {
+    if (!dragState.isDragging) return;
+    
+    // Reset visual feedback
+    if (dragState.element) {
+        dragState.element.style.opacity = '1';
+        dragState.element.style.transform = 'scale(1)';
+    }
+    
+    // Reset drag state
+    dragState.isDragging = false;
+    dragState.element = null;
+    dragState.deviceId = null;
+    
+    // Enable save button if we have custom changes
+    if (hasCustomChanges) {
+        document.getElementById('save-layout-btn').disabled = false;
+    }
+    
+    console.log('Ended dragging');
+}
+
+// Update device visual position
+function updateDeviceVisualPosition(deviceId, x, y) {
+    const deviceElement = document.querySelector(`[data-device-id="${deviceId}"]`);
+    if (!deviceElement) return;
+    
+    // Update all child elements (circle, text, label)
+    const circle = deviceElement.querySelector('circle');
+    const iconText = deviceElement.querySelector('text');
+    const labels = deviceElement.querySelectorAll('text');
+    
+    if (circle) {
+        circle.setAttribute('cx', x);
+        circle.setAttribute('cy', y);
+    }
+    
+    if (iconText) {
+        iconText.setAttribute('x', x);
+        iconText.setAttribute('y', y + 8);
+    }
+    
+    // Update all text labels
+    labels.forEach((label, index) => {
+        label.setAttribute('x', x);
+        if (index === 1) { // Device label (second text element)
+            const deviceConfig = deviceIcons[networkStructure.devices[deviceId].deviceType] || deviceIcons.server;
+            label.setAttribute('y', y + deviceConfig.size / 2 + 20);
+        }
+    });
+}
+
+// Redraw connections when devices move
+function redrawConnections() {
+    if (!networkStructure) return;
+    
+    // Remove existing connections
+    const svg = document.querySelector('#network-diagram-container svg');
+    const connections = svg.querySelectorAll('line, path');
+    connections.forEach(conn => {
+        if (conn.getAttribute('class')?.includes('connection')) {
+            conn.remove();
+        }
+    });
+    
+    // Redraw connections
+    drawConnections(svg, networkStructure);
+}
+
+// Resize SVG to fit all devices
+function resizeSVGToFitDevices() {
+    if (!networkStructure) return;
+    
+    const svg = document.querySelector('#network-diagram-container svg');
+    if (!svg) return;
+    
+    // Find the bounding box of all devices
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    let deviceCount = 0;
+    
+    Object.values(networkStructure.devices).forEach(device => {
+        if (device.x !== undefined && device.y !== undefined) {
+            const deviceConfig = deviceIcons[device.deviceType] || deviceIcons.server;
+            const radius = (deviceConfig.size / 2) + 30; // Device size + label space
+            
+            minX = Math.min(minX, device.x - radius);
+            minY = Math.min(minY, device.y - radius);
+            maxX = Math.max(maxX, device.x + radius);
+            maxY = Math.max(maxY, device.y + radius);
+            deviceCount++;
+        }
+    });
+    
+    console.log(`Found ${deviceCount} devices. Bounds: (${minX}, ${minY}) to (${maxX}, ${maxY})`);
+    
+    // If no devices found, use default size
+    if (deviceCount === 0) {
+        const container = document.getElementById('network-diagram-container');
+        const containerWidth = container.clientWidth;
+        const containerHeight = container.clientHeight || 700;
+        
+        svg.setAttribute('width', containerWidth);
+        svg.setAttribute('height', containerHeight);
+        svg.setAttribute('viewBox', `0 0 ${containerWidth} ${containerHeight}`);
+        return;
+    }
+    
+    // Add padding around the content
+    const padding = 100;
+    minX = Math.max(0, minX - padding); // Don't go negative
+    minY = Math.max(0, minY - padding);
+    maxX += padding;
+    maxY += padding;
+    
+    // Calculate content dimensions
+    const contentWidth = maxX - minX;
+    const contentHeight = maxY - minY;
+    
+    // Ensure the SVG canvas is large enough to contain all devices
+    const container = document.getElementById('network-diagram-container');
+    const containerWidth = container.clientWidth;
+    const containerHeight = container.clientHeight || 700;
+    
+    // Set SVG to be large enough for the full content
+    const newWidth = Math.max(containerWidth, contentWidth);
+    const newHeight = Math.max(containerHeight, contentHeight);
+    
+    console.log(`Setting SVG size: ${newWidth}x${newHeight}`);
+    
+    // Update SVG dimensions but keep current viewBox if panning
+    svg.setAttribute('width', newWidth);
+    svg.setAttribute('height', newHeight);
+    
+    // Only update viewBox if not in pan mode to preserve user's view
+    if (!isPanMode || !svg.getAttribute('viewBox')) {
+        svg.setAttribute('viewBox', `${minX} ${minY} ${contentWidth} ${contentHeight}`);
+    }
+    
+    // Force container to recognize the new size
+    svg.style.display = 'block';
+    svg.style.minWidth = newWidth + 'px';
+    svg.style.minHeight = newHeight + 'px';
+}
+
+// ============================================
+// LAYOUT MANAGEMENT (Server-side)
+// ============================================
+
+// Save current layout to server
+function saveLayout() {
+    if (!networkStructure || !hasCustomChanges) {
+        showMessage('No custom changes to save.', 'warning');
+        return;
+    }
+    
+    // Create layout data with device positions
+    const layoutData = {
+        timestamp: new Date().toISOString(),
+        devices: {}
+    };
+    
+    // Store device positions
+    Object.keys(networkStructure.devices).forEach(deviceId => {
+        const device = networkStructure.devices[deviceId];
+        layoutData.devices[deviceId] = {
+            x: device.x,
+            y: device.y,
+            segment: device.segment,
+            deviceType: device.deviceType
+        };
+    });
+    
+    // Disable save button during save
+    const saveBtn = document.getElementById('save-layout-btn');
+    saveBtn.disabled = true;
+    saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
+    
+    // Save to server
+    fetch('/api/diagram_layout', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            layout_name: 'default',
+            layout_data: layoutData,
+            created_by: 'user'
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Reset custom changes flag
+            hasCustomChanges = false;
+            showMessage('Layout saved successfully!', 'success');
+            console.log('Layout saved to server:', layoutData);
+        } else {
+            showMessage(`Failed to save layout: ${data.error || 'Unknown error'}`, 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error saving layout:', error);
+        showMessage('Failed to save layout to server', 'error');
+    })
+    .finally(() => {
+        // Reset save button
+        saveBtn.innerHTML = '<i class="fas fa-save"></i> Save Layout';
+        if (!hasCustomChanges) {
+            saveBtn.disabled = true;
+        }
+    });
+}
+
+// Load saved layout from server
+function loadSavedLayout() {
+    return fetch('/api/diagram_layout?name=default')
+        .then(response => response.json())
+        .then(data => {
+            if (data.success && data.layout) {
+                customLayout = data.layout.layout_data;
+                console.log('Loaded saved layout from server:', customLayout);
+                return true;
+            } else {
+                console.log('No saved layout found on server');
+                return false;
+            }
+        })
+        .catch(error => {
+            console.error('Error loading saved layout from server:', error);
+            return false;
+        });
+}
+
+// Apply saved layout to devices
+function applySavedLayout(structure) {
+    if (!customLayout || !customLayout.devices) return false;
+    
+    let appliedCount = 0;
+    
+    Object.keys(structure.devices).forEach(deviceId => {
+        const savedPosition = customLayout.devices[deviceId];
+        if (savedPosition) {
+            structure.devices[deviceId].x = savedPosition.x;
+            structure.devices[deviceId].y = savedPosition.y;
+            appliedCount++;
+        }
+    });
+    
+    if (appliedCount > 0) {
+        console.log(`Applied saved positions to ${appliedCount} devices`);
+        showMessage(`Applied saved layout to ${appliedCount} devices.`, 'info');
+        return true;
+    }
+    
+    return false;
+}
+
+// Reset to automatic layout
+function resetLayout() {
+    // Clear custom layout
+    customLayout = null;
+    hasCustomChanges = false;
+    localStorage.removeItem('networkDiagramLayout');
+    
+    // If we have an existing network structure, reposition devices within current bounds
+    if (networkStructure) {
+        repositionDevicesWithinBounds();
+    } else {
+        // Regenerate diagram with automatic layout
+        generateNetworkDiagram();
+    }
+    
+    // Update UI
+    document.getElementById('save-layout-btn').disabled = true;
+    
+    showMessage('Layout reset - devices repositioned within panel bounds.', 'info');
+}
+
+// Reposition all devices to fit within current panel bounds
+function repositionDevicesWithinBounds() {
+    if (!networkStructure) return;
+    
+    const container = document.getElementById('network-diagram-container');
+    const width = container.clientWidth;
+    const height = container.clientHeight || 700;
+    
+    console.log('Repositioning devices within bounds:', width, 'x', height);
+    
+    // Re-layout devices using the same logic as initial layout but with current bounds
+    layoutDevices(networkStructure, width, height);
+    
+    // Update visual positions of all devices
+    Object.keys(networkStructure.devices).forEach(deviceId => {
+        const device = networkStructure.devices[deviceId];
+        if (device.x !== undefined && device.y !== undefined) {
+            updateDeviceVisualPosition(deviceId, device.x, device.y);
+        }
+    });
+    
+    // Redraw connections
+    redrawConnections();
+    
+    // Reset SVG to fit the container
+    const svg = document.querySelector('#network-diagram-container svg');
+    if (svg) {
+        svg.setAttribute('width', width);
+        svg.setAttribute('height', height);
+        svg.setAttribute('viewBox', `0 0 ${width} ${height}`);
+        svg.style.minWidth = width + 'px';
+        svg.style.minHeight = height + 'px';
+    }
+    
+    console.log('Devices repositioned within panel bounds');
+}
+
+// ============================================
+// UTILITY FUNCTIONS
+// ============================================
+
+// Show temporary message
+function showMessage(message, type = 'info') {
+    // Create message element
+    const messageDiv = document.createElement('div');
+    messageDiv.className = `alert alert-${type === 'info' ? 'primary' : type === 'success' ? 'success' : type === 'warning' ? 'warning' : 'danger'} alert-dismissible fade show position-fixed`;
+    messageDiv.style.cssText = 'top: 20px; right: 20px; z-index: 9999; max-width: 400px;';
+    messageDiv.innerHTML = `
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    
+    // Add to page
+    document.body.appendChild(messageDiv);
+    
+    // Auto-remove after 4 seconds
+    setTimeout(() => {
+        if (messageDiv.parentNode) {
+            messageDiv.remove();
+        }
+    }, 4000);
+}
+
+// ============================================
+// ENHANCED DIAGRAM GENERATION
+// ============================================
+
+// Enhanced diagram generation with async layout loading
+function generateNetworkDiagram() {
+    if (!diagramData || !diagramData.nodes) return;
+    
+    const container = document.getElementById('network-diagram-container');
+    const width = container.clientWidth;
+    const height = container.clientHeight || 700;
+    
+    // Clear existing diagram
+    container.innerHTML = '';
+    
+    // Create SVG
+    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    svg.setAttribute('width', width);
+    svg.setAttribute('height', height);
+    svg.setAttribute('viewBox', `0 0 ${width} ${height}`);
+    svg.style.background = '#f8f9fa';
+    
+    // Analyze network structure
+    networkStructure = analyzeNetworkStructure(diagramData, width, height);
+    
+    // Load saved layout asynchronously, then render
+    if (!customLayout) {
+        loadSavedLayout().then((layoutLoaded) => {
+            if (layoutLoaded && customLayout) {
+                applySavedLayout(networkStructure);
+            }
+            renderDiagram(svg, networkStructure);
+        });
+    } else {
+        // Apply existing custom layout
+        applySavedLayout(networkStructure);
+        renderDiagram(svg, networkStructure);
+    }
+}
+
+// Render the actual diagram elements
+function renderDiagram(svg, structure) {
+    // Draw network segments
+    drawNetworkSegments(svg, structure, svg.clientWidth || 800, svg.clientHeight || 700);
+    
+    // Draw connections
+    drawConnections(svg, structure);
+    
+    // Draw devices
+    drawDevices(svg, structure);
+    
+    // Enable dragging if drag mode is active
+    if (isDragMode) {
+        setTimeout(() => enableDragging(), 100);
+    }
+    
+    // Add to container
+    const container = document.getElementById('network-diagram-container');
+    container.appendChild(svg);
+    
+    console.log('Network diagram rendered successfully');
+}
+</script>
+{% endblock %}
