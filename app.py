@@ -2575,19 +2575,54 @@ def deploy_agent_to_host_ssh(host, server_url):
 #!/bin/bash
 set -e
 
-# Download deployment script
-curl -f -o /tmp/deploy_agent.sh {server_url}/static/deploy_agent.sh
-chmod +x /tmp/deploy_agent.sh
+# Create directories
+sudo mkdir -p /opt/networkmap-agent /etc/networkmap /var/log
 
-# Run deployment
-sudo /tmp/deploy_agent.sh --server-url {server_url} --no-start
+# Download agent script
+curl -f -o /tmp/networkmap_agent.py {server_url}/static/networkmap_agent.py
+sudo cp /tmp/networkmap_agent.py /opt/networkmap-agent/networkmap_agent.py
+sudo chmod +x /opt/networkmap-agent/networkmap_agent.py
 
-# Start the service
-sudo systemctl start networkmap-agent
+# Install Python dependencies
+sudo apt-get update
+sudo apt-get install -y python3-pip python3-requests
+sudo pip3 install requests
+
+# Create configuration
+sudo python3 /opt/networkmap-agent/networkmap_agent.py --create-config --server-url {server_url} --username $(whoami)
+
+# Create systemd service
+sudo tee /etc/systemd/system/networkmap-agent.service >/dev/null << 'SERVICEEOF'
+[Unit]
+Description=NetworkMap Monitoring Agent
+After=network.target
+Wants=network.target
+
+[Service]
+Type=simple
+User=root
+Group=root
+WorkingDirectory=/opt/networkmap-agent
+ExecStart=/usr/bin/python3 /opt/networkmap-agent/networkmap_agent.py
+Restart=always
+RestartSec=10
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=networkmap-agent
+
+[Install]
+WantedBy=multi-user.target
+SERVICEEOF
+
+# Reload systemd and start service
+sudo systemctl daemon-reload
 sudo systemctl enable networkmap-agent
+sudo systemctl start networkmap-agent
 
 # Cleanup
-rm -f /tmp/deploy_agent.sh
+rm -f /tmp/networkmap_agent.py
 
 echo "Agent deployment completed successfully"
 """
