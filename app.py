@@ -2636,6 +2636,10 @@ sudo apt-get install -y -qq \
     python3-venv \
     python3-requests \
     curl \
+    lsof \
+    net-tools \
+    iproute2 \
+    procps \
     >/dev/null 2>&1
 
 # Create virtual environment for the agent
