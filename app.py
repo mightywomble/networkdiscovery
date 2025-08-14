@@ -2394,7 +2394,7 @@ def get_all_hosts():
 
 @app.route('/api/deploy_agent', methods=['POST'])
 def deploy_agent_via_ssh():
-    """Deploy agent to a host via SSH"""
+    """Deploy agent to a host via SSH with optional force redeploy"""
     try:
         data = request.get_json()
         if not data:
@@ -2405,6 +2405,7 @@ def deploy_agent_via_ssh():
         
         host_id = data.get('host_id')
         server_url = data.get('server_url', request.url_root.rstrip('/'))
+        force_redeploy = data.get('force_redeploy', False)
         
         if not host_id:
             return jsonify({
@@ -2422,21 +2423,25 @@ def deploy_agent_via_ssh():
                 'error': f'Host with ID {host_id} not found'
             }), 404
         
-        # Deploy agent via SSH
-        result = deploy_agent_to_host_ssh(host, server_url)
+        # Deploy agent via SSH with force redeploy option
+        result = deploy_agent_to_host_ssh(host, server_url, force_redeploy)
+        
+        action_type = "Force redeployed" if force_redeploy else "Deployed"
         
         if result['success']:
             return jsonify({
                 'success': True,
-                'message': f'Agent deployed successfully to {host["name"]}',
+                'message': f'Agent {action_type.lower()} successfully to {host["name"]}',
                 'output': result.get('output', ''),
+                'force_redeploy': force_redeploy,
                 'timestamp': datetime.now().isoformat()
             })
         else:
             return jsonify({
                 'success': False,
-                'error': result.get('error', 'Deployment failed'),
-                'output': result.get('output', '')
+                'error': result.get('error', f'{action_type} failed'),
+                'output': result.get('output', ''),
+                'force_redeploy': force_redeploy
             }), 500
         
     except Exception as e:
@@ -2565,10 +2570,11 @@ def uninstall_agent_via_ssh():
             'error': str(e)
         }), 500
 
-def deploy_agent_to_host_ssh(host, server_url):
+def deploy_agent_to_host_ssh(host, server_url, force_redeploy=False):
     """Deploy agent to a host using SSH"""
     try:
-        print(f"Deploying agent to {host['name']} ({host['ip_address']})")
+        action_type = "Force redeploying" if force_redeploy else "Deploying"
+        print(f"{action_type} agent to {host['name']} ({host['ip_address']})")
         
         # Validate host information
         if not host.get('ip_address'):
@@ -2596,7 +2602,34 @@ def deploy_agent_to_host_ssh(host, server_url):
                 'output': f'Cannot connect to {host["name"]} ({host["ip_address"]}) via SSH. Please check: 1) Host is online, 2) SSH service is running, 3) SSH keys are properly configured, 4) Username is correct ({host.get("username", "root")})'
             }
         
-        print(f"SSH connectivity confirmed. Proceeding with deployment...")
+        print(f"SSH connectivity confirmed. Proceeding with {action_type.lower()}...")
+        
+        # Create deployment script with optional cleanup for force redeploy
+        cleanup_section = ""
+        if force_redeploy:
+            cleanup_section = f"""
+# Force redeploy - completely remove existing agent first
+echo "Force redeploy requested - removing existing agent installation..."
+
+# Stop and disable existing service if it exists
+sudo systemctl stop networkmap-agent 2>/dev/null || true
+sudo systemctl disable networkmap-agent 2>/dev/null || true
+
+# Remove existing service file
+sudo rm -f /etc/systemd/system/networkmap-agent.service
+
+# Remove existing directories and files
+sudo rm -rf /opt/networkmap-agent /etc/networkmap-agent /var/log/networkmap-agent /etc/networkmap
+
+# Remove any old configurations
+sudo rm -f /etc/networkmap/agent.conf
+
+# Reload systemd to remove service references
+sudo systemctl daemon-reload
+
+echo "✓ Existing agent installation removed"
+
+"""
         
         # Create deployment script commands
         deployment_script = f"""
@@ -2610,12 +2643,13 @@ export NEEDRESTART_SUSPEND=1
 
 echo "Starting NetworkMap agent deployment..."
 
+{cleanup_section}
 # Create directories
 echo "Creating directories..."
-sudo mkdir -p /opt/networkmap-agent /etc/networkmap-agent /var/log/networkmap-agent
+sudo mkdir -p /opt/networkmap-agent /etc/networkmap /var/log/networkmap-agent
 
 # Download agent script
-echo "Downloading agent script..."
+echo "Downloading latest agent script..."
 curl -f -o /tmp/networkmap_agent.py {server_url}/static/networkmap_agent.py
 sudo cp /tmp/networkmap_agent.py /opt/networkmap-agent/networkmap_agent.py
 sudo chmod +x /opt/networkmap-agent/networkmap_agent.py
@@ -2653,7 +2687,7 @@ sudo /opt/networkmap-agent/venv/bin/python /opt/networkmap-agent/networkmap_agen
 
 # Create systemd service with virtual environment
 echo "Creating systemd service..."
-sudo tee /etc/systemd/system/networkmap-agent.service >/dev/null << 'SERVICEEOF'
+sudo tee /etc/systemd/system/networkmap-agent.service >/dev/null <<'SERVICEEOF'
 [Unit]
 Description=NetworkMap Monitoring Agent
 After=network.target
@@ -2682,7 +2716,7 @@ ProtectHome=true
 ProtectKernelTunables=true
 ProtectControlGroups=true
 RestrictSUIDSGID=true
-ReadWritePaths=/var/log/networkmap-agent /etc/networkmap-agent /opt/networkmap-agent
+ReadWritePaths=/var/log/networkmap-agent /etc/networkmap /opt/networkmap-agent
 
 [Install]
 WantedBy=multi-user.target
@@ -2691,10 +2725,10 @@ SERVICEEOF
 # Set proper permissions
 echo "Setting permissions..."
 sudo chown -R root:root /opt/networkmap-agent
-sudo chown -R root:root /etc/networkmap-agent
+sudo chown -R root:root /etc/networkmap
 sudo chown -R root:root /var/log/networkmap-agent
 sudo chmod 755 /opt/networkmap-agent
-sudo chmod 755 /etc/networkmap-agent
+sudo chmod 755 /etc/networkmap
 sudo chmod 755 /var/log/networkmap-agent
 
 # Reload systemd and start service
@@ -2704,20 +2738,25 @@ sudo systemctl enable networkmap-agent >/dev/null 2>&1
 sudo systemctl start networkmap-agent
 
 # Wait a moment and check if service started successfully
-sleep 3
+sleep 5
 if sudo systemctl is-active --quiet networkmap-agent; then
     echo "✓ NetworkMap agent service started successfully"
+    echo "Service status: $(sudo systemctl is-active networkmap-agent)"
 else
     echo "⚠ Warning: NetworkMap agent service may not have started properly"
     sudo systemctl status networkmap-agent --no-pager -l || true
+    echo "Check logs with: sudo journalctl -u networkmap-agent -f"
 fi
+
+# Show configuration location
+echo "Configuration file: /etc/networkmap/agent.conf"
+echo "Service status: $(sudo systemctl is-active networkmap-agent)"
+echo "To check logs: sudo journalctl -u networkmap-agent -f"
 
 # Cleanup
 rm -f /tmp/networkmap_agent.py
 
 echo "Agent deployment completed successfully!"
-echo "Service status: $(sudo systemctl is-active networkmap-agent)"
-echo "To check logs: sudo journalctl -u networkmap-agent -f"
 """
         
         # Execute deployment via SSH
