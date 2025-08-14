@@ -1,0 +1,697 @@
+{% extends "base.html" %}
+
+{% block title %}Agent Management - Network Map{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col">
+        <h1><i class="fas fa-robot"></i> Agent Management</h1>
+        <p class="text-muted">Deploy and manage network monitoring agents via SSH</p>
+    </div>
+</div>
+
+<!-- Stats Overview -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card border-left-primary">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h6 class="card-title text-primary">Total Hosts</h6>
+                        <h3 class="mb-0" id="total-hosts">-</h3>
+                    </div>
+                    <i class="fas fa-server fa-2x text-primary opacity-75"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card border-left-success">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h6 class="card-title text-success">Agents Deployed</h6>
+                        <h3 class="mb-0" id="deployed-agents">-</h3>
+                    </div>
+                    <i class="fas fa-robot fa-2x text-success opacity-75"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card border-left-info">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h6 class="card-title text-info">Online Agents</h6>
+                        <h3 class="mb-0" id="online-agents">-</h3>
+                    </div>
+                    <i class="fas fa-check-circle fa-2x text-info opacity-75"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card border-left-warning">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h6 class="card-title text-warning">Pending</h6>
+                        <h3 class="mb-0" id="pending-agents">-</h3>
+                    </div>
+                    <i class="fas fa-clock fa-2x text-warning opacity-75"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Action Buttons -->
+<div class="row mb-4">
+    <div class="col">
+        <div class="btn-group me-2" role="group">
+            <button type="button" class="btn btn-primary" onclick="refreshData()">
+                <i class="fas fa-sync-alt"></i> Refresh
+            </button>
+            <button type="button" class="btn btn-success" onclick="deploySelectedAgents()">
+                <i class="fas fa-rocket"></i> Deploy Selected
+            </button>
+        </div>
+        <div class="btn-group" role="group">
+            <button type="button" class="btn btn-outline-secondary" onclick="selectAllHosts()" id="select-all-btn">
+                <i class="fas fa-check-square"></i> Select All
+            </button>
+            <button type="button" class="btn btn-outline-info" onclick="showAgentLogs()">
+                <i class="fas fa-file-alt"></i> View Logs
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Hosts and Agents List -->
+<div class="row">
+    <div class="col">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-server"></i> Hosts & Agent Status
+                </h5>
+            </div>
+            <div class="card-body">
+                <div id="hosts-container">
+                    <!-- Hosts will be loaded here -->
+                    <div class="text-center text-muted py-4">
+                        <i class="fas fa-spinner fa-spin fa-2x mb-3"></i>
+                        <p>Loading hosts...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Deployment Progress Modal -->
+<div class="modal fade" id="deploymentProgressModal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="fas fa-rocket"></i> Agent Deployment Progress</h5>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <div class="progress">
+                        <div class="progress-bar" role="progressbar" id="deployment-progress" style="width: 0%"></div>
+                    </div>
+                    <small class="text-muted" id="deployment-status">Starting deployment...</small>
+                </div>
+                <div class="deployment-logs" style="max-height: 300px; overflow-y: auto; background: #f8f9fa; padding: 1rem; border-radius: 0.375rem; font-family: monospace; font-size: 0.875rem;" id="deployment-logs">
+                    <!-- Deployment logs will appear here -->
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" id="close-deployment-btn" disabled>Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Agent Logs Modal -->
+<div class="modal fade" id="logsModal" tabindex="-1">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="fas fa-file-alt"></i> Agent Logs</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <select class="form-select" id="log-agent-select">
+                            <option value="">All Agents</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <select class="form-select" id="log-hours-select">
+                            <option value="1">Last Hour</option>
+                            <option value="6">Last 6 Hours</option>
+                            <option value="24" selected>Last 24 Hours</option>
+                            <option value="168">Last Week</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <button class="btn btn-primary" onclick="loadAgentLogs()">
+                            <i class="fas fa-sync-alt"></i> Refresh
+                        </button>
+                    </div>
+                </div>
+                <div class="log-viewer" style="background-color: #1e1e1e; color: #ffffff; font-family: 'Courier New', monospace; font-size: 0.875rem; border-radius: 0.375rem; max-height: 400px; overflow-y: auto; padding: 1rem;" id="logs-container">
+                    <div class="text-center text-muted p-4">
+                        Select an agent and click refresh to view logs
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Agent Control Modal -->
+<div class="modal fade" id="agentControlModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="fas fa-cog"></i> Agent Control</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <strong>Host:</strong> <span id="control-host-name"></span>
+                </div>
+                <div class="d-grid gap-2">
+                    <button class="btn btn-success" onclick="controlAgent('start')" id="start-agent-btn">
+                        <i class="fas fa-play"></i> Start Agent
+                    </button>
+                    <button class="btn btn-warning" onclick="controlAgent('restart')" id="restart-agent-btn">
+                        <i class="fas fa-redo"></i> Restart Agent
+                    </button>
+                    <button class="btn btn-danger" onclick="controlAgent('stop')" id="stop-agent-btn">
+                        <i class="fas fa-stop"></i> Stop Agent
+                    </button>
+                    <hr>
+                    <button class="btn btn-info" onclick="checkAgentStatus()" id="status-agent-btn">
+                        <i class="fas fa-info-circle"></i> Check Status
+                    </button>
+                    <button class="btn btn-secondary" onclick="viewAgentConfig()" id="config-agent-btn">
+                        <i class="fas fa-cog"></i> View Configuration
+                    </button>
+                </div>
+                <div class="mt-3" id="agent-status-output" style="font-family: monospace; font-size: 0.875rem; background: #f8f9fa; padding: 0.5rem; border-radius: 0.375rem; display: none;">
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.border-left-primary { border-left: 4px solid #007bff; }
+.border-left-success { border-left: 4px solid #28a745; }
+.border-left-info { border-left: 4px solid #17a2b8; }
+.border-left-warning { border-left: 4px solid #ffc107; }
+
+.host-card {
+    transition: all 0.3s ease;
+}
+
+.host-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+.agent-status-badge {
+    font-size: 0.75rem;
+    padding: 0.25rem 0.5rem;
+}
+
+.deployment-logs {
+    white-space: pre-wrap;
+    word-wrap: break-word;
+}
+</style>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+let hosts = [];
+let agents = [];
+let selectedHosts = new Set();
+let deploymentInProgress = false;
+
+// Initialize page
+document.addEventListener('DOMContentLoaded', function() {
+    refreshData();
+    setInterval(refreshData, 30000); // Auto-refresh every 30 seconds
+});
+
+async function refreshData() {
+    try {
+        // Load hosts and agents data
+        const [hostsResponse, agentsResponse] = await Promise.all([
+            fetch('/api/hosts'),
+            fetch('/api/agents')
+        ]);
+        
+        const hostsData = await hostsResponse.json();
+        const agentsData = await agentsResponse.json();
+        
+        if (hostsData.success) {
+            hosts = hostsData.hosts || [];
+        }
+        
+        if (agentsData.success) {
+            agents = agentsData.agents || [];
+        }
+        
+        renderHosts();
+        updateStats();
+        updateLogAgentSelect();
+        
+    } catch (error) {
+        console.error('Error refreshing data:', error);
+        document.getElementById('hosts-container').innerHTML = 
+            '<div class="alert alert-danger">Error loading data: ' + error.message + '</div>';
+    }
+}
+
+function renderHosts() {
+    const container = document.getElementById('hosts-container');
+    
+    if (hosts.length === 0) {
+        container.innerHTML = `
+            <div class="text-center text-muted py-5">
+                <i class="fas fa-server fa-3x mb-3"></i>
+                <h5>No Hosts Configured</h5>
+                <p>Add hosts first to deploy agents</p>
+                <a href="/hosts" class="btn btn-primary">
+                    <i class="fas fa-plus"></i> Add Hosts
+                </a>
+            </div>
+        `;
+        return;
+    }
+
+    const html = hosts.map(host => {
+        const agent = agents.find(a => a.ip_address === host.ip_address || a.hostname === host.name);
+        const isSelected = selectedHosts.has(host.id);
+        
+        let agentStatus = 'Not Deployed';
+        let agentStatusClass = 'secondary';
+        let agentStatusIcon = 'fas fa-minus-circle';
+        
+        if (agent) {
+            switch (agent.heartbeat_status) {
+                case 'online':
+                    agentStatus = 'Online';
+                    agentStatusClass = 'success';
+                    agentStatusIcon = 'fas fa-check-circle';
+                    break;
+                case 'warning':
+                    agentStatus = 'Warning';
+                    agentStatusClass = 'warning';
+                    agentStatusIcon = 'fas fa-exclamation-triangle';
+                    break;
+                case 'offline':
+                    agentStatus = 'Offline';
+                    agentStatusClass = 'danger';
+                    agentStatusIcon = 'fas fa-times-circle';
+                    break;
+                default:
+                    agentStatus = 'Unknown';
+                    agentStatusClass = 'secondary';
+                    agentStatusIcon = 'fas fa-question-circle';
+            }
+        }
+        
+        return `
+            <div class="host-card card mb-3">
+                <div class="card-body">
+                    <div class="row align-items-center">
+                        <div class="col-md-1">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" 
+                                       id="host-${host.id}" 
+                                       ${isSelected ? 'checked' : ''}
+                                       ${agent ? 'disabled' : ''}
+                                       onchange="toggleHostSelection(${host.id})">
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <h6 class="mb-1">
+                                <i class="fas fa-server"></i> ${host.name}
+                            </h6>
+                            <small class="text-muted">${host.ip_address}</small>
+                            ${host.description ? `<br><small class="text-muted">${host.description}</small>` : ''}
+                        </div>
+                        <div class="col-md-2">
+                            <small class="text-muted">SSH User:</small><br>
+                            <strong>${host.username}</strong>
+                        </div>
+                        <div class="col-md-2">
+                            <small class="text-muted">Host Status:</small><br>
+                            <span class="badge bg-${host.status === 'online' ? 'success' : host.status === 'offline' ? 'danger' : 'warning'}">
+                                ${host.status || 'Unknown'}
+                            </span>
+                        </div>
+                        <div class="col-md-2">
+                            <small class="text-muted">Agent Status:</small><br>
+                            <span class="agent-status-badge badge bg-${agentStatusClass}">
+                                <i class="${agentStatusIcon}"></i> ${agentStatus}
+                            </span>
+                        </div>
+                        <div class="col-md-2 text-end">
+                            ${agent ? `
+                                <div class="btn-group btn-group-sm">
+                                    <button class="btn btn-outline-primary" onclick="showAgentControl('${host.name}', '${host.ip_address}')" title="Control Agent">
+                                        <i class="fas fa-cog"></i>
+                                    </button>
+                                    <button class="btn btn-outline-info" onclick="viewHostAgentLogs('${agent.agent_id}')" title="View Logs">
+                                        <i class="fas fa-file-alt"></i>
+                                    </button>
+                                    <button class="btn btn-outline-danger" onclick="uninstallAgent('${host.name}', '${host.ip_address}')" title="Uninstall">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </div>
+                            ` : `
+                                <button class="btn btn-sm btn-success" onclick="deploySingleAgent(${host.id})" title="Deploy Agent">
+                                    <i class="fas fa-rocket"></i> Deploy
+                                </button>
+                            `}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    }).join('');
+
+    container.innerHTML = html;
+}
+
+function updateStats() {
+    const totalHosts = hosts.length;
+    const deployedAgents = agents.length;
+    const onlineAgents = agents.filter(a => a.heartbeat_status === 'online').length;
+    const pendingAgents = selectedHosts.size;
+    
+    document.getElementById('total-hosts').textContent = totalHosts;
+    document.getElementById('deployed-agents').textContent = deployedAgents;
+    document.getElementById('online-agents').textContent = onlineAgents;
+    document.getElementById('pending-agents').textContent = pendingAgents;
+}
+
+function toggleHostSelection(hostId) {
+    if (selectedHosts.has(hostId)) {
+        selectedHosts.delete(hostId);
+    } else {
+        selectedHosts.add(hostId);
+    }
+    updateStats();
+    updateSelectAllButton();
+}
+
+function selectAllHosts() {
+    const availableHosts = hosts.filter(host => 
+        !agents.find(a => a.ip_address === host.ip_address || a.hostname === host.name)
+    );
+    
+    if (selectedHosts.size === availableHosts.length) {
+        // Unselect all
+        selectedHosts.clear();
+    } else {
+        // Select all available hosts
+        selectedHosts.clear();
+        availableHosts.forEach(host => selectedHosts.add(host.id));
+    }
+    
+    renderHosts();
+    updateStats();
+    updateSelectAllButton();
+}
+
+function updateSelectAllButton() {
+    const btn = document.getElementById('select-all-btn');
+    const availableHosts = hosts.filter(host => 
+        !agents.find(a => a.ip_address === host.ip_address || a.hostname === host.name)
+    );
+    
+    if (selectedHosts.size === 0) {
+        btn.innerHTML = '<i class="fas fa-check-square"></i> Select All';
+    } else if (selectedHosts.size === availableHosts.length) {
+        btn.innerHTML = '<i class="fas fa-square"></i> Unselect All';
+    } else {
+        btn.innerHTML = '<i class="fas fa-minus-square"></i> Select All';
+    }
+}
+
+async function deploySelectedAgents() {
+    if (selectedHosts.size === 0) {
+        alert('Please select hosts to deploy agents to');
+        return;
+    }
+    
+    if (deploymentInProgress) {
+        alert('Deployment already in progress');
+        return;
+    }
+    
+    const selectedHostsArray = Array.from(selectedHosts).map(id => 
+        hosts.find(h => h.id === id)
+    ).filter(h => h);
+    
+    if (selectedHostsArray.length === 0) {
+        alert('No valid hosts selected');
+        return;
+    }
+    
+    deploymentInProgress = true;
+    const modal = new bootstrap.Modal(document.getElementById('deploymentProgressModal'));
+    modal.show();
+    
+    const progressBar = document.getElementById('deployment-progress');
+    const statusElement = document.getElementById('deployment-status');
+    const logsElement = document.getElementById('deployment-logs');
+    const closeBtn = document.getElementById('close-deployment-btn');
+    
+    progressBar.style.width = '0%';
+    statusElement.textContent = 'Starting deployment...';
+    logsElement.textContent = '';
+    closeBtn.disabled = true;
+    
+    try {
+        for (let i = 0; i < selectedHostsArray.length; i++) {
+            const host = selectedHostsArray[i];
+            const progress = ((i + 1) / selectedHostsArray.length) * 100;
+            
+            progressBar.style.width = progress + '%';
+            statusElement.textContent = `Deploying to ${host.name} (${i + 1}/${selectedHostsArray.length})`;
+            
+            logsElement.textContent += `\n[${new Date().toLocaleTimeString()}] Starting deployment to ${host.name} (${host.ip_address})\n`;
+            logsElement.scrollTop = logsElement.scrollHeight;
+            
+            try {
+                await deployAgentToHost(host);
+                logsElement.textContent += `[${new Date().toLocaleTimeString()}] ✓ Successfully deployed to ${host.name}\n`;
+            } catch (error) {
+                logsElement.textContent += `[${new Date().toLocaleTimeString()}] ✗ Failed to deploy to ${host.name}: ${error.message}\n`;
+            }
+            
+            logsElement.scrollTop = logsElement.scrollHeight;
+        }
+        
+        statusElement.textContent = 'Deployment completed';
+        selectedHosts.clear();
+        
+        // Refresh data to show new agents
+        setTimeout(() => {
+            refreshData();
+        }, 2000);
+        
+    } catch (error) {
+        statusElement.textContent = 'Deployment failed: ' + error.message;
+    } finally {
+        deploymentInProgress = false;
+        closeBtn.disabled = false;
+    }
+}
+
+async function deploySingleAgent(hostId) {
+    const host = hosts.find(h => h.id === hostId);
+    if (!host) return;
+    
+    selectedHosts.clear();
+    selectedHosts.add(hostId);
+    await deploySelectedAgents();
+}
+
+async function deployAgentToHost(host) {
+    const response = await fetch('/api/deploy_agent', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            host_id: host.id,
+            server_url: window.location.origin
+        })
+    });
+    
+    const data = await response.json();
+    
+    if (!data.success) {
+        throw new Error(data.error || 'Deployment failed');
+    }
+    
+    return data;
+}
+
+function showAgentControl(hostname, ipAddress) {
+    document.getElementById('control-host-name').textContent = `${hostname} (${ipAddress})`;
+    const modal = new bootstrap.Modal(document.getElementById('agentControlModal'));
+    modal.show();
+    
+    // Store current host for control operations
+    window.currentControlHost = { hostname, ipAddress };
+}
+
+async function controlAgent(action) {
+    if (!window.currentControlHost) return;
+    
+    const { hostname, ipAddress } = window.currentControlHost;
+    const outputElement = document.getElementById('agent-status-output');
+    
+    outputElement.style.display = 'block';
+    outputElement.textContent = `Executing ${action} on ${hostname}...`;
+    
+    try {
+        const response = await fetch('/api/control_agent', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                hostname: hostname,
+                ip_address: ipAddress,
+                action: action
+            })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            outputElement.textContent = data.output || `${action} completed successfully`;
+            
+            // Refresh data to update status
+            setTimeout(refreshData, 1000);
+        } else {
+            outputElement.textContent = `Error: ${data.error}`;
+        }
+    } catch (error) {
+        outputElement.textContent = `Error: ${error.message}`;
+    }
+}
+
+async function checkAgentStatus() {
+    await controlAgent('status');
+}
+
+async function viewAgentConfig() {
+    await controlAgent('config');
+}
+
+async function uninstallAgent(hostname, ipAddress) {
+    if (!confirm(`Are you sure you want to uninstall the agent from ${hostname}?`)) {
+        return;
+    }
+    
+    try {
+        const response = await fetch('/api/uninstall_agent', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                hostname: hostname,
+                ip_address: ipAddress
+            })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            alert('Agent uninstalled successfully');
+            refreshData();
+        } else {
+            alert('Failed to uninstall agent: ' + data.error);
+        }
+    } catch (error) {
+        alert('Error uninstalling agent: ' + error.message);
+    }
+}
+
+function showAgentLogs() {
+    const modal = new bootstrap.Modal(document.getElementById('logsModal'));
+    modal.show();
+}
+
+function viewHostAgentLogs(agentId) {
+    document.getElementById('log-agent-select').value = agentId;
+    showAgentLogs();
+    loadAgentLogs();
+}
+
+function updateLogAgentSelect() {
+    const select = document.getElementById('log-agent-select');
+    select.innerHTML = '<option value="">All Agents</option>' +
+        agents.map(agent => `<option value="${agent.agent_id}">${agent.hostname} (${agent.ip_address})</option>`).join('');
+}
+
+async function loadAgentLogs() {
+    const agentId = document.getElementById('log-agent-select').value;
+    const hours = document.getElementById('log-hours-select').value;
+    const container = document.getElementById('logs-container');
+    
+    container.innerHTML = '<div class="text-center p-4"><i class="fas fa-spinner fa-spin"></i> Loading logs...</div>';
+    
+    try {
+        const url = `/api/agent/logs?${agentId ? `agent_id=${agentId}&` : ''}hours=${hours}&limit=1000`;
+        const response = await fetch(url);
+        const data = await response.json();
+        
+        if (data.success) {
+            if (data.logs.length === 0) {
+                container.innerHTML = '<div class="text-center text-muted p-4">No logs found for the selected criteria</div>';
+                return;
+            }
+            
+            const logsHtml = data.logs.map(log => {
+                const timestamp = new Date(log.timestamp).toLocaleString();
+                const level = log.level || 'info';
+                const levelColor = level === 'error' ? 'text-danger' : level === 'warning' ? 'text-warning' : 'text-info';
+                
+                return `<div class="mb-1">
+                    <span class="text-muted">[${timestamp}]</span>
+                    <span class="${levelColor}">[${level.toUpperCase()}]</span>
+                    ${log.source ? `<span class="text-success">[${log.source}]</span>` : ''}
+                    <span>${log.message}</span>
+                </div>`;
+            }).join('');
+            
+            container.innerHTML = logsHtml;
+            container.scrollTop = container.scrollHeight;
+        } else {
+            container.innerHTML = '<div class="alert alert-danger">Failed to load logs: ' + data.error + '</div>';
+        }
+    } catch (error) {
+        container.innerHTML = '<div class="alert alert-danger">Error loading logs: ' + error.message + '</div>';
+    }
+}
+</script>
+{% endblock %}

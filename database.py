@@ -142,6 +142,72 @@ class Database:
                 )
             ''')
             
+            # Agent management
+            conn.execute('''
+                CREATE TABLE IF NOT EXISTS agents (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    agent_id TEXT UNIQUE NOT NULL,
+                    host_id INTEGER,
+                    hostname TEXT NOT NULL,
+                    ip_address TEXT NOT NULL,
+                    username TEXT NOT NULL,
+                    agent_version TEXT,
+                    status TEXT DEFAULT 'inactive',
+                    last_heartbeat TIMESTAMP,
+                    last_scan TIMESTAMP,
+                    config_hash TEXT,
+                    error_message TEXT,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (host_id) REFERENCES hosts (id)
+                )
+            ''')
+            
+            # Agent configuration
+            conn.execute('''
+                CREATE TABLE IF NOT EXISTS agent_configs (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    agent_id TEXT NOT NULL,
+                    server_url TEXT NOT NULL,
+                    scan_interval INTEGER DEFAULT 300,
+                    heartbeat_interval INTEGER DEFAULT 60,
+                    log_collection_enabled BOOLEAN DEFAULT 1,
+                    log_paths TEXT DEFAULT '/var/log',
+                    scan_enabled BOOLEAN DEFAULT 1,
+                    config_version INTEGER DEFAULT 1,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (agent_id) REFERENCES agents (agent_id)
+                )
+            ''')
+            
+            # Agent logs collection
+            conn.execute('''
+                CREATE TABLE IF NOT EXISTS agent_logs (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    agent_id TEXT NOT NULL,
+                    log_source TEXT NOT NULL,
+                    log_level TEXT,
+                    message TEXT NOT NULL,
+                    timestamp TIMESTAMP,
+                    collected_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (agent_id) REFERENCES agents (agent_id)
+                )
+            ''')
+            
+            # Agent scan results
+            conn.execute('''
+                CREATE TABLE IF NOT EXISTS agent_scan_results (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    agent_id TEXT NOT NULL,
+                    scan_type TEXT NOT NULL,
+                    scan_data TEXT NOT NULL,
+                    scan_timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    processed BOOLEAN DEFAULT 0,
+                    FOREIGN KEY (agent_id) REFERENCES agents (agent_id)
+                )
+            ''')
+            
             conn.commit()
     
     # Host management
@@ -548,3 +614,236 @@ class Database:
             cursor = conn.execute('DELETE FROM diagram_layouts WHERE layout_name = ?', (layout_name,))
             conn.commit()
             return cursor.rowcount > 0
+    
+    # Agent management methods
+    def register_agent(self, agent_id, hostname, ip_address, username, agent_version=None, host_id=None):
+        """Register a new agent or update existing one"""
+        with self.get_connection() as conn:
+            # Check if agent already exists
+            cursor = conn.execute('SELECT id FROM agents WHERE agent_id = ?', (agent_id,))
+            existing = cursor.fetchone()
+            
+            if existing:
+                # Update existing agent
+                conn.execute('''
+                    UPDATE agents 
+                    SET hostname = ?, ip_address = ?, username = ?, agent_version = ?, 
+                        host_id = ?, status = 'active', updated_at = CURRENT_TIMESTAMP
+                    WHERE agent_id = ?
+                ''', (hostname, ip_address, username, agent_version, host_id, agent_id))
+            else:
+                # Insert new agent
+                conn.execute('''
+                    INSERT INTO agents 
+                    (agent_id, hostname, ip_address, username, agent_version, host_id, status)
+                    VALUES (?, ?, ?, ?, ?, ?, 'active')
+                ''', (agent_id, hostname, ip_address, username, agent_version, host_id))
+            
+            conn.commit()
+    
+    def update_agent_heartbeat(self, agent_id, status='active', error_message=None):
+        """Update agent heartbeat and status"""
+        with self.get_connection() as conn:
+            conn.execute('''
+                UPDATE agents 
+                SET last_heartbeat = CURRENT_TIMESTAMP, status = ?, error_message = ?,
+                    updated_at = CURRENT_TIMESTAMP
+                WHERE agent_id = ?
+            ''', (status, error_message, agent_id))
+            conn.commit()
+    
+    def update_agent_scan_time(self, agent_id):
+        """Update agent last scan time"""
+        with self.get_connection() as conn:
+            conn.execute('''
+                UPDATE agents 
+                SET last_scan = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP
+                WHERE agent_id = ?
+            ''', (agent_id,))
+            conn.commit()
+    
+    def get_agent(self, agent_id):
+        """Get agent information"""
+        with self.get_connection() as conn:
+            cursor = conn.execute('SELECT * FROM agents WHERE agent_id = ?', (agent_id,))
+            row = cursor.fetchone()
+            return dict(row) if row else None
+    
+    def get_all_agents(self):
+        """Get all registered agents"""
+        with self.get_connection() as conn:
+            cursor = conn.execute('''
+                SELECT a.*, h.name as host_name 
+                FROM agents a
+                LEFT JOIN hosts h ON a.host_id = h.id
+                ORDER BY a.hostname
+            ''')
+            return [dict(row) for row in cursor.fetchall()]
+    
+    def deactivate_agent(self, agent_id):
+        """Deactivate an agent"""
+        with self.get_connection() as conn:
+            conn.execute('''
+                UPDATE agents 
+                SET status = 'inactive', updated_at = CURRENT_TIMESTAMP
+                WHERE agent_id = ?
+            ''', (agent_id,))
+            conn.commit()
+    
+    def remove_agent(self, agent_id):
+        """Remove an agent and all related data"""
+        with self.get_connection() as conn:
+            conn.execute('DELETE FROM agent_logs WHERE agent_id = ?', (agent_id,))
+            conn.execute('DELETE FROM agent_scan_results WHERE agent_id = ?', (agent_id,))
+            conn.execute('DELETE FROM agent_configs WHERE agent_id = ?', (agent_id,))
+            conn.execute('DELETE FROM agents WHERE agent_id = ?', (agent_id,))
+            conn.commit()
+    
+    # Agent configuration management
+    def save_agent_config(self, agent_id, server_url, scan_interval=300, heartbeat_interval=60,
+                         log_collection_enabled=True, log_paths='/var/log', scan_enabled=True):
+        """Save agent configuration"""
+        with self.get_connection() as conn:
+            # Check if config exists
+            cursor = conn.execute('SELECT id FROM agent_configs WHERE agent_id = ?', (agent_id,))
+            existing = cursor.fetchone()
+            
+            if existing:
+                # Update existing config
+                conn.execute('''
+                    UPDATE agent_configs 
+                    SET server_url = ?, scan_interval = ?, heartbeat_interval = ?,
+                        log_collection_enabled = ?, log_paths = ?, scan_enabled = ?,
+                        config_version = config_version + 1, updated_at = CURRENT_TIMESTAMP
+                    WHERE agent_id = ?
+                ''', (server_url, scan_interval, heartbeat_interval, log_collection_enabled,
+                     log_paths, scan_enabled, agent_id))
+            else:
+                # Insert new config
+                conn.execute('''
+                    INSERT INTO agent_configs 
+                    (agent_id, server_url, scan_interval, heartbeat_interval, 
+                     log_collection_enabled, log_paths, scan_enabled)
+                    VALUES (?, ?, ?, ?, ?, ?, ?)
+                ''', (agent_id, server_url, scan_interval, heartbeat_interval,
+                     log_collection_enabled, log_paths, scan_enabled))
+            
+            conn.commit()
+    
+    def get_agent_config(self, agent_id):
+        """Get agent configuration"""
+        with self.get_connection() as conn:
+            cursor = conn.execute('SELECT * FROM agent_configs WHERE agent_id = ?', (agent_id,))
+            row = cursor.fetchone()
+            return dict(row) if row else None
+    
+    # Agent logs management
+    def save_agent_logs(self, agent_id, logs):
+        """Save logs from agent"""
+        with self.get_connection() as conn:
+            for log_entry in logs:
+                conn.execute('''
+                    INSERT INTO agent_logs 
+                    (agent_id, log_source, log_level, message, timestamp)
+                    VALUES (?, ?, ?, ?, ?)
+                ''', (agent_id, log_entry.get('source'), log_entry.get('level'),
+                     log_entry.get('message'), log_entry.get('timestamp')))
+            conn.commit()
+    
+    def get_agent_logs(self, agent_id=None, hours=24, limit=1000):
+        """Get agent logs"""
+        cutoff = datetime.now() - timedelta(hours=hours)
+        
+        with self.get_connection() as conn:
+            if agent_id:
+                cursor = conn.execute('''
+                    SELECT al.*, a.hostname 
+                    FROM agent_logs al
+                    JOIN agents a ON al.agent_id = a.agent_id
+                    WHERE al.agent_id = ? AND al.collected_at > ?
+                    ORDER BY al.timestamp DESC, al.collected_at DESC
+                    LIMIT ?
+                ''', (agent_id, cutoff, limit))
+            else:
+                cursor = conn.execute('''
+                    SELECT al.*, a.hostname 
+                    FROM agent_logs al
+                    JOIN agents a ON al.agent_id = a.agent_id
+                    WHERE al.collected_at > ?
+                    ORDER BY al.timestamp DESC, al.collected_at DESC
+                    LIMIT ?
+                ''', (cutoff, limit))
+            
+            return [dict(row) for row in cursor.fetchall()]
+    
+    # Agent scan results management
+    def save_agent_scan_result(self, agent_id, scan_type, scan_data):
+        """Save scan results from agent"""
+        with self.get_connection() as conn:
+            conn.execute('''
+                INSERT INTO agent_scan_results (agent_id, scan_type, scan_data)
+                VALUES (?, ?, ?)
+            ''', (agent_id, scan_type, json.dumps(scan_data)))
+            conn.commit()
+    
+    def get_unprocessed_agent_scans(self):
+        """Get unprocessed agent scan results"""
+        with self.get_connection() as conn:
+            cursor = conn.execute('''
+                SELECT * FROM agent_scan_results 
+                WHERE processed = 0 
+                ORDER BY scan_timestamp ASC
+            ''')
+            results = []
+            for row in cursor.fetchall():
+                result = dict(row)
+                try:
+                    result['scan_data'] = json.loads(result['scan_data'])
+                except json.JSONDecodeError:
+                    result['scan_data'] = {}
+                results.append(result)
+            return results
+    
+    def mark_agent_scan_processed(self, scan_id):
+        """Mark agent scan result as processed"""
+        with self.get_connection() as conn:
+            conn.execute('''
+                UPDATE agent_scan_results 
+                SET processed = 1 
+                WHERE id = ?
+            ''', (scan_id,))
+            conn.commit()
+    
+    def get_agent_stats(self):
+        """Get agent statistics"""
+        with self.get_connection() as conn:
+            # Total agents
+            cursor = conn.execute('SELECT COUNT(*) as total_agents FROM agents')
+            total_agents = cursor.fetchone()['total_agents']
+            
+            # Active agents
+            cursor = conn.execute("SELECT COUNT(*) as active_agents FROM agents WHERE status = 'active'")
+            active_agents = cursor.fetchone()['active_agents']
+            
+            # Agents with recent heartbeat (last 5 minutes)
+            cutoff = datetime.now() - timedelta(minutes=5)
+            cursor = conn.execute('''
+                SELECT COUNT(*) as recent_heartbeats 
+                FROM agents WHERE last_heartbeat > ?
+            ''', (cutoff,))
+            recent_heartbeats = cursor.fetchone()['recent_heartbeats']
+            
+            # Recent log entries (last hour)
+            log_cutoff = datetime.now() - timedelta(hours=1)
+            cursor = conn.execute('''
+                SELECT COUNT(*) as recent_logs 
+                FROM agent_logs WHERE collected_at > ?
+            ''', (log_cutoff,))
+            recent_logs = cursor.fetchone()['recent_logs']
+            
+            return {
+                'total_agents': total_agents,
+                'active_agents': active_agents,
+                'recent_heartbeats': recent_heartbeats,
+                'recent_logs': recent_logs
+            }

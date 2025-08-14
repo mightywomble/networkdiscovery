@@ -50,6 +50,11 @@ def hosts():
     hosts = host_manager.get_all_hosts()
     return render_template('hosts.html', hosts=hosts)
 
+@app.route('/agents')
+def agents():
+    """Agent management page"""
+    return render_template('agents.html')
+
 @app.route('/add_host', methods=['POST'])
 def add_host():
     """Add a new host to monitor"""
@@ -1634,6 +1639,703 @@ def update_host():
             'success': False,
             'error': str(e)
         }), 500
+
+# Agent Management API Endpoints
+@app.route('/api/agent/register', methods=['POST'])
+def agent_register():
+    """Register an agent with the server"""
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({
+                'success': False,
+                'error': 'No data provided'
+            }), 400
+        
+        agent_id = data.get('agent_id')
+        hostname = data.get('hostname')
+        ip_address = data.get('ip_address')
+        username = data.get('username')
+        agent_version = data.get('agent_version')
+        
+        if not all([agent_id, hostname, ip_address, username]):
+            return jsonify({
+                'success': False,
+                'error': 'Missing required fields: agent_id, hostname, ip_address, username'
+            }), 400
+        
+        # Try to find matching host
+        host_id = None
+        try:
+            hosts = host_manager.get_all_hosts()
+            for host in hosts:
+                if host['ip_address'] == ip_address or host['name'] == hostname:
+                    host_id = host['id']
+                    break
+        except Exception as e:
+            print(f"Warning: Could not match agent to existing host: {e}")
+        
+        # Register agent
+        db.register_agent(agent_id, hostname, ip_address, username, agent_version, host_id)
+        
+        # Create default configuration
+        server_url = request.url_root.rstrip('/')
+        db.save_agent_config(
+            agent_id=agent_id,
+            server_url=server_url,
+            scan_interval=300,  # 5 minutes
+            heartbeat_interval=60,  # 1 minute
+            log_collection_enabled=True,
+            log_paths='/var/log,/var/log/syslog,/var/log/auth.log',
+            scan_enabled=True
+        )
+        
+        return jsonify({
+            'success': True,
+            'message': f'Agent {hostname} registered successfully',
+            'agent_id': agent_id,
+            'timestamp': datetime.now().isoformat()
+        })
+        
+    except Exception as e:
+        print(f"Error registering agent: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@app.route('/api/agent/heartbeat', methods=['POST'])
+def agent_heartbeat():
+    """Receive heartbeat from agent"""
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({
+                'success': False,
+                'error': 'No data provided'
+            }), 400
+        
+        agent_id = data.get('agent_id')
+        status = data.get('status', 'active')
+        error_message = data.get('error_message')
+        
+        if not agent_id:
+            return jsonify({
+                'success': False,
+                'error': 'agent_id is required'
+            }), 400
+        
+        # Update agent heartbeat
+        db.update_agent_heartbeat(agent_id, status, error_message)
+        
+        return jsonify({
+            'success': True,
+            'message': 'Heartbeat received',
+            'timestamp': datetime.now().isoformat()
+        })
+        
+    except Exception as e:
+        print(f"Error processing heartbeat: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@app.route('/api/agent/config/<agent_id>', methods=['GET'])
+def get_agent_config(agent_id):
+    """Get configuration for an agent"""
+    try:
+        config = db.get_agent_config(agent_id)
+        
+        if not config:
+            return jsonify({
+                'success': False,
+                'error': 'Agent configuration not found'
+            }), 404
+        
+        # Remove sensitive data
+        safe_config = {
+            'scan_interval': config.get('scan_interval', 300),
+            'heartbeat_interval': config.get('heartbeat_interval', 60),
+            'log_collection_enabled': config.get('log_collection_enabled', True),
+            'log_paths': config.get('log_paths', '/var/log'),
+            'scan_enabled': config.get('scan_enabled', True),
+            'config_version': config.get('config_version', 1)
+        }
+        
+        return jsonify({
+            'success': True,
+            'config': safe_config,
+            'timestamp': datetime.now().isoformat()
+        })
+        
+    except Exception as e:
+        print(f"Error getting agent config: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@app.route('/api/agent/config/<agent_id>', methods=['POST'])
+def update_agent_config(agent_id):
+    """Update configuration for an agent"""
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({
+                'success': False,
+                'error': 'No data provided'
+            }), 400
+        
+        # Validate configuration data
+        scan_interval = data.get('scan_interval', 300)
+        heartbeat_interval = data.get('heartbeat_interval', 60)
+        log_collection_enabled = data.get('log_collection_enabled', True)
+        log_paths = data.get('log_paths', '/var/log')
+        scan_enabled = data.get('scan_enabled', True)
+        
+        # Validate ranges
+        if not (60 <= scan_interval <= 86400):
+            return jsonify({
+                'success': False,
+                'error': 'Scan interval must be between 60 and 86400 seconds'
+            }), 400
+            
+        if not (30 <= heartbeat_interval <= 300):
+            return jsonify({
+                'success': False,
+                'error': 'Heartbeat interval must be between 30 and 300 seconds'
+            }), 400
+        
+        # Update agent configuration
+        db.save_agent_config(
+            agent_id=agent_id,
+            server_url=request.url_root.rstrip('/'),
+            scan_interval=scan_interval,
+            heartbeat_interval=heartbeat_interval,
+            log_collection_enabled=log_collection_enabled,
+            log_paths=log_paths,
+            scan_enabled=scan_enabled
+        )
+        
+        return jsonify({
+            'success': True,
+            'message': 'Agent configuration updated successfully',
+            'timestamp': datetime.now().isoformat()
+        })
+        
+    except Exception as e:
+        print(f"Error updating agent config: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@app.route('/api/agent/scan_results', methods=['POST'])
+def receive_agent_scan_results():
+    """Receive scan results from agent"""
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({
+                'success': False,
+                'error': 'No data provided'
+            }), 400
+        
+        agent_id = data.get('agent_id')
+        scan_type = data.get('scan_type')
+        scan_data = data.get('scan_data')
+        
+        if not all([agent_id, scan_type, scan_data]):
+            return jsonify({
+                'success': False,
+                'error': 'Missing required fields: agent_id, scan_type, scan_data'
+            }), 400
+        
+        # Save scan results
+        db.save_agent_scan_result(agent_id, scan_type, scan_data)
+        
+        # Update agent last scan time
+        db.update_agent_scan_time(agent_id)
+        
+        return jsonify({
+            'success': True,
+            'message': 'Scan results received',
+            'timestamp': datetime.now().isoformat()
+        })
+        
+    except Exception as e:
+        print(f"Error receiving scan results: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@app.route('/api/agent/logs', methods=['POST'])
+def receive_agent_logs():
+    """Receive logs from agent"""
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({
+                'success': False,
+                'error': 'No data provided'
+            }), 400
+        
+        agent_id = data.get('agent_id')
+        logs = data.get('logs', [])
+        
+        if not agent_id:
+            return jsonify({
+                'success': False,
+                'error': 'agent_id is required'
+            }), 400
+        
+        if logs:
+            # Save logs
+            db.save_agent_logs(agent_id, logs)
+        
+        return jsonify({
+            'success': True,
+            'message': f'Received {len(logs)} log entries',
+            'timestamp': datetime.now().isoformat()
+        })
+        
+    except Exception as e:
+        print(f"Error receiving logs: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@app.route('/api/agents', methods=['GET'])
+def get_all_agents():
+    """Get all registered agents"""
+    try:
+        agents = db.get_all_agents()
+        
+        # Add status indicators
+        now = datetime.now()
+        for agent in agents:
+            if agent.get('last_heartbeat'):
+                try:
+                    last_heartbeat = datetime.fromisoformat(agent['last_heartbeat'].replace(' ', 'T'))
+                    minutes_since = (now - last_heartbeat).total_seconds() / 60
+                    
+                    if minutes_since <= 2:
+                        agent['heartbeat_status'] = 'online'
+                    elif minutes_since <= 5:
+                        agent['heartbeat_status'] = 'warning'
+                    else:
+                        agent['heartbeat_status'] = 'offline'
+                        
+                    agent['minutes_since_heartbeat'] = int(minutes_since)
+                except:
+                    agent['heartbeat_status'] = 'unknown'
+                    agent['minutes_since_heartbeat'] = None
+            else:
+                agent['heartbeat_status'] = 'never'
+                agent['minutes_since_heartbeat'] = None
+        
+        return jsonify({
+            'success': True,
+            'agents': agents,
+            'count': len(agents),
+            'timestamp': datetime.now().isoformat()
+        })
+        
+    except Exception as e:
+        print(f"Error getting agents: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@app.route('/api/agent/logs', methods=['GET'])
+def get_agent_logs():
+    """Get agent logs"""
+    try:
+        agent_id = request.args.get('agent_id')
+        hours = int(request.args.get('hours', 24))
+        limit = int(request.args.get('limit', 1000))
+        
+        logs = db.get_agent_logs(agent_id, hours, limit)
+        
+        return jsonify({
+            'success': True,
+            'logs': logs,
+            'count': len(logs),
+            'timestamp': datetime.now().isoformat()
+        })
+        
+    except Exception as e:
+        print(f"Error getting agent logs: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@app.route('/api/agent/stats', methods=['GET'])
+def get_agent_stats():
+    """Get agent statistics"""
+    try:
+        stats = db.get_agent_stats()
+        
+        return jsonify({
+            'success': True,
+            'stats': stats,
+            'timestamp': datetime.now().isoformat()
+        })
+        
+    except Exception as e:
+        print(f"Error getting agent stats: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+# SSH-based Agent Deployment Endpoints
+@app.route('/api/hosts', methods=['GET'])
+def get_all_hosts():
+    """Get all configured hosts"""
+    try:
+        hosts = host_manager.get_all_hosts()
+        return jsonify({
+            'success': True,
+            'hosts': hosts,
+            'count': len(hosts),
+            'timestamp': datetime.now().isoformat()
+        })
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@app.route('/api/deploy_agent', methods=['POST'])
+def deploy_agent_via_ssh():
+    """Deploy agent to a host via SSH"""
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({
+                'success': False,
+                'error': 'No data provided'
+            }), 400
+        
+        host_id = data.get('host_id')
+        server_url = data.get('server_url', request.url_root.rstrip('/'))
+        
+        if not host_id:
+            return jsonify({
+                'success': False,
+                'error': 'host_id is required'
+            }), 400
+        
+        # Get host information
+        hosts = host_manager.get_all_hosts()
+        host = next((h for h in hosts if h['id'] == host_id), None)
+        
+        if not host:
+            return jsonify({
+                'success': False,
+                'error': f'Host with ID {host_id} not found'
+            }), 404
+        
+        # Deploy agent via SSH
+        result = deploy_agent_to_host_ssh(host, server_url)
+        
+        if result['success']:
+            return jsonify({
+                'success': True,
+                'message': f'Agent deployed successfully to {host["name"]}',
+                'output': result.get('output', ''),
+                'timestamp': datetime.now().isoformat()
+            })
+        else:
+            return jsonify({
+                'success': False,
+                'error': result.get('error', 'Deployment failed'),
+                'output': result.get('output', '')
+            }), 500
+        
+    except Exception as e:
+        print(f"Error deploying agent: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@app.route('/api/control_agent', methods=['POST'])
+def control_agent_via_ssh():
+    """Control agent (start/stop/restart/status) via SSH"""
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({
+                'success': False,
+                'error': 'No data provided'
+            }), 400
+        
+        hostname = data.get('hostname')
+        ip_address = data.get('ip_address')
+        action = data.get('action')
+        
+        if not all([hostname, ip_address, action]):
+            return jsonify({
+                'success': False,
+                'error': 'hostname, ip_address, and action are required'
+            }), 400
+        
+        if action not in ['start', 'stop', 'restart', 'status', 'config']:
+            return jsonify({
+                'success': False,
+                'error': 'Invalid action. Must be one of: start, stop, restart, status, config'
+            }), 400
+        
+        # Find host by IP or name
+        hosts = host_manager.get_all_hosts()
+        host = next((h for h in hosts if h['ip_address'] == ip_address or h['name'] == hostname), None)
+        
+        if not host:
+            return jsonify({
+                'success': False,
+                'error': f'Host {hostname} ({ip_address}) not found in configuration'
+            }), 404
+        
+        # Execute control action via SSH
+        result = control_agent_on_host_ssh(host, action)
+        
+        return jsonify({
+            'success': result['success'],
+            'output': result.get('output', ''),
+            'error': result.get('error'),
+            'timestamp': datetime.now().isoformat()
+        })
+        
+    except Exception as e:
+        print(f"Error controlling agent: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@app.route('/api/uninstall_agent', methods=['POST'])
+def uninstall_agent_via_ssh():
+    """Uninstall agent from a host via SSH"""
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({
+                'success': False,
+                'error': 'No data provided'
+            }), 400
+        
+        hostname = data.get('hostname')
+        ip_address = data.get('ip_address')
+        
+        if not all([hostname, ip_address]):
+            return jsonify({
+                'success': False,
+                'error': 'hostname and ip_address are required'
+            }), 400
+        
+        # Find host by IP or name
+        hosts = host_manager.get_all_hosts()
+        host = next((h for h in hosts if h['ip_address'] == ip_address or h['name'] == hostname), None)
+        
+        if not host:
+            return jsonify({
+                'success': False,
+                'error': f'Host {hostname} ({ip_address}) not found in configuration'
+            }), 404
+        
+        # Uninstall agent via SSH
+        result = uninstall_agent_from_host_ssh(host)
+        
+        if result['success']:
+            # Remove agent from database
+            try:
+                agents = db.get_all_agents()
+                for agent in agents:
+                    if agent.get('ip_address') == ip_address or agent.get('hostname') == hostname:
+                        # Remove agent record (this would require a delete method in the database)
+                        print(f"Agent record should be removed for {hostname}")
+                        break
+            except Exception as e:
+                print(f"Warning: Could not remove agent from database: {e}")
+            
+            return jsonify({
+                'success': True,
+                'message': f'Agent uninstalled successfully from {hostname}',
+                'output': result.get('output', ''),
+                'timestamp': datetime.now().isoformat()
+            })
+        else:
+            return jsonify({
+                'success': False,
+                'error': result.get('error', 'Uninstallation failed'),
+                'output': result.get('output', '')
+            }), 500
+        
+    except Exception as e:
+        print(f"Error uninstalling agent: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+def deploy_agent_to_host_ssh(host, server_url):
+    """Deploy agent to a host using SSH"""
+    try:
+        print(f"Deploying agent to {host['name']} ({host['ip_address']})")
+        
+        # Create deployment script commands
+        deployment_script = f"""
+#!/bin/bash
+set -e
+
+# Download deployment script
+curl -f -o /tmp/deploy_agent.sh {server_url}/static/deploy_agent.sh
+chmod +x /tmp/deploy_agent.sh
+
+# Run deployment
+sudo /tmp/deploy_agent.sh --server-url {server_url} --no-start
+
+# Start the service
+sudo systemctl start networkmap-agent
+sudo systemctl enable networkmap-agent
+
+# Cleanup
+rm -f /tmp/deploy_agent.sh
+
+echo "Agent deployment completed successfully"
+"""
+        
+        # Execute deployment via SSH
+        result, error = host_manager.execute_command(host, deployment_script, timeout=600)
+        
+        if result and result['success']:
+            return {
+                'success': True,
+                'output': result.get('stdout', ''),
+                'message': 'Agent deployed successfully'
+            }
+        else:
+            error_msg = result.get('stderr', error) if result else str(error)
+            return {
+                'success': False,
+                'error': f'Deployment failed: {error_msg}',
+                'output': result.get('stdout', '') if result else ''
+            }
+            
+    except Exception as e:
+        return {
+            'success': False,
+            'error': f'Exception during deployment: {str(e)}',
+            'output': ''
+        }
+
+def control_agent_on_host_ssh(host, action):
+    """Control agent on a host using SSH"""
+    try:
+        print(f"Executing {action} on agent at {host['name']} ({host['ip_address']})")
+        
+        if action == 'status':
+            command = 'sudo systemctl status networkmap-agent --no-pager -l'
+        elif action == 'start':
+            command = 'sudo systemctl start networkmap-agent'
+        elif action == 'stop':
+            command = 'sudo systemctl stop networkmap-agent'
+        elif action == 'restart':
+            command = 'sudo systemctl restart networkmap-agent'
+        elif action == 'config':
+            command = 'sudo cat /etc/networkmap-agent/config.json 2>/dev/null || echo "Configuration file not found"'
+        else:
+            return {
+                'success': False,
+                'error': f'Unknown action: {action}'
+            }
+        
+        # Execute command via SSH
+        result, error = host_manager.execute_command(host, command, timeout=60)
+        
+        if result:
+            # For systemctl commands, both stdout and stderr might contain useful info
+            output = result.get('stdout', '') + ('\n' + result.get('stderr', '') if result.get('stderr') else '')
+            
+            return {
+                'success': True,
+                'output': output.strip(),
+                'action': action
+            }
+        else:
+            return {
+                'success': False,
+                'error': f'Command execution failed: {error}',
+                'output': ''
+            }
+            
+    except Exception as e:
+        return {
+            'success': False,
+            'error': f'Exception during {action}: {str(e)}',
+            'output': ''
+        }
+
+def uninstall_agent_from_host_ssh(host):
+    """Uninstall agent from a host using SSH"""
+    try:
+        print(f"Uninstalling agent from {host['name']} ({host['ip_address']})")
+        
+        # Create uninstallation script
+        uninstall_script = """
+#!/bin/bash
+
+# Stop and disable service
+sudo systemctl stop networkmap-agent 2>/dev/null || true
+sudo systemctl disable networkmap-agent 2>/dev/null || true
+
+# Remove service file
+sudo rm -f /etc/systemd/system/networkmap-agent.service
+sudo systemctl daemon-reload
+
+# Remove directories
+sudo rm -rf /opt/networkmap-agent /var/log/networkmap-agent /etc/networkmap-agent
+
+# Remove user
+sudo userdel networkmap-agent 2>/dev/null || true
+sudo rm -rf /home/networkmap-agent 2>/dev/null || true
+
+# Remove sudo configuration
+sudo rm -f /etc/sudoers.d/networkmap-agent
+
+echo "Agent uninstallation completed successfully"
+"""
+        
+        # Execute uninstallation via SSH
+        result, error = host_manager.execute_command(host, uninstall_script, timeout=120)
+        
+        if result and result['success']:
+            return {
+                'success': True,
+                'output': result.get('stdout', ''),
+                'message': 'Agent uninstalled successfully'
+            }
+        else:
+            error_msg = result.get('stderr', error) if result else str(error)
+            return {
+                'success': False,
+                'error': f'Uninstallation failed: {error_msg}',
+                'output': result.get('stdout', '') if result else ''
+            }
+            
+    except Exception as e:
+        return {
+            'success': False,
+            'error': f'Exception during uninstallation: {str(e)}',
+            'output': ''
+        }
 
 def update_scan_status(phase, message, progress=None, current_host=None, step=None):
     """Helper to update scan status with consistent format"""
