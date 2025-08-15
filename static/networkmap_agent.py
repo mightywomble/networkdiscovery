@@ -25,7 +25,7 @@ import requests
 import hashlib
 
 # Agent version and build information
-__version__ = "1.6.1"
+__version__ = "1.6.2"
 __build_date__ = "2025-08-15"
 
 VERSION = __version__
@@ -295,6 +295,11 @@ class NetworkMapAgent:
             'timestamp': scan_start_time.isoformat(),
             'hostname': socket.gethostname(),
             'system_info': {},
+            'agent_info': {
+                'agent_version': VERSION,
+                'build_date': BUILD_DATE,
+                'platform': platform.platform()
+            },
             'network_interfaces': {},
             'routing_table': [],
             'arp_table': [],
