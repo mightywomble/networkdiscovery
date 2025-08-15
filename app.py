@@ -3396,7 +3396,7 @@ if [ ! -s /tmp/networkmap_agent.py ]; then
     echo "ERROR: Downloaded agent script is empty (0 bytes)"
     echo "Trying alternative download method..."
     wget -O /tmp/networkmap_agent.py {server_url}/static/networkmap_agent.py || \
-      { echo "All download methods failed"; exit 1; }
+      {{ echo "All download methods failed"; exit 1; }}
     
     # Check again
     if [ ! -s /tmp/networkmap_agent.py ]; then
@@ -3407,7 +3407,7 @@ fi
 
 # Verify Python syntax before copying
 echo "Verifying script integrity..."
-python3 -m py_compile /tmp/networkmap_agent.py || { echo "ERROR: Downloaded script has syntax errors"; exit 1; }
+python3 -m py_compile /tmp/networkmap_agent.py || {{ echo "ERROR: Downloaded script has syntax errors"; exit 1; }}
 
 # Show file information for verification
 echo "Agent script details:"
