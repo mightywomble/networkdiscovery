@@ -25,7 +25,7 @@ import requests
 import hashlib
 
 # Agent version and build information
-__version__ = "1.5.0"
+__version__ = "1.5.2"
 __build_date__ = "2025-08-15"
 
 VERSION = __version__
@@ -417,11 +417,34 @@ class NetworkMapAgent:
         
         # Network Interfaces Test
         interfaces = scan_data.get('network_interfaces', {})
-        interfaces_count = len(interfaces.get('ip_addr', '').split('\n')) if interfaces.get('ip_addr') else 0
+        ip_addr_data = interfaces.get('ip_addr', '')
+        active_interfaces = []
+        loopback_interfaces = []
+        
+        if ip_addr_data:
+            # Parse interface data for meaningful details
+            lines = ip_addr_data.split('\n')
+            current_interface = None
+            for line in lines:
+                if line.strip() and not line.startswith(' '):
+                    # Interface line (e.g., "1: lo: <LOOPBACK,UP,LOWER_UP>")
+                    if ':' in line:
+                        interface_name = line.split(':')[1].strip()
+                        current_interface = interface_name
+                        if 'UP' in line:
+                            if 'LOOPBACK' in line:
+                                loopback_interfaces.append(interface_name)
+                            else:
+                                active_interfaces.append(interface_name)
+        
+        interfaces_count = len(active_interfaces) + len(loopback_interfaces)
         tests['Network Interfaces'] = {
             'success': interfaces_count > 0,
-            'description': f'Found {interfaces_count} network interface entries',
-            'details': f"Interface data collected at {scan_data['timestamp']}\nInterfaces detected: {interfaces_count}"
+            'description': f'Found {interfaces_count} network interfaces ({len(active_interfaces)} active, {len(loopback_interfaces)} loopback)',
+            'details': f"Interface data collected at {scan_data['timestamp']}\n" +
+                      f"Active interfaces: {', '.join(active_interfaces) if active_interfaces else 'None'}\n" +
+                      f"Loopback interfaces: {', '.join(loopback_interfaces) if loopback_interfaces else 'None'}\n" +
+                      f"Total interfaces detected: {interfaces_count}"
         }
         
         # System Info Test
@@ -429,15 +452,36 @@ class NetworkMapAgent:
         tests['System Information'] = {
             'success': bool(system_info),
             'description': f'Collected system information for {system_info.get("hostname", "unknown")}',
-            'details': f"Platform: {system_info.get('platform', 'Unknown')}\nAgent version: {system_info.get('agent_version', 'Unknown')}"
+            'details': f"Hostname: {system_info.get('hostname', 'Unknown')}\n" +
+                      f"IP Address: {system_info.get('ip_address', 'Unknown')}\n" +
+                      f"Platform: {system_info.get('platform', 'Unknown')}\n" +
+                      f"Python Version: {system_info.get('python_version', 'Unknown')}\n" +
+                      f"Agent Version: {system_info.get('agent_version', 'Unknown')}"
         }
         
         # Network Statistics Test
         net_stats = scan_data.get('network_stats', {})
+        net_dev_data = net_stats.get('net_dev', '')
+        interface_stats = []
+        
+        if net_dev_data:
+            # Parse network device statistics
+            lines = net_dev_data.strip().split('\n')[2:]  # Skip header lines
+            for line in lines:
+                if ':' in line:
+                    interface_name = line.split(':')[0].strip()
+                    stats_part = line.split(':')[1].strip().split()
+                    if len(stats_part) >= 8:
+                        rx_bytes = stats_part[0]
+                        tx_bytes = stats_part[8]
+                        interface_stats.append(f"{interface_name}: RX {rx_bytes} bytes, TX {tx_bytes} bytes")
+        
         tests['Network Statistics'] = {
             'success': bool(net_stats.get('net_dev')),
-            'description': 'Network interface statistics collected',
-            'details': f"Statistics collected at {scan_data['timestamp']}"
+            'description': f'Collected network statistics for {len(interface_stats)} interfaces',
+            'details': f"Statistics collected at {scan_data['timestamp']}\n" +
+                      "\n".join(interface_stats[:5]) +  # Show first 5 interfaces
+                      (f"\n... and {len(interface_stats) - 5} more" if len(interface_stats) > 5 else "")
         }
         
         return tests
@@ -448,27 +492,58 @@ class NetworkMapAgent:
         
         # ARP Table Analysis
         arp_data = scan_data.get('arp_table', [])
-        arp_count = len([entry for entry in arp_data if entry.strip()]) if arp_data else 0
+        arp_entries = [entry for entry in arp_data if entry.strip() and '(' in entry]
+        unique_hosts = set()
+        mac_addresses = set()
+        
+        for entry in arp_entries:
+            # Parse ARP entries like "192.168.1.1 (192.168.1.1) at aa:bb:cc:dd:ee:ff [ether] on eth0"
+            if '(' in entry and 'at' in entry:
+                parts = entry.split()
+                for part in parts:
+                    if '(' in part and ')' in part:
+                        ip = part.strip('()')
+                        unique_hosts.add(ip)
+                    elif ':' in part and len(part.replace(':', '')) == 12:  # MAC address format
+                        mac_addresses.add(part)
+        
         tests['ARP Table Analysis'] = {
-            'success': arp_count > 0,
-            'description': f'Found {arp_count} entries in ARP table',
-            'details': f"ARP data collected at {scan_data['timestamp']}\nEntries found: {arp_count}\nHosts discovered via ARP"
+            'success': len(arp_entries) > 0,
+            'description': f'Found {len(arp_entries)} ARP entries revealing {len(unique_hosts)} unique hosts',
+            'details': f"ARP data collected at {scan_data['timestamp']}\n" +
+                      f"ARP entries found: {len(arp_entries)}\n" +
+                      f"Unique hosts discovered: {len(unique_hosts)}\n" +
+                      f"MAC addresses seen: {len(mac_addresses)}\n" +
+                      f"Sample hosts: {', '.join(list(unique_hosts)[:3])}" + 
+                      (f" and {len(unique_hosts) - 3} more" if len(unique_hosts) > 3 else "")
         }
         
         # Routing Table Analysis
         routing_data = scan_data.get('routing_table', [])
-        routing_count = len([route for route in routing_data if route.strip()]) if routing_data else 0
+        routing_entries = [route for route in routing_data if route.strip()]
+        default_routes = [route for route in routing_entries if 'default' in route]
+        local_routes = [route for route in routing_entries if any(net in route for net in ['192.168.', '10.', '172.'])]
+        
         tests['Routing Table Analysis'] = {
-            'success': routing_count > 0,
-            'description': f'Found {routing_count} routing entries',
-            'details': f"Routing data collected at {scan_data['timestamp']}\nRoutes analyzed: {routing_count}"
+            'success': len(routing_entries) > 0,
+            'description': f'Found {len(routing_entries)} routing entries ({len(default_routes)} default, {len(local_routes)} local)',
+            'details': f"Routing data collected at {scan_data['timestamp']}\n" +
+                      f"Total routing entries: {len(routing_entries)}\n" +
+                      f"Default routes: {len(default_routes)}\n" +
+                      f"Local network routes: {len(local_routes)}\n" +
+                      f"Sample routes:\n" + "\n".join(routing_entries[:3]) +
+                      (f"\n... and {len(routing_entries) - 3} more" if len(routing_entries) > 3 else "")
         }
         
         # Network Topology Test
         tests['Network Topology Mapping'] = {
-            'success': arp_count > 0 or routing_count > 0,
-            'description': f'Network topology analysis based on ARP and routing data',
-            'details': f"Combined ARP ({arp_count}) and routing ({routing_count}) entries for topology mapping"
+            'success': len(arp_entries) > 0 or len(routing_entries) > 0,
+            'description': f'Network topology analysis: {len(unique_hosts)} hosts, {len(routing_entries)} routes',
+            'details': f"Network topology analysis completed at {scan_data['timestamp']}\n" +
+                      f"ARP-discovered hosts: {len(unique_hosts)}\n" +
+                      f"Routing table entries: {len(routing_entries)}\n" +
+                      f"Network segments identified: {len(local_routes)}\n" +
+                      f"Gateway routes: {len(default_routes)}"
         }
         
         return tests
@@ -479,23 +554,66 @@ class NetworkMapAgent:
         
         # Active Connections Analysis
         connections = scan_data.get('active_connections', [])
-        connection_count = len([conn for conn in connections if conn.strip()]) if connections else 0
-        tcp_connections = len([conn for conn in connections if 'tcp' in conn.lower()]) if connections else 0
-        udp_connections = len([conn for conn in connections if 'udp' in conn.lower()]) if connections else 0
+        valid_connections = [conn for conn in connections if conn.strip() and not conn.startswith('State')]
+        tcp_connections = [conn for conn in valid_connections if 'tcp' in conn.lower()]
+        udp_connections = [conn for conn in valid_connections if 'udp' in conn.lower()]
+        established_connections = [conn for conn in tcp_connections if 'ESTAB' in conn or 'ESTABLISHED' in conn]
+        listening_connections = [conn for conn in valid_connections if 'LISTEN' in conn]
+        
+        # Extract unique remote hosts
+        remote_hosts = set()
+        for conn in established_connections:
+            parts = conn.split()
+            for part in parts:
+                if ':' in part and not part.startswith('127.') and not part.startswith('0.0.0.0'):
+                    host = part.split(':')[0]
+                    if '.' in host:  # IP address
+                        remote_hosts.add(host)
         
         tests['Connection Monitoring'] = {
-            'success': connection_count > 0,
-            'description': f'Found {connection_count} active connections',
-            'details': f"Connections monitored at {scan_data['timestamp']}\nTCP connections: {tcp_connections}\nUDP connections: {udp_connections}\nTotal active: {connection_count}"
+            'success': len(valid_connections) > 0,
+            'description': f'Monitoring {len(valid_connections)} active connections ({len(established_connections)} established)',
+            'details': f"Connections monitored at {scan_data['timestamp']}\n" +
+                      f"TCP connections: {len(tcp_connections)}\n" +
+                      f"UDP connections: {len(udp_connections)}\n" +
+                      f"Established connections: {len(established_connections)}\n" +
+                      f"Listening connections: {len(listening_connections)}\n" +
+                      f"Remote hosts connected: {len(remote_hosts)}\n" +
+                      f"Total active connections: {len(valid_connections)}"
         }
         
         # Process Network Analysis
         process_net = scan_data.get('process_network', [])
-        process_count = len([proc for proc in process_net if proc.strip()]) if process_net else 0
+        valid_processes = [proc for proc in process_net if proc.strip() and not proc.startswith('COMMAND')]
+        unique_processes = set()
+        network_protocols = {'TCP': 0, 'UDP': 0, 'IPv4': 0, 'IPv6': 0}
+        
+        for proc_line in valid_processes:
+            parts = proc_line.split()
+            if len(parts) >= 1:
+                process_name = parts[0]
+                unique_processes.add(process_name)
+                
+                # Count protocols
+                if 'TCP' in proc_line:
+                    network_protocols['TCP'] += 1
+                if 'UDP' in proc_line:
+                    network_protocols['UDP'] += 1
+                if 'IPv4' in proc_line or '.' in proc_line:
+                    network_protocols['IPv4'] += 1
+                if 'IPv6' in proc_line or ':' in proc_line and '::' in proc_line:
+                    network_protocols['IPv6'] += 1
+        
         tests['Process Network Analysis'] = {
-            'success': process_count > 0,
-            'description': f'Found {process_count} processes with network connections',
-            'details': f"Process network data collected at {scan_data['timestamp']}\nProcesses with network activity: {process_count}"
+            'success': len(valid_processes) > 0,
+            'description': f'Found {len(unique_processes)} unique processes with {len(valid_processes)} network connections',
+            'details': f"Process network data collected at {scan_data['timestamp']}\n" +
+                      f"Total network connections: {len(valid_processes)}\n" +
+                      f"Unique processes with network activity: {len(unique_processes)}\n" +
+                      f"TCP connections: {network_protocols['TCP']}\n" +
+                      f"UDP connections: {network_protocols['UDP']}\n" +
+                      f"Top processes: {', '.join(list(unique_processes)[:5])}" +
+                      (f" and {len(unique_processes) - 5} more" if len(unique_processes) > 5 else "")
         }
         
         return tests
@@ -506,34 +624,90 @@ class NetworkMapAgent:
         
         # Listening Ports Analysis
         ports = scan_data.get('listening_ports', [])
-        port_count = len([port for port in ports if port.strip() and 'LISTEN' in port]) if ports else 0
-        tcp_ports = len([port for port in ports if 'tcp' in port.lower() and 'LISTEN' in port]) if ports else 0
+        valid_ports = [port for port in ports if port.strip() and not port.startswith('State')]
+        listening_ports = [port for port in valid_ports if 'LISTEN' in port]
+        tcp_ports = [port for port in listening_ports if 'tcp' in port.lower()]
+        udp_ports = [port for port in valid_ports if 'udp' in port.lower()]
+        
+        # Extract port numbers and addresses
+        port_details = []
+        unique_port_numbers = set()
+        for port_line in listening_ports:
+            # Parse lines like "LISTEN 0 128 0.0.0.0:22 0.0.0.0:*"
+            parts = port_line.split()
+            for part in parts:
+                if ':' in part and not part.endswith(':*'):
+                    try:
+                        addr_port = part.split(':')
+                        if len(addr_port) >= 2:
+                            port_num = addr_port[-1]
+                            if port_num.isdigit():
+                                unique_port_numbers.add(port_num)
+                                port_details.append(f"Port {port_num} on {addr_port[0]}")
+                    except:
+                        continue
         
         tests['Port Scanning'] = {
-            'success': port_count > 0,
-            'description': f'Found {port_count} listening ports',
-            'details': f"Ports scanned at {scan_data['timestamp']}\nTCP listening ports: {tcp_ports}\nTotal listening: {port_count}"
+            'success': len(listening_ports) > 0,
+            'description': f'Found {len(listening_ports)} listening ports across {len(unique_port_numbers)} unique port numbers',
+            'details': f"Ports scanned at {scan_data['timestamp']}\n" +
+                      f"TCP listening ports: {len(tcp_ports)}\n" +
+                      f"UDP ports detected: {len(udp_ports)}\n" +
+                      f"Unique port numbers: {len(unique_port_numbers)}\n" +
+                      f"Total listening entries: {len(listening_ports)}\n" +
+                      f"Sample port details:\n" + "\n".join(port_details[:5]) +
+                      (f"\n... and {len(port_details) - 5} more" if len(port_details) > 5 else "")
         }
         
         # Service Discovery
         services_found = []
-        if ports:
-            for port_line in ports:
-                if 'LISTEN' in port_line:
-                    # Extract service information from port line
-                    if '22' in port_line:
-                        services_found.append('SSH')
-                    elif '80' in port_line:
-                        services_found.append('HTTP')
-                    elif '443' in port_line:
-                        services_found.append('HTTPS')
-                    elif '5150' in port_line:
-                        services_found.append('NetworkMap')
+        service_ports = {}
+        
+        if listening_ports:
+            for port_line in listening_ports:
+                # Enhanced service detection
+                if ':22' in port_line or ' 22 ' in port_line:
+                    services_found.append('SSH (22)')
+                    service_ports['SSH'] = '22'
+                elif ':80' in port_line or ' 80 ' in port_line:
+                    services_found.append('HTTP (80)')
+                    service_ports['HTTP'] = '80'
+                elif ':443' in port_line or ' 443 ' in port_line:
+                    services_found.append('HTTPS (443)')
+                    service_ports['HTTPS'] = '443'
+                elif ':53' in port_line or ' 53 ' in port_line:
+                    services_found.append('DNS (53)')
+                    service_ports['DNS'] = '53'
+                elif ':25' in port_line or ' 25 ' in port_line:
+                    services_found.append('SMTP (25)')
+                    service_ports['SMTP'] = '25'
+                elif ':5150' in port_line or ' 5150 ' in port_line:
+                    services_found.append('NetworkMap (5150)')
+                    service_ports['NetworkMap'] = '5150'
+                elif ':3306' in port_line or ' 3306 ' in port_line:
+                    services_found.append('MySQL (3306)')
+                    service_ports['MySQL'] = '3306'
+                elif ':5432' in port_line or ' 5432 ' in port_line:
+                    services_found.append('PostgreSQL (5432)')
+                    service_ports['PostgreSQL'] = '5432'
+                elif ':21' in port_line or ' 21 ' in port_line:
+                    services_found.append('FTP (21)')
+                    service_ports['FTP'] = '21'
+        
+        # Classify service types
+        web_services = [s for s in services_found if any(web in s for web in ['HTTP', 'HTTPS'])]
+        database_services = [s for s in services_found if any(db in s for db in ['MySQL', 'PostgreSQL'])]
+        system_services = [s for s in services_found if any(sys in s for sys in ['SSH', 'DNS', 'FTP'])]
         
         tests['Service Discovery'] = {
             'success': len(services_found) > 0,
-            'description': f'Identified {len(services_found)} common services',
-            'details': f"Services discovered: {', '.join(set(services_found))}\nService detection completed at {scan_data['timestamp']}"
+            'description': f'Identified {len(services_found)} services ({len(web_services)} web, {len(database_services)} database, {len(system_services)} system)',
+            'details': f"Service discovery completed at {scan_data['timestamp']}\n" +
+                      f"Total services identified: {len(services_found)}\n" +
+                      f"Web services: {', '.join(web_services) if web_services else 'None'}\n" +
+                      f"Database services: {', '.join(database_services) if database_services else 'None'}\n" +
+                      f"System services: {', '.join(system_services) if system_services else 'None'}\n" +
+                      f"All services: {', '.join(services_found) if services_found else 'None'}"
         }
         
         return tests
