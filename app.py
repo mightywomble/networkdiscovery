@@ -1300,10 +1300,27 @@ def get_diagram_layout():
                 'timestamp': datetime.now().isoformat()
             })
         else:
-            return jsonify({
-                'success': False,
-                'message': f'Layout "{layout_name}" not found'
-            }), 404
+            # If the default layout doesn't exist, return an empty layout instead of 404
+            # This prevents the frontend from breaking when no layout has been saved yet
+            if layout_name == 'default':
+                empty_layout = {
+                    'id': None,
+                    'layout_name': 'default',
+                    'layout_data': {'devices': {}, 'timestamp': datetime.now().isoformat()},
+                    'created_by': 'system',
+                    'created_at': datetime.now().isoformat(),
+                    'updated_at': datetime.now().isoformat()
+                }
+                return jsonify({
+                    'success': True,
+                    'layout': empty_layout,
+                    'timestamp': datetime.now().isoformat()
+                })
+            else:
+                return jsonify({
+                    'success': False,
+                    'message': f'Layout "{layout_name}" not found'
+                }), 404
             
     except Exception as e:
         return jsonify({
