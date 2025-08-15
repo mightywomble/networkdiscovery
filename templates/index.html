@@ -1085,14 +1085,14 @@ function updateHostScanStatusCards(hosts) {
                         </span>
                     </div>
                     
-                            <div class="pf-c-progress pf-u-mb-sm" style="--pf-c-progress--Height: 8px;">
-                                <div class="pf-c-progress__bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${progress || 0}">
-                                    <div class="pf-c-progress__indicator ${status === 'scanning' ? 'pf-m-progress-bar-animated' : ''}" 
-                                         style="width: ${progress || 0}%; background-color: var(--pf-global--${statusClass === 'primary' ? 'primary' : statusClass === 'success' ? 'success' : statusClass === 'danger' ? 'danger' : 'info'}--color--100);">
-                                        <span class="pf-screen-reader">${progress || 0}% complete</span>
-                                    </div>
-                                </div>
+                    <div class="pf-c-progress pf-u-mb-sm" style="--pf-c-progress--Height: 8px;">
+                        <div class="pf-c-progress__bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${progress || 0}">
+                            <div class="pf-c-progress__indicator ${status === 'scanning' ? 'pf-m-progress-bar-animated' : ''}" 
+                                 style="width: ${progress || 0}%; background-color: var(--pf-global--${statusClass === 'primary' ? 'primary' : statusClass === 'success' ? 'success' : statusClass === 'danger' ? 'danger' : 'info'}--color--100);">
+                                <span class="pf-screen-reader">${progress || 0}% complete</span>
                             </div>
+                        </div>
+                    </div>
                     
                     <div class="pf-u-font-size-sm pf-u-color-200 pf-u-mb-xs">${current_action || current_phase || 'Waiting...'}</div>
                     <div class="pf-u-font-size-sm">Phases: ${completedCount}/${totalPhases}</div>
