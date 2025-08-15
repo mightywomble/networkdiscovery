@@ -23,7 +23,7 @@ from typing import Dict, List, Any, Optional
 import requests
 import hashlib
 
-VERSION = "1.0.0"
+VERSION = "1.5.0"
 CONFIG_FILE = "/etc/networkmap/agent.conf"
 LOG_FILE = "/var/log/networkmap-agent.log"
 PID_FILE = "/var/run/networkmap-agent.pid"
