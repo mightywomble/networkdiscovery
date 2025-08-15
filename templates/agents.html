@@ -2305,14 +2305,19 @@ async function performAgentUpdates(hostsToUpdate) {
             logsElement.scrollTop = logsElement.scrollHeight;
             
             try {
-                const response = await fetch('/api/update_agent', {
+                // Find the agent ID for this host
+                const agent = agents.find(a => a.ip_address === host.ip_address || a.hostname === host.name);
+                if (!agent) {
+                    throw new Error('No agent found for this host');
+                }
+                
+                const response = await fetch('/api/agent/update', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
                     },
                     body: JSON.stringify({
-                        hostname: host.name,
-                        ip_address: host.ip_address
+                        agent_id: agent.agent_id
                     })
                 });
                 

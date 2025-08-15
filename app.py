@@ -2552,13 +2552,42 @@ def remove_agents_by_host():
 
 @app.route('/api/agent/versions', methods=['GET'])
 def get_agent_versions():
-    """Get agent version summary"""
+    """Get agent version summary with individual agent data"""
     try:
-        version_summary = db.get_agent_version_summary()
+        # Get all agents with version information
+        agents = db.get_all_agents()
+        
+        # Get server version information
+        # Try to read server agent version from the agent script
+        server_version = "Unknown"
+        server_build_date = "Unknown"
+        
+        try:
+            import os
+            agent_script_path = os.path.join(os.path.dirname(__file__), 'agent.py')
+            if os.path.exists(agent_script_path):
+                with open(agent_script_path, 'r') as f:
+                    content = f.read()
+                    # Look for version information in the agent script
+                    import re
+                    version_match = re.search(r'VERSION\s*=\s*["\']([^"\'\']+)["\']', content)
+                    build_match = re.search(r'BUILD_DATE\s*=\s*["\']([^"\'\']+)["\']', content)
+                    
+                    if version_match:
+                        server_version = version_match.group(1)
+                    if build_match:
+                        server_build_date = build_match.group(1)
+        except Exception as e:
+            print(f"Warning: Could not read server version: {e}")
+            # Fallback to a default version
+            server_version = "1.0.0"
+            server_build_date = datetime.now().strftime("%Y-%m-%d")
         
         return jsonify({
             'success': True,
-            'versions': version_summary,
+            'agents': agents,
+            'server_version': server_version,
+            'server_build_date': server_build_date,
             'timestamp': datetime.now().isoformat()
         })
         
