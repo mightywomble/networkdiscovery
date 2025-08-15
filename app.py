@@ -2389,15 +2389,20 @@ def get_agent_stats():
             'error': str(e)
         }), 500
 
+@app.route('/api/test')
+def test_endpoint():
+    return jsonify({'success': True, 'message': 'Test endpoint is working'})
+
 @app.route('/api/agent/test_configurations', methods=['GET'])
 def get_test_configurations():
     """Get available test configurations for agents"""
     try:
         from network_test_suite import NetworkTestSuite
         
-        # Get all test categories and definitions
-        test_categories = NetworkTestSuite.get_all_test_categories()
-        default_config = NetworkTestSuite.get_default_configuration()
+        # Create instance and get all test categories and definitions
+        test_suite = NetworkTestSuite()
+        test_categories = test_suite.get_all_test_categories()
+        default_config = test_suite.get_default_configuration()
         
         return jsonify({
             'success': True,
@@ -3537,8 +3542,21 @@ def test_host_connectivity(host_id):
         }), 500
 
 if __name__ == '__main__':
-    # Initialize database
-    db.init_db()
+    print("Initializing NetworkMap Flask Application...")
     
-    # Run Flask app
-    app.run(debug=True, host='0.0.0.0', port=5150, threaded=True)
+    try:
+        # Initialize database
+        print("Initializing database...")
+        db.init_db()
+        print("✓ Database initialized successfully")
+        
+        print("Starting Flask server on http://0.0.0.0:5150")
+        print("Note: Debug mode disabled for stability")
+        
+        # Run Flask app with debug=False to prevent reload issues
+        app.run(debug=False, host='0.0.0.0', port=5150, threaded=True, use_reloader=False)
+        
+    except Exception as e:
+        print(f"❌ Failed to start Flask application: {e}")
+        import traceback
+        traceback.print_exc()

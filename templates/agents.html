@@ -1760,7 +1760,7 @@ async function loadTestConfigurationSection(existingConfig = null) {
             throw new Error(data.error || 'Failed to load test configurations');
         }
         
-        availableTestConfigurations = data.test_configurations;
+        availableTestConfigurations = data.test_categories;
         
         // Use existing config or default configuration
         currentTestConfiguration = existingConfig || data.default_configuration || {};
