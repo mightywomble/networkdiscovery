@@ -27,6 +27,56 @@
 </section>
 
 <section class="pf-c-page__main-section">
+    {% if hosts %}
+    <!-- Host Statistics -->
+    <div class="pf-c-card pf-u-mb-md nm-stats-card">
+        <div class="pf-c-card__header">
+            <div class="pf-c-card__header-main">
+                <h2 class="pf-c-card__title">
+                    <i class="fas fa-chart-bar pf-u-mr-sm"></i>
+                    Host Statistics
+                </h2>
+            </div>
+        </div>
+        <div class="pf-c-card__body">
+            <div class="pf-l-grid pf-m-all-3-col pf-m-gutter">
+                <div class="pf-l-grid__item">
+                    <div class="pf-c-card nm-stat-card">
+                        <div class="pf-c-card__body pf-u-text-align-center">
+                            <div class="nm-stat-value" style="color: var(--pf-global--primary-color--100)">{{ hosts|length }}</div>
+                            <div class="nm-stat-label">Total Hosts</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="pf-l-grid__item">
+                    <div class="pf-c-card nm-stat-card">
+                        <div class="pf-c-card__body pf-u-text-align-center">
+                            <div class="nm-stat-value" style="color: var(--pf-global--success-color--100)">{{ hosts|selectattr("status", "equalto", "online")|list|length }}</div>
+                            <div class="nm-stat-label">Online</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="pf-l-grid__item">
+                    <div class="pf-c-card nm-stat-card">
+                        <div class="pf-c-card__body pf-u-text-align-center">
+                            <div class="nm-stat-value" style="color: var(--pf-global--warning-color--100)">{{ hosts|selectattr("status", "equalto", "ping_only")|list|length }}</div>
+                            <div class="nm-stat-label">Ping Only</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="pf-l-grid__item">
+                    <div class="pf-c-card nm-stat-card">
+                        <div class="pf-c-card__body pf-u-text-align-center">
+                            <div class="nm-stat-value" style="color: var(--pf-global--danger-color--100)">{{ hosts|selectattr("status", "equalto", "offline")|list|length }}</div>
+                            <div class="nm-stat-label">Offline</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+    
     <!-- Configured Hosts Section -->
     <div class="pf-c-card nm-hosts-list-card">
         <div class="pf-c-card__header">
@@ -165,81 +215,9 @@
         </div>
     </div>
     
-    {% if hosts %}
-    <!-- Host Statistics -->
-    <div class="pf-c-card pf-u-mt-md nm-stats-card">
-        <div class="pf-c-card__header">
-            <div class="pf-c-card__header-main">
-                <h2 class="pf-c-card__title">
-                    <i class="fas fa-chart-bar pf-u-mr-sm"></i>
-                    Host Statistics
-                </h2>
-            </div>
-        </div>
-        <div class="pf-c-card__body">
-            <div class="pf-l-gallery pf-m-gutter">
-                <div class="pf-c-card nm-stat-card">
-                    <div class="pf-c-card__body pf-u-text-align-center">
-                        <div class="nm-stat-value" style="color: var(--pf-global--primary-color--100)">{{ hosts|length }}</div>
-                        <div class="nm-stat-label">Total Hosts</div>
-                    </div>
-                </div>
-                <div class="pf-c-card nm-stat-card">
-                    <div class="pf-c-card__body pf-u-text-align-center">
-                        <div class="nm-stat-value" style="color: var(--pf-global--success-color--100)">{{ hosts|selectattr("status", "equalto", "online")|list|length }}</div>
-                        <div class="nm-stat-label">Online</div>
-                    </div>
-                </div>
-                <div class="pf-c-card nm-stat-card">
-                    <div class="pf-c-card__body pf-u-text-align-center">
-                        <div class="nm-stat-value" style="color: var(--pf-global--warning-color--100)">{{ hosts|selectattr("status", "equalto", "ping_only")|list|length }}</div>
-                        <div class="nm-stat-label">Ping Only</div>
-                    </div>
-                </div>
-                <div class="pf-c-card nm-stat-card">
-                    <div class="pf-c-card__body pf-u-text-align-center">
-                        <div class="nm-stat-value" style="color: var(--pf-global--danger-color--100)">{{ hosts|selectattr("status", "equalto", "offline")|list|length }}</div>
-                        <div class="nm-stat-label">Offline</div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-    {% endif %}
     
-    <!-- Host Management Action Cards -->
-    <div class="pf-l-grid pf-m-all-12-col-on-sm pf-m-all-6-col-on-md pf-m-all-4-col-on-lg pf-m-gutter pf-u-mt-md">
-        <!-- Remove Host Card -->
-        <div class="pf-l-grid__item">
-            <div class="pf-c-card nm-action-card nm-remove-card">
-                <div class="pf-c-card__header">
-                    <div class="pf-c-card__header-main">
-                        <h3 class="pf-c-card__title">
-                            <i class="fas fa-trash pf-u-mr-sm"></i>
-                            Remove Hosts
-                        </h3>
-                    </div>
-                </div>
-                <div class="pf-c-card__body">
-                    <p class="pf-u-font-size-sm pf-u-color-200 pf-u-mb-sm">
-                        Safely remove hosts from your network monitoring. This will permanently delete all associated scan history and configuration data.
-                    </p>
-                    <div class="pf-c-alert pf-m-warning pf-m-inline pf-m-plain" aria-label="Warning alert">
-                        <div class="pf-c-alert__icon">
-                            <i class="fas fa-exclamation-triangle" aria-hidden="true"></i>
-                        </div>
-                        <div class="pf-c-alert__title pf-u-font-size-sm">This action cannot be undone</div>
-                    </div>
-                </div>
-                <div class="pf-c-card__footer">
-                    <button class="pf-c-button pf-m-danger pf-m-small" onclick="showRemoveHostOptions()" {% if not hosts %}disabled{% endif %}>
-                        <i class="fas fa-trash pf-u-mr-xs"></i>Remove Hosts
-                    </button>
-                </div>
-            </div>
-        </div>
-        
-        <!-- Import Hosts Card -->
+    <!-- Import Hosts Card -->
+    <div class="pf-l-grid pf-m-all-12-col pf-m-gutter pf-u-mt-md">
         <div class="pf-l-grid__item">
             <div class="pf-c-card nm-action-card nm-import-card">
                 <div class="pf-c-card__header">
