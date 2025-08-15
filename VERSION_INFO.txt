@@ -1,0 +1,74 @@
+NetworkMap Agent Version Information
+=====================================
+
+Version: 1.5.2
+Build Date: 2025-08-15
+Release: Enhanced Testing & Monitoring
+
+CHANGELOG:
+==========
+
+v1.5.2 (2025-08-15) - Enhanced Testing & Monitoring
+---------------------------------------------------
+✅ Added comprehensive test framework with 4 test categories
+✅ System Monitoring Tests:
+   - Network Interfaces detection and analysis
+   - System Information collection
+   - Network Statistics monitoring
+
+✅ Network Discovery Tests:
+   - ARP Table Analysis with host discovery
+   - Routing Table Analysis
+   - Network Topology Mapping
+
+✅ Connection Monitoring Tests:
+   - Active Connections Analysis
+   - Process Network Analysis
+   - Connection state tracking
+
+✅ Port Scanning Tests:
+   - Listening Ports Analysis
+   - Service Discovery (SSH, HTTP, HTTPS, MySQL, etc.)
+   - Port classification and service identification
+
+✅ Added 4 new enhanced test function sets:
+   - _run_connectivity_tests() - Ping, DNS, Internet, Port connectivity
+   - _run_performance_tests() - Bandwidth, Latency, CPU throughput
+   - _run_security_tests() - Open ports, Firewall, SSH config, File permissions
+   - _run_discovery_tests() - Network scan, ARP/Route tables, Interface discovery
+
+✅ Enhanced scan results with structured test data
+✅ Improved error handling and logging
+✅ Better integration with Test Results UI tab
+✅ Comprehensive network analysis and reporting
+
+DEPLOYMENT NOTES:
+================
+- Deploy this file to /opt/networkmap-agent/VERSION_INFO.txt on target hosts
+- Agent provides detailed test results for Web UI Test Results tab
+- All network scanning functions enhanced with structured output
+- Compatible with existing agent configurations
+- Requires restart of networkmap-agent service after deployment
+
+VERIFICATION:
+============
+To verify enhanced functions on deployed host:
+python3 -c "
+import sys; sys.path.insert(0, '/opt/networkmap-agent')
+from networkmap_agent import NetworkMapAgent
+agent = NetworkMapAgent()
+tests = ['_run_system_monitoring_tests', '_run_connectivity_tests', 
+         '_run_performance_tests', '_run_security_tests', '_run_discovery_tests']
+all_present = all(hasattr(agent, test) for test in tests)
+print('✅ All enhanced functions present' if all_present else '❌ Missing functions')
+"
+
+QUICK VERSION CHECK:
+===================
+python3 /opt/networkmap-agent/networkmap_agent.py --version
+
+SERVICE MANAGEMENT:
+==================
+sudo systemctl status networkmap-agent
+sudo systemctl restart networkmap-agent
+sudo journalctl -u networkmap-agent -f

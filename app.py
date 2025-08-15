@@ -3859,8 +3859,9 @@ def get_agent_last_data(agent_id):
             # If scan_data is directly a list of hosts
             agent_data['network_data'] = scan_data
         
-        # Create synthetic test results from available data
-        if agent_data['listening_ports'] or agent_data['active_connections'] or agent_data['network_interfaces']:
+        # Create synthetic test results from available data ONLY if no real test results exist
+        # This provides backward compatibility for older agents without enhanced test features
+        if not agent_data['test_results'] and (agent_data['listening_ports'] or agent_data['active_connections'] or agent_data['network_interfaces']):
             agent_data['test_results'] = {
                 'System Monitoring': {
                     'Network Interfaces': {
