@@ -1909,99 +1909,127 @@ function showEnhancedInstallationModal() {
     }
     
     const modalHtml = `
-        <div class="modal fade" id="enhancedInstallationModal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
-            <div class="modal-dialog modal-xl">
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <h5 class="modal-title">
-                            <img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyMCIgaGVpZ2h0PSIyMCIgZmlsbD0iY3VycmVudENvbG9yIiBjbGFzcz0iYmkgYmktdWJ1bnR1IiB2aWV3Qm94PSIwIDAgMTYgMTYiPjxwYXRoIGQ9Im0xMi4xNjYgOC45NGMtLjUyNSAxLjA5Ni0xLjY1NSAxLjg0My0yLjk1MiAxLjk5M2EyLjcgMi43IDAgMCAwIDAtLjM5M2MwLS43MS0uMTY4LTEuMTctLjY1OS0xLjU1OWwtLjg5NC0uODk0YTQuNyA0LjcgMCAwIDEtLjQ5Mi0uNTE5IDMuNDQgMy40NCAwIDAgMSAuNDkyLS41MTlsLjg5NC0uODk0Yy40OTEtLjM4OS42NTktLjg0OS42NTktMS41NTkgMC0uMTI4IDAtLjI3IDAtLjM5MyAxLjI5Ny4xNSAyLjQyNy44OTcgMi45NTIgMS45OTNsLS40OTIuNTE5YTUuMjggNS4yOCAwIDAgMCAwIDEuMDRsLjQ5Mi41MTlaIi8+PHBhdGggZD0ibTIuNzEgOS43MDNhNS4yNSA1LjI1IDAgMCAwIDUuNTkxIDEuNDU0Yy40OTMtLjg5NS40OTMtMS4zNDQgMC0xLjc1M2wtLjcwOC0uNzk0YTQuNyA0LjcgMCAwIDEtLjU3Ni0uNDI5IDMuNzQgMy43NCAwIDAgMS0uNDIzLS42NGwxLjExNy0xLjExN2E0LjcgNC43IDAgMCAxIC40MjMtLjY0IDMuNzQgMy43NCAwIDAgMSAuNTc2LS40MjlsLjcwOC0uNzk0Yy40OTMtLjQwOS40OTMtLjg1OCAwLTEuNzUzYTUuMjUgNS4yNSAwIDAgMC01LjU5MSAxLjQ1NGw2Ljk5NiA2Ljk5NloiLz48L3N2Zz4=" class="me-2"/>
+        <div class="pf-c-backdrop" id="enhancedInstallationModal">
+            <div class="pf-l-bullseye">
+                <div class="pf-c-modal-box pf-m-xl" role="dialog" aria-modal="true" aria-labelledby="installation-modal-title">
+                    <button class="pf-c-button pf-m-plain" type="button" aria-label="Close" onclick="closeInstallationModal()">
+                        <i class="fas fa-times" aria-hidden="true"></i>
+                    </button>
+                    <header class="pf-c-modal-box__header">
+                        <h1 class="pf-c-modal-box__title" id="installation-modal-title">
+                            <i class="fab fa-ubuntu pf-u-mr-sm"></i>
                             Ubuntu Network Tools Installation
-                        </h5>
-                    </div>
-                    <div class="modal-body">
+                        </h1>
+                    </header>
+                    <div class="pf-c-modal-box__body">
                         <div id="enhancedInstallationContent">
-                            <div class="alert alert-info">
-                                <div class="row">
-                                    <div class="col-md-6">
-                                        <h6><i class="fas fa-info-circle me-2"></i>Network Discovery Tools:</h6>
-                                        <ul class="small mb-2">
-                                            <li>nmap - Network mapping and port scanning</li>
-                                            <li>traceroute - Network path tracing</li>
-                                            <li>mtr - Network diagnostics tool</li>
-                                            <li>arp-scan - ARP table scanner</li>
-                                            <li>fping - Fast parallel ping</li>
-                                            <li>masscan - High-speed port scanner</li>
-                                        </ul>
-                                        
-                                        <h6><i class="fas fa-chart-line me-2"></i>Traffic Analysis:</h6>
-                                        <ul class="small mb-2">
-                                            <li>tcpdump - Packet capture utility</li>
-                                            <li>tshark - Wireshark command line</li>
-                                            <li>wireshark-common - Protocol analyzers</li>
-                                        </ul>
-                                    </div>
-                                    <div class="col-md-6">
-                                        <h6><i class="fas fa-tachometer-alt me-2"></i>Monitoring & Performance:</h6>
-                                        <ul class="small mb-2">
-                                            <li>iftop - Bandwidth usage per connection</li>
-                                            <li>nethogs - Process bandwidth monitor</li>
-                                            <li>bmon - Interface bandwidth monitor</li>
-                                            <li>vnstat - Network statistics daemon</li>
-                                            <li>htop - Interactive process viewer</li>
-                                            <li>iotop - I/O monitoring tool</li>
-                                            <li>iperf3 - Network performance testing</li>
-                                            <li>netperf - Network performance benchmark</li>
-                                            <li>speedtest-cli - Internet speed test</li>
-                                        </ul>
-                                        
-                                        <h6><i class="fas fa-shield-alt me-2"></i>Infrastructure & Security:</h6>
-                                        <ul class="small mb-0">
-                                            <li>snmp - SNMP tools and utilities</li>
-                                            <li>snmp-mibs-downloader - SNMP MIB files</li>
-                                            <li>ngrep - Network packet grep</li>
-                                            <li>p0f - Passive OS fingerprinting</li>
-                                        </ul>
+                            <div class="pf-c-alert pf-m-info pf-m-inline" aria-label="Info alert">
+                                <div class="pf-c-alert__icon">
+                                    <i class="fas fa-info-circle" aria-hidden="true"></i>
+                                </div>
+                                <div class="pf-c-alert__title">Comprehensive Network Analysis Tools</div>
+                                <div class="pf-c-alert__description">
+                                    <div class="pf-l-grid pf-m-all-12-col-on-sm pf-m-all-6-col-on-md pf-m-all-4-col-on-lg">
+                                        <div class="pf-l-grid__item">
+                                            <h6><i class="fas fa-search pf-u-mr-sm"></i>Network Discovery:</h6>
+                                            <ul class="pf-c-list pf-m-plain pf-u-font-size-sm">
+                                                <li>nmap - Network mapping and port scanning</li>
+                                                <li>traceroute - Network path tracing</li>
+                                                <li>mtr - Network diagnostics tool</li>
+                                                <li>arp-scan - ARP table scanner</li>
+                                                <li>fping - Fast parallel ping</li>
+                                                <li>masscan - High-speed port scanner</li>
+                                            </ul>
+                                            
+                                            <h6><i class="fas fa-chart-line pf-u-mr-sm"></i>Traffic Analysis:</h6>
+                                            <ul class="pf-c-list pf-m-plain pf-u-font-size-sm">
+                                                <li>tcpdump - Packet capture utility</li>
+                                                <li>tshark - Wireshark command line</li>
+                                                <li>wireshark-common - Protocol analyzers</li>
+                                            </ul>
+                                        </div>
+                                        <div class="pf-l-grid__item">
+                                            <h6><i class="fas fa-tachometer-alt pf-u-mr-sm"></i>Monitoring & Performance:</h6>
+                                            <ul class="pf-c-list pf-m-plain pf-u-font-size-sm">
+                                                <li>iftop - Bandwidth usage per connection</li>
+                                                <li>nethogs - Process bandwidth monitor</li>
+                                                <li>bmon - Interface bandwidth monitor</li>
+                                                <li>vnstat - Network statistics daemon</li>
+                                                <li>htop - Interactive process viewer</li>
+                                                <li>iotop - I/O monitoring tool</li>
+                                                <li>iperf3 - Network performance testing</li>
+                                                <li>netperf - Network performance benchmark</li>
+                                                <li>speedtest-cli - Internet speed test</li>
+                                            </ul>
+                                            
+                                            <h6><i class="fas fa-shield-alt pf-u-mr-sm"></i>Infrastructure & Security:</h6>
+                                            <ul class="pf-c-list pf-m-plain pf-u-font-size-sm">
+                                                <li>snmp - SNMP tools and utilities</li>
+                                                <li>snmp-mibs-downloader - SNMP MIB files</li>
+                                                <li>ngrep - Network packet grep</li>
+                                                <li>p0f - Passive OS fingerprinting</li>
+                                            </ul>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
                             
                             <div class="installation-progress">
-                                <div class="card mb-3">
-                                    <div class="card-header">
-                                        <h6 class="mb-0"><i class="fas fa-cogs me-2"></i>Overall Progress</h6>
+                                <div class="pf-c-card pf-u-mb-md">
+                                    <div class="pf-c-card__header">
+                                        <div class="pf-c-card__header-main">
+                                            <h2 class="pf-c-card__title pf-u-font-size-lg">
+                                                <i class="fas fa-cogs pf-u-mr-sm"></i>Overall Installation Progress
+                                            </h2>
+                                        </div>
                                     </div>
-                                    <div class="card-body py-2">
+                                    <div class="pf-c-card__body">
                                         <div id="overallProgressContainer">
-                                            <div class="progress mb-2" style="height: 25px;">
-                                                <div id="overallProgressBar" class="progress-bar progress-bar-striped progress-bar-animated" 
-                                                     role="progressbar" style="width: 0%" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">
-                                                    0%
+                                            <div class="pf-c-progress pf-u-mb-sm" style="--pf-c-progress--Height: 25px; --pf-c-progress__measure--FontSize: var(--pf-global--FontSize--sm);">
+                                                <div class="pf-c-progress__description"></div>
+                                                <div class="pf-c-progress__status">
+                                                    <span class="pf-c-progress__measure" id="installProgressText">0%</span>
+                                                </div>
+                                                <div class="pf-c-progress__bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+                                                    <div class="pf-c-progress__indicator" id="overallInstallProgressBar" style="width: 0%; background-color: var(--pf-global--primary-color--100);">
+                                                        <span class="pf-screen-reader">0% complete</span>
+                                                    </div>
                                                 </div>
                                             </div>
-                                            <div id="currentPhase" class="small text-muted">Initializing installation process...</div>
+                                            <div id="currentInstallPhase" class="pf-u-font-size-sm pf-u-color-200">Ready to start installation process...</div>
                                         </div>
                                     </div>
                                 </div>
                                 
-                                <div id="installationLogs" class="card mb-3" style="display: none;">
-                                    <div class="card-header d-flex justify-content-between align-items-center">
-                                        <h6 class="mb-0"><i class="fas fa-terminal me-2"></i>Installation Logs</h6>
-                                        <button type="button" class="btn btn-sm btn-outline-secondary" onclick="toggleLogVisibility()" id="toggleLogsBtn">
-                                            <i class="fas fa-chevron-up"></i>
-                                        </button>
+                                <div id="installationLogs" class="pf-c-card pf-u-mb-md" style="display: none;">
+                                    <div class="pf-c-card__header">
+                                        <div class="pf-c-card__header-main">
+                                            <h2 class="pf-c-card__title pf-u-font-size-lg">
+                                                <i class="fas fa-terminal pf-u-mr-sm"></i>Installation Output
+                                            </h2>
+                                        </div>
+                                        <div class="pf-c-card__actions">
+                                            <button class="pf-c-button pf-m-plain" type="button" onclick="toggleInstallLogVisibility()" id="toggleInstallLogsBtn" aria-label="Toggle installation logs">
+                                                <i class="fas fa-chevron-up" aria-hidden="true"></i>
+                                            </button>
+                                        </div>
                                     </div>
-                                    <div class="card-body p-0" id="installationLogsBody">
-                                        <div id="logsContent" style="max-height: 200px; overflow-y: auto; background: #1a1a1a; color: #00ff00; padding: 10px; font-family: 'Courier New', monospace; font-size: 12px; line-height: 1.2;">
+                                    <div class="pf-c-card__body pf-u-p-0" id="installationLogsBody">
+                                        <div id="installLogsContent" style="max-height: 300px; overflow-y: auto; background: #1a1a1a; color: #00ff00; padding: 10px; font-family: 'Courier New', monospace; font-size: 12px; line-height: 1.2;">
                                         </div>
                                     </div>
                                 </div>
                                 
-                                <div id="hostStatusContainer" class="card" style="display: none;">
-                                    <div class="card-header">
-                                        <h6 class="mb-0"><i class="fas fa-server me-2"></i>Host Installation Status</h6>
+                                <div id="hostInstallStatusContainer" class="pf-c-card pf-u-mb-md" style="display: none;">
+                                    <div class="pf-c-card__header">
+                                        <div class="pf-c-card__header-main">
+                                            <h2 class="pf-c-card__title pf-u-font-size-lg">
+                                                <i class="fas fa-server pf-u-mr-sm"></i>Host Installation Status
+                                            </h2>
+                                        </div>
                                     </div>
-                                    <div class="card-body">
-                                        <div id="hostStatusCards" class="row">
+                                    <div class="pf-c-card__body">
+                                        <div id="hostInstallStatusCards" class="pf-l-gallery pf-m-gutter">
                                         </div>
                                     </div>
                                 </div>
@@ -2012,21 +2040,19 @@ function showEnhancedInstallationModal() {
                             </div>
                         </div>
                     </div>
-                    <div class="modal-footer">
-                        <div class="loading-spinner">
-                            <div class="spinner-border spinner-border-sm text-primary me-2"></div>
-                            <span class="text-muted">Installing tools, please wait...</span>
-                        </div>
-                        <button type="button" class="btn btn-warning retry-button" onclick="retryInstallation()" style="display: none;">
-                            <i class="fas fa-redo me-2"></i>Retry Installation
+                    <footer class="pf-c-modal-box__footer">
+                        <button class="pf-c-button pf-m-warning install-retry-button" type="button" onclick="retryInstallation()" style="display: none;">
+                            <i class="fas fa-redo pf-u-mr-sm"></i>
+                            Retry Installation
                         </button>
-                        <button type="button" class="btn btn-success verify-button" onclick="verifyToolInstallation()" style="display: none;">
-                            <i class="fas fa-check-double me-2"></i>Verify Installation
+                        <button class="pf-c-button pf-m-primary install-verify-button" type="button" onclick="verifyToolInstallation()" style="display: none;">
+                            <i class="fas fa-check-double pf-u-mr-sm"></i>
+                            Verify Installation
                         </button>
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" onclick="closeInstallationModal()">
+                        <button class="pf-c-button pf-m-secondary" type="button" onclick="closeInstallationModal()">
                             Close
                         </button>
-                    </div>
+                    </footer>
                 </div>
             </div>
         </div>
@@ -2036,37 +2062,41 @@ function showEnhancedInstallationModal() {
     const modal = document.getElementById('enhancedInstallationModal');
     
     // Show the modal
-    const bootstrapModal = new bootstrap.Modal(modal);
-    bootstrapModal.show();
+    modal.hidden = false;
 }
 
 function displayInstallationProgress(data) {
     const { running, hosts, current_phase, logs, overall_progress, host_status_counts } = data;
     
     // Update overall progress bar
-    const progressBar = document.getElementById('overallProgressBar');
-    if (progressBar) {
+    const progressBar = document.getElementById('overallInstallProgressBar');
+    const progressText = document.getElementById('installProgressText');
+    if (progressBar && progressText) {
         progressBar.style.width = `${overall_progress}%`;
-        progressBar.textContent = `${overall_progress}%`;
+        progressText.textContent = `${overall_progress}%`;
         progressBar.setAttribute('aria-valuenow', overall_progress);
         
-        // Update progress bar color based on phase
-        const progressClasses = {
-            'initializing': 'bg-info',
-            'checking_tools': 'bg-warning',
-            'installing': 'bg-primary',
-            'complete': 'bg-success',
-            'error': 'bg-danger'
+        // Update progress bar color based on phase - using PatternFly CSS custom properties
+        const progressColors = {
+            'initializing': 'var(--pf-global--info-color--100)',
+            'checking_tools': 'var(--pf-global--warning-color--100)',
+            'installing': 'var(--pf-global--primary-color--100)',
+            'complete': 'var(--pf-global--success-color--100)',
+            'error': 'var(--pf-global--danger-color--100)'
         };
         
-        progressBar.className = `progress-bar progress-bar-striped ${progressClasses[current_phase] || 'bg-primary'}`;
-        if (running) {
-            progressBar.classList.add('progress-bar-animated');
+        progressBar.style.backgroundColor = progressColors[current_phase] || 'var(--pf-global--primary-color--100)';
+        
+        // Add animation if running
+        if (running && !progressBar.classList.contains('pf-m-progress-bar-animated')) {
+            progressBar.classList.add('pf-m-progress-bar-animated');
+        } else if (!running) {
+            progressBar.classList.remove('pf-m-progress-bar-animated');
         }
     }
     
     // Update current phase
-    const phaseElement = document.getElementById('currentPhase');
+    const phaseElement = document.getElementById('currentInstallPhase');
     if (phaseElement) {
         const phaseEmojis = {
             'initializing': '🚀',
@@ -2095,7 +2125,7 @@ function displayInstallationProgress(data) {
     
     // Update installation logs
     const logsContainer = document.getElementById('installationLogs');
-    const logsContent = document.getElementById('logsContent');
+    const logsContent = document.getElementById('installLogsContent');
     if (logsContainer && logsContent && logs && logs.length > 0) {
         logsContainer.style.display = 'block';
         
@@ -2117,7 +2147,7 @@ function displayInstallationProgress(data) {
     }
     
     // Update host status cards
-    updateHostStatusCards(hosts);
+    updateHostInstallStatusCards(hosts);
     
     // If installation is complete, show final results
     if (!running && installationStarted) {
@@ -2161,6 +2191,20 @@ function displayInstallationError(error) {
     if (installationProgressTimer) {
         clearInterval(installationProgressTimer);
         installationProgressTimer = null;
+    }
+}
+
+function toggleInstallLogVisibility() {
+    const logsBody = document.getElementById('installationLogsBody');
+    const toggleBtn = document.getElementById('toggleInstallLogsBtn');
+    const icon = toggleBtn.querySelector('i');
+    
+    if (logsBody.style.display === 'none') {
+        logsBody.style.display = 'block';
+        icon.className = 'fas fa-chevron-up';
+    } else {
+        logsBody.style.display = 'none';
+        icon.className = 'fas fa-chevron-down';
     }
 }
 
@@ -2399,9 +2443,9 @@ function updateModalFooterForVerification() {
     if (closeButton) closeButton.style.display = 'inline-block';
 }
 
-function updateHostStatusCards(hosts) {
-    const container = document.getElementById('hostStatusContainer');
-    const cardsContainer = document.getElementById('hostStatusCards');
+function updateHostInstallStatusCards(hosts) {
+    const container = document.getElementById('hostInstallStatusContainer');
+    const cardsContainer = document.getElementById('hostInstallStatusCards');
     
     if (!hosts || Object.keys(hosts).length === 0) {
         if (container) container.style.display = 'none';
