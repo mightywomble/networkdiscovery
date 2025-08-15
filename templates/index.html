@@ -306,67 +306,85 @@
     </div>
 </section>
 
-<!-- Enhanced Network Scan Modal -->
-<div class="modal fade" id="enhancedScanModal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
-    <div class="modal-dialog modal-xl">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">
-                    <i class="fas fa-satellite-dish me-2 text-primary"></i>
+<!-- Enhanced Network Scan Modal - PatternFly Style -->
+<div class="pf-c-backdrop" id="enhancedScanModal" hidden>
+    <div class="pf-l-bullseye">
+        <div class="pf-c-modal-box pf-m-xl" role="dialog" aria-modal="true" aria-labelledby="enhanced-scan-title">
+            <button class="pf-c-button pf-m-plain" type="button" aria-label="Close" onclick="closeScanModal()">
+                <i class="fas fa-times" aria-hidden="true"></i>
+            </button>
+            <header class="pf-c-modal-box__header">
+                <h1 class="pf-c-modal-box__title" id="enhanced-scan-title">
+                    <i class="fas fa-satellite-dish pf-u-mr-sm"></i>
                     Enhanced Network Discovery & Analysis
-                </h5>
-            </div>
-            <div class="modal-body">
+                </h1>
+            </header>
+            <div class="pf-c-modal-box__body">
                 <div id="enhancedScanContent">
-                    <div class="alert alert-info">
-                        <div class="row">
-                            <div class="col-md-4">
-                                <h6><i class="fas fa-search me-2"></i>Network Discovery:</h6>
-                                <ul class="small mb-2">
-                                    <li>Advanced nmap port scanning</li>
-                                    <li>ARP table discovery</li>
-                                    <li>Network route analysis</li>
-                                    <li>Fast ping sweep (fping)</li>
-                                    <li>Rapid port discovery (masscan)</li>
-                                </ul>
-                            </div>
-                            <div class="col-md-4">
-                                <h6><i class="fas fa-chart-line me-2"></i>Traffic Analysis:</h6>
-                                <ul class="small mb-2">
-                                    <li>Interface statistics & bandwidth</li>
-                                    <li>Active connection analysis</li>
-                                    <li>Protocol breakdown (tshark)</li>
-                                    <li>Bandwidth monitoring (iftop)</li>
-                                    <li>Historical traffic data (vnstat)</li>
-                                </ul>
-                            </div>
-                            <div class="col-md-4">
-                                <h6><i class="fas fa-tachometer-alt me-2"></i>Performance & Security:</h6>
-                                <ul class="small mb-0">
-                                    <li>System performance analysis</li>
-                                    <li>Network latency testing (mtr)</li>
-                                    <li>Internet speed testing</li>
-                                    <li>Service fingerprinting</li>
-                                    <li>SNMP infrastructure discovery</li>
-                                </ul>
+                    <div class="pf-c-alert pf-m-info pf-m-inline" aria-label="Info alert">
+                        <div class="pf-c-alert__icon">
+                            <i class="fas fa-info-circle" aria-hidden="true"></i>
+                        </div>
+                        <div class="pf-c-alert__title">Comprehensive Network Analysis Tools</div>
+                        <div class="pf-c-alert__description">
+                            <div class="pf-l-grid pf-m-all-12-col-on-sm pf-m-all-6-col-on-md pf-m-all-4-col-on-lg">
+                                <div class="pf-l-grid__item">
+                                    <h6><i class="fas fa-search pf-u-mr-sm"></i>Network Discovery:</h6>
+                                    <ul class="pf-c-list pf-m-plain pf-u-font-size-sm">
+                                        <li>Advanced nmap port scanning</li>
+                                        <li>ARP table discovery</li>
+                                        <li>Network route analysis</li>
+                                        <li>Fast ping sweep (fping)</li>
+                                        <li>Rapid port discovery (masscan)</li>
+                                    </ul>
+                                </div>
+                                <div class="pf-l-grid__item">
+                                    <h6><i class="fas fa-chart-line pf-u-mr-sm"></i>Traffic Analysis:</h6>
+                                    <ul class="pf-c-list pf-m-plain pf-u-font-size-sm">
+                                        <li>Interface statistics & bandwidth</li>
+                                        <li>Active connection analysis</li>
+                                        <li>Protocol breakdown (tshark)</li>
+                                        <li>Bandwidth monitoring (iftop)</li>
+                                        <li>Historical traffic data (vnstat)</li>
+                                    </ul>
+                                </div>
+                                <div class="pf-l-grid__item">
+                                    <h6><i class="fas fa-tachometer-alt pf-u-mr-sm"></i>Performance & Security:</h6>
+                                    <ul class="pf-c-list pf-m-plain pf-u-font-size-sm">
+                                        <li>System performance analysis</li>
+                                        <li>Network latency testing (mtr)</li>
+                                        <li>Internet speed testing</li>
+                                        <li>Service fingerprinting</li>
+                                        <li>SNMP infrastructure discovery</li>
+                                    </ul>
+                                </div>
                             </div>
                         </div>
                     </div>
                     
                     <div class="scan-progress">
-                        <div class="card mb-3">
-                            <div class="card-header">
-                                <h6 class="mb-0"><i class="fas fa-cogs me-2"></i>Overall Scan Progress</h6>
+                        <div class="pf-c-card pf-u-mb-md">
+                            <div class="pf-c-card__header">
+                                <div class="pf-c-card__header-main">
+                                    <h2 class="pf-c-card__title pf-u-font-size-lg">
+                                        <i class="fas fa-cogs pf-u-mr-sm"></i>Overall Scan Progress
+                                    </h2>
+                                </div>
                             </div>
-                            <div class="card-body py-2">
+                            <div class="pf-c-card__body">
                                 <div id="overallScanProgressContainer">
-                                    <div class="progress mb-2" style="height: 25px;">
-                                        <div id="overallScanProgressBar" class="progress-bar progress-bar-striped progress-bar-animated" 
-                                             role="progressbar" style="width: 0%" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">
-                                            0%
+                                    <div class="pf-c-progress pf-u-mb-sm" style="--pf-c-progress--Height: 25px;">
+                                        <div class="pf-c-progress__description"></div>
+                                        <div class="pf-c-progress__status">
+                                            <span class="pf-c-progress__measure" id="scanProgressText">0%</span>
+                                        </div>
+                                        <div class="pf-c-progress__bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+                                            <div class="pf-c-progress__indicator" id="overallScanProgressBar" style="width: 0%">
+                                                <span class="pf-screen-reader">0% complete</span>
+                                            </div>
                                         </div>
                                     </div>
-                                    <div id="currentScanPhase" class="small text-muted">Ready to start comprehensive network scan...</div>
+                                    <div id="currentScanPhase" class="pf-u-font-size-sm pf-u-color-200">Ready to start comprehensive network scan...</div>
                                 </div>
                             </div>
                         </div>
@@ -500,37 +518,52 @@
                     </div>
                 </div>
             </div>
-            <div class="modal-footer">
-                <div class="scan-loading-spinner">
-                    <div class="spinner-border spinner-border-sm text-primary me-2"></div>
-                    <span class="text-muted">Running comprehensive network scan, please wait...</span>
+            <footer class="pf-c-modal-box__footer">
+                <div class="scan-loading-spinner pf-u-display-flex pf-u-align-items-center">
+                    <span class="pf-c-spinner pf-m-md pf-u-mr-sm" role="progressbar" aria-label="Loading scan progress">
+                        <span class="pf-c-spinner__clipper"></span>
+                        <span class="pf-c-spinner__lead-ball"></span>
+                        <span class="pf-c-spinner__tail-ball"></span>
+                    </span>
+                    <span class="pf-u-color-200">Running comprehensive network scan, please wait...</span>
                 </div>
-                <button type="button" class="btn btn-warning scan-retry-button" onclick="retryScan()" style="display: none;">
-                    <i class="fas fa-redo me-2"></i>Retry Scan
+                <button class="pf-c-button pf-m-warning scan-retry-button" type="button" onclick="retryScan()" style="display: none;">
+                    <i class="fas fa-redo pf-u-mr-sm"></i>
+                    Retry Scan
                 </button>
-                <button type="button" class="btn btn-primary scan-export-button" onclick="exportScanResults()" style="display: none;">
-                    <i class="fas fa-download me-2"></i>Export Results
+                <button class="pf-c-button pf-m-primary scan-export-button" type="button" onclick="exportScanResults()" style="display: none;">
+                    <i class="fas fa-download pf-u-mr-sm"></i>
+                    Export Results
                 </button>
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" onclick="closeScanModal()">
+                <button class="pf-c-button pf-m-secondary" type="button" onclick="closeScanModal()">
                     Close
                 </button>
-            </div>
+            </footer>
         </div>
     </div>
 </div>
 
-<!-- Host Details Modal -->
-<div class="modal fade" id="hostDetailsModal" tabindex="-1">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Host Details</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body" id="hostDetailsContent">
-                <div class="text-center">
-                    <div class="spinner-border" role="status"></div>
-                    <p class="mt-2">Loading host details...</p>
+<!-- Host Details Modal - PatternFly Style -->
+<div class="pf-c-backdrop" id="hostDetailsModal" hidden>
+    <div class="pf-l-bullseye">
+        <div class="pf-c-modal-box pf-m-lg" role="dialog" aria-modal="true" aria-labelledby="host-details-title">
+            <button class="pf-c-button pf-m-plain" type="button" aria-label="Close" onclick="closeHostDetailsModal()">
+                <i class="fas fa-times" aria-hidden="true"></i>
+            </button>
+            <header class="pf-c-modal-box__header">
+                <h1 class="pf-c-modal-box__title" id="host-details-title">
+                    <i class="fas fa-server pf-u-mr-sm"></i>
+                    Host Details
+                </h1>
+            </header>
+            <div class="pf-c-modal-box__body" id="hostDetailsContent">
+                <div class="pf-u-text-align-center">
+                    <span class="pf-c-spinner pf-m-xl" role="progressbar" aria-label="Loading host details">
+                        <span class="pf-c-spinner__clipper"></span>
+                        <span class="pf-c-spinner__lead-ball"></span>
+                        <span class="pf-c-spinner__tail-ball"></span>
+                    </span>
+                    <p class="pf-u-mt-md">Loading host details...</p>
                 </div>
             </div>
         </div>
@@ -541,18 +574,22 @@
 {% block scripts %}
 <script>
 function showHostDetails(hostId) {
-    const modal = new bootstrap.Modal(document.getElementById('hostDetailsModal'));
+    const modal = document.getElementById('hostDetailsModal');
     const content = document.getElementById('hostDetailsContent');
     
     // Show loading state
     content.innerHTML = `
-        <div class="text-center">
-            <div class="spinner-border" role="status"></div>
-            <p class="mt-2">Loading host details...</p>
+        <div class="pf-u-text-align-center">
+            <span class="pf-c-spinner pf-m-xl" role="progressbar" aria-label="Loading host details">
+                <span class="pf-c-spinner__clipper"></span>
+                <span class="pf-c-spinner__lead-ball"></span>
+                <span class="pf-c-spinner__tail-ball"></span>
+            </span>
+            <p class="pf-u-mt-md">Loading host details...</p>
         </div>
     `;
     
-    modal.show();
+    modal.hidden = false;
     
     // Fetch host details
     fetch(`/api/host_stats/${hostId}`)
@@ -770,8 +807,7 @@ function updateScanProgress() {
 function showEnhancedScanModal() {
     const modal = document.getElementById('enhancedScanModal');
     if (modal) {
-        const bootstrapModal = new bootstrap.Modal(modal);
-        bootstrapModal.show();
+        modal.hidden = false;
         
         // Reset modal state
         resetScanModal();
@@ -1512,7 +1548,19 @@ function closeScanModal() {
         scanProgressTimer = null;
     }
     
+    const modal = document.getElementById('enhancedScanModal');
+    if (modal) {
+        modal.hidden = true;
+    }
+    
     scanStarted = false;
+}
+
+function closeHostDetailsModal() {
+    const modal = document.getElementById('hostDetailsModal');
+    if (modal) {
+        modal.hidden = true;
+    }
 }
 
 function exportScanResults() {
