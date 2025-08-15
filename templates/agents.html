@@ -2301,7 +2301,7 @@ async function performAgentUpdates(hostsToUpdate) {
             statusElement.textContent = `Updating ${host.name} (${i + 1}/${hostsToUpdate.length})`;
             
             const timestamp = new Date().toLocaleTimeString();
-            logsElement.textContent += `\n[${timestamp}] Starting update for ${host.name} (${host.ip_address})\n`;
+            logsElement.textContent += `\n🚀 [${timestamp}] Starting update for ${host.name} (${host.ip_address})\n`;
             logsElement.scrollTop = logsElement.scrollHeight;
             
             try {
@@ -2324,21 +2324,36 @@ async function performAgentUpdates(hostsToUpdate) {
                 const data = await response.json();
                 
                 if (data.success) {
-                    logsElement.textContent += `[${new Date().toLocaleTimeString()}] ✓ Successfully updated ${host.name}\n`;
+                    logsElement.textContent += `✅ [${new Date().toLocaleTimeString()}] Successfully updated ${host.name}\n`;
                     successCount++;
                 } else {
-                    logsElement.textContent += `[${new Date().toLocaleTimeString()}] ✗ Failed to update ${host.name}: ${data.error}\n`;
+                    logsElement.textContent += `❌ [${new Date().toLocaleTimeString()}] Failed to update ${host.name}: ${data.error}\n`;
                     errorCount++;
                 }
             } catch (error) {
-                logsElement.textContent += `[${new Date().toLocaleTimeString()}] ✗ Error updating ${host.name}: ${error.message}\n`;
+                logsElement.textContent += `💥 [${new Date().toLocaleTimeString()}] Exception updating ${host.name}: ${error.message}\n`;
                 errorCount++;
             }
             
             logsElement.scrollTop = logsElement.scrollHeight;
         }
         
-        statusElement.textContent = `Updates completed: ${successCount} successful, ${errorCount} failed`;
+        // Final summary with pretty formatting
+        let summaryText = '🎉 Updates completed: ';
+        if (successCount > 0) {
+            summaryText += `✅ ${successCount} successful`;
+        }
+        if (errorCount > 0) {
+            summaryText += successCount > 0 ? `, ❌ ${errorCount} failed` : `❌ ${errorCount} failed`;
+        }
+        if (successCount === 0 && errorCount === 0) {
+            summaryText = '⚠️ No updates processed';
+        }
+        statusElement.textContent = summaryText;
+        
+        // Add a final summary to logs
+        const finalSummary = `\n${'═'.repeat(50)}\n🏁 UPDATE SUMMARY:\n   ✅ Successful: ${successCount}\n   ❌ Failed: ${errorCount}\n   📊 Total: ${successCount + errorCount}\n${'═'.repeat(50)}\n`;
+        logsElement.textContent += finalSummary;
         
         // Refresh data to show updated versions
         setTimeout(() => {

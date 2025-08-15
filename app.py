@@ -2406,6 +2406,66 @@ def get_test_configurations():
             'timestamp': datetime.now().isoformat()
         })
         
+    except ImportError as e:
+        print(f"NetworkTestSuite not available: {e}")
+        # Return a basic fallback configuration
+        fallback_categories = {
+            'network_discovery': {
+                'name': 'Network Discovery',
+                'description': 'Basic network discovery tests',
+                'tests': {
+                    'port_scan': {
+                        'name': 'Port Scanning',
+                        'description': 'Scan for open ports on local network',
+                        'tool': 'nmap',
+                        'enabled': True
+                    },
+                    'ping_sweep': {
+                        'name': 'Ping Sweep', 
+                        'description': 'Fast ping sweep to find alive hosts',
+                        'tool': 'fping',
+                        'enabled': True
+                    }
+                }
+            },
+            'traffic_analysis': {
+                'name': 'Traffic Analysis',
+                'description': 'Basic traffic analysis',
+                'tests': {
+                    'interface_stats': {
+                        'name': 'Interface Statistics',
+                        'description': 'Analyze network interface statistics',
+                        'tool': 'ip',
+                        'enabled': True
+                    },
+                    'connection_analysis': {
+                        'name': 'Connection Analysis',
+                        'description': 'Analyze active network connections',
+                        'tool': 'ss',
+                        'enabled': True
+                    }
+                }
+            }
+        }
+        
+        fallback_default = {
+            'network_discovery': {
+                'port_scan': True,
+                'ping_sweep': True
+            },
+            'traffic_analysis': {
+                'interface_stats': True,
+                'connection_analysis': True
+            }
+        }
+        
+        return jsonify({
+            'success': True,
+            'test_categories': fallback_categories,
+            'default_configuration': fallback_default,
+            'timestamp': datetime.now().isoformat()
+        })
+        
     except Exception as e:
         print(f"Error getting test configurations: {e}")
         return jsonify({
@@ -3197,7 +3257,12 @@ def perform_agent_update(agent):
         hostname = agent.get('hostname', 'unknown')
         ip_address = agent.get('ip_address')
         
-        print(f"Starting agent update for {hostname} ({ip_address})")
+        # Pretty formatted output
+        print(f"\n🚀 ╭─────────────────────────────────────────────────╮")
+        print(f"   │  STARTING AGENT UPDATE                          │")
+        print(f"   │  Host: {hostname:<35} │")
+        print(f"   │  IP:   {ip_address:<35} │")
+        print(f"   ╰─────────────────────────────────────────────────╯")
         
         # Find the corresponding host in host_manager
         hosts = host_manager.get_all_hosts()
@@ -3274,16 +3339,29 @@ echo "Agent update completed successfully!"
         if result and result['success']:
             # Mark update as completed
             db.mark_agent_update_completed(agent_id, current_version, build_date)
-            print(f"✅ Agent update completed successfully for {hostname}")
+            print(f"\n✅ ╭─────────────────────────────────────────────────╮")
+            print(f"   │  UPDATE SUCCESSFUL                              │")
+            print(f"   │  Host: {hostname:<35} │")
+            print(f"   │  Version: {current_version:<31} │")
+            print(f"   │  Build: {build_date:<33} │")
+            print(f"   ╰─────────────────────────────────────────────────╯\n")
         else:
             # Mark update as failed
             error_msg = result.get('stderr', error) if result else str(error)
             db.mark_agent_update_failed(agent_id, f"Update script failed: {error_msg[:200]}")
-            print(f"❌ Agent update failed for {hostname}: {error_msg}")
+            print(f"\n❌ ╭─────────────────────────────────────────────────╮")
+            print(f"   │  UPDATE FAILED                                  │")
+            print(f"   │  Host: {hostname:<35} │")
+            print(f"   │  Error: {error_msg[:32]:<32} │")
+            print(f"   ╰─────────────────────────────────────────────────╯\n")
             
     except Exception as e:
         error_msg = f"Exception during agent update: {str(e)}"
-        print(f"❌ {error_msg}")
+        print(f"\n💥 ╭─────────────────────────────────────────────────╮")
+        print(f"   │  UPDATE EXCEPTION                               │")
+        print(f"   │  Host: {hostname:<35} │")
+        print(f"   │  Exception: {str(e)[:29]:<29} │")
+        print(f"   ╰─────────────────────────────────────────────────╯\n")
         db.mark_agent_update_failed(agent_id, error_msg)
 
 def update_scan_status(phase, message, progress=None, current_host=None, step=None):
