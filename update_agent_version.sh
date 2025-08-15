@@ -34,7 +34,7 @@ AGENT_FILES=("networkmap_agent.py" "static/networkmap_agent.py")
 for file in "${AGENT_FILES[@]}"; do
     if [ -f "$SCRIPT_DIR/$file" ]; then
         # Extract current version
-        VERSION=$(grep -E "__version__|VERSION" "$SCRIPT_DIR/$file" | head -1 | sed -E 's/.*["\']([0-9]+\.[0-9]+\.[0-9]+)["\'].*/\1/')
+        VERSION=$(grep -E "__version__|VERSION" "$SCRIPT_DIR/$file" | head -1 | sed -E 's/.*["'"'"']([0-9]+\.[0-9]+\.[0-9]+)["'"'"'].*/\1/')
         echo -e "${GREEN}   ✓ $file (current version: $VERSION)${NC}"
     else
         echo -e "${YELLOW}   ⚠ $file (not found)${NC}"
@@ -52,7 +52,7 @@ if python3 "$AUTO_VERSION_SCRIPT"; then
     echo -e "${BLUE}📄 Updated files:${NC}"
     for file in "${AGENT_FILES[@]}"; do
         if [ -f "$SCRIPT_DIR/$file" ]; then
-            NEW_VERSION=$(grep -E "__version__|VERSION" "$SCRIPT_DIR/$file" | head -1 | sed -E 's/.*["\']([0-9]+\.[0-9]+\.[0-9]+)["\'].*/\1/')
+            NEW_VERSION=$(grep -E "__version__|VERSION" "$SCRIPT_DIR/$file" | head -1 | sed -E 's/.*["'"'"']([0-9]+\.[0-9]+\.[0-9]+)["'"'"'].*/\1/')
             echo -e "${GREEN}   ✓ $file (new version: $NEW_VERSION)${NC}"
         fi
     done
@@ -64,7 +64,7 @@ if python3 "$AUTO_VERSION_SCRIPT"; then
     echo ""
     echo -e "${YELLOW}📝 Next steps:${NC}"
     echo -e "   1. Review the changes: ${BLUE}git diff${NC}"
-    echo -e "   2. Commit the updates: ${BLUE}git add . && git commit -m \"Update agent version\"${NC}"
+    echo -e "   2. Commit the updates: ${BLUE}git add . && git commit -m 'Update agent version'${NC}"
     echo -e "   3. Push to repository: ${BLUE}git push${NC}"
     
 else

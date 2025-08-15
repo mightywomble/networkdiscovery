@@ -2785,7 +2785,7 @@ function showDataSummary(data) {
                             <dt class="col-sm-5">Last Scan:</dt>
                             <dd class="col-sm-7">${data.last_scan ? new Date(data.last_scan).toLocaleString() : 'Never'}</dd>
             <dt class="col-sm-5">Agent Version:</dt>
-            <dd class="col-sm-7">${data.agent_info ? data.agent_info.agent_version || 'Unknown' : 'Unknown'}</dd>
+            <dd class="col-sm-7">${(data.agent_info && data.agent_info.agent_version) || (data.system_info && data.system_info.agent_version) || 'Unknown'}</dd>
                             <dt class="col-sm-5">Status:</dt>
                             <dd class="col-sm-7"><span class="badge bg-${data.scan_status === 'completed' ? 'success' : 'warning'}">${data.scan_status || 'Unknown'}</span></dd>
                         </dl>
