@@ -209,9 +209,10 @@ class NetworkMapAgent:
             return None
     
     def run_network_scan(self) -> Dict[str, Any]:
-        """Run network scanning commands (same as main network scanner)"""
+        """Run comprehensive network scanning and testing with detailed results"""
+        scan_start_time = datetime.now()
         scan_results = {
-            'timestamp': datetime.now().isoformat(),
+            'timestamp': scan_start_time.isoformat(),
             'hostname': socket.gethostname(),
             'system_info': {},
             'network_interfaces': {},
@@ -220,7 +221,11 @@ class NetworkMapAgent:
             'listening_ports': [],
             'active_connections': [],
             'network_stats': {},
-            'process_network': []
+            'process_network': [],
+            'test_results': {},
+            'errors': [],
+            'scan_duration': None,
+            'scan_status': 'running'
         }
         
         try:
@@ -290,12 +295,168 @@ class NetworkMapAgent:
             except Exception as e:
                 self.logger.warning(f"Failed to get process network info: {e}")
             
-            self.logger.info("Network scan completed successfully")
+            # Run comprehensive network tests
+            scan_results['test_results'] = self._run_network_tests(scan_results)
+            
+            # Calculate scan duration
+            scan_end_time = datetime.now()
+            scan_duration = (scan_end_time - scan_start_time).total_seconds()
+            scan_results['scan_duration'] = f"{scan_duration:.2f} seconds"
+            scan_results['scan_status'] = 'completed'
+            
+            self.logger.info(f"Network scan completed successfully in {scan_duration:.2f} seconds")
             
         except Exception as e:
+            scan_results['errors'].append(f"Network scan failed: {str(e)}")
+            scan_results['scan_status'] = 'failed'
             self.logger.error(f"Network scan failed: {e}")
         
         return scan_results
+    
+    def _run_network_tests(self, scan_data: Dict[str, Any]) -> Dict[str, Any]:
+        """Run comprehensive network tests and return structured results"""
+        test_results = {}
+        
+        # System Monitoring Tests
+        test_results['System Monitoring'] = self._run_system_monitoring_tests(scan_data)
+        
+        # Network Discovery Tests
+        test_results['Network Discovery'] = self._run_network_discovery_tests(scan_data)
+        
+        # Connection Monitoring Tests
+        test_results['Connection Monitoring'] = self._run_connection_monitoring_tests(scan_data)
+        
+        # Port Scanning Tests
+        test_results['Port Scanning'] = self._run_port_scanning_tests(scan_data)
+        
+        return test_results
+    
+    def _run_system_monitoring_tests(self, scan_data: Dict[str, Any]) -> Dict[str, Any]:
+        """Run system monitoring tests"""
+        tests = {}
+        
+        # Network Interfaces Test
+        interfaces = scan_data.get('network_interfaces', {})
+        interfaces_count = len(interfaces.get('ip_addr', '').split('\n')) if interfaces.get('ip_addr') else 0
+        tests['Network Interfaces'] = {
+            'success': interfaces_count > 0,
+            'description': f'Found {interfaces_count} network interface entries',
+            'details': f"Interface data collected at {scan_data['timestamp']}\nInterfaces detected: {interfaces_count}"
+        }
+        
+        # System Info Test
+        system_info = scan_data.get('system_info', {})
+        tests['System Information'] = {
+            'success': bool(system_info),
+            'description': f'Collected system information for {system_info.get("hostname", "unknown")}',
+            'details': f"Platform: {system_info.get('platform', 'Unknown')}\nAgent version: {system_info.get('agent_version', 'Unknown')}"
+        }
+        
+        # Network Statistics Test
+        net_stats = scan_data.get('network_stats', {})
+        tests['Network Statistics'] = {
+            'success': bool(net_stats.get('net_dev')),
+            'description': 'Network interface statistics collected',
+            'details': f"Statistics collected at {scan_data['timestamp']}"
+        }
+        
+        return tests
+    
+    def _run_network_discovery_tests(self, scan_data: Dict[str, Any]) -> Dict[str, Any]:
+        """Run network discovery tests"""
+        tests = {}
+        
+        # ARP Table Analysis
+        arp_data = scan_data.get('arp_table', [])
+        arp_count = len([entry for entry in arp_data if entry.strip()]) if arp_data else 0
+        tests['ARP Table Analysis'] = {
+            'success': arp_count > 0,
+            'description': f'Found {arp_count} entries in ARP table',
+            'details': f"ARP data collected at {scan_data['timestamp']}\nEntries found: {arp_count}\nHosts discovered via ARP"
+        }
+        
+        # Routing Table Analysis
+        routing_data = scan_data.get('routing_table', [])
+        routing_count = len([route for route in routing_data if route.strip()]) if routing_data else 0
+        tests['Routing Table Analysis'] = {
+            'success': routing_count > 0,
+            'description': f'Found {routing_count} routing entries',
+            'details': f"Routing data collected at {scan_data['timestamp']}\nRoutes analyzed: {routing_count}"
+        }
+        
+        # Network Topology Test
+        tests['Network Topology Mapping'] = {
+            'success': arp_count > 0 or routing_count > 0,
+            'description': f'Network topology analysis based on ARP and routing data',
+            'details': f"Combined ARP ({arp_count}) and routing ({routing_count}) entries for topology mapping"
+        }
+        
+        return tests
+    
+    def _run_connection_monitoring_tests(self, scan_data: Dict[str, Any]) -> Dict[str, Any]:
+        """Run connection monitoring tests"""
+        tests = {}
+        
+        # Active Connections Analysis
+        connections = scan_data.get('active_connections', [])
+        connection_count = len([conn for conn in connections if conn.strip()]) if connections else 0
+        tcp_connections = len([conn for conn in connections if 'tcp' in conn.lower()]) if connections else 0
+        udp_connections = len([conn for conn in connections if 'udp' in conn.lower()]) if connections else 0
+        
+        tests['Connection Monitoring'] = {
+            'success': connection_count > 0,
+            'description': f'Found {connection_count} active connections',
+            'details': f"Connections monitored at {scan_data['timestamp']}\nTCP connections: {tcp_connections}\nUDP connections: {udp_connections}\nTotal active: {connection_count}"
+        }
+        
+        # Process Network Analysis
+        process_net = scan_data.get('process_network', [])
+        process_count = len([proc for proc in process_net if proc.strip()]) if process_net else 0
+        tests['Process Network Analysis'] = {
+            'success': process_count > 0,
+            'description': f'Found {process_count} processes with network connections',
+            'details': f"Process network data collected at {scan_data['timestamp']}\nProcesses with network activity: {process_count}"
+        }
+        
+        return tests
+    
+    def _run_port_scanning_tests(self, scan_data: Dict[str, Any]) -> Dict[str, Any]:
+        """Run port scanning tests"""
+        tests = {}
+        
+        # Listening Ports Analysis
+        ports = scan_data.get('listening_ports', [])
+        port_count = len([port for port in ports if port.strip() and 'LISTEN' in port]) if ports else 0
+        tcp_ports = len([port for port in ports if 'tcp' in port.lower() and 'LISTEN' in port]) if ports else 0
+        
+        tests['Port Scanning'] = {
+            'success': port_count > 0,
+            'description': f'Found {port_count} listening ports',
+            'details': f"Ports scanned at {scan_data['timestamp']}\nTCP listening ports: {tcp_ports}\nTotal listening: {port_count}"
+        }
+        
+        # Service Discovery
+        services_found = []
+        if ports:
+            for port_line in ports:
+                if 'LISTEN' in port_line:
+                    # Extract service information from port line
+                    if '22' in port_line:
+                        services_found.append('SSH')
+                    elif '80' in port_line:
+                        services_found.append('HTTP')
+                    elif '443' in port_line:
+                        services_found.append('HTTPS')
+                    elif '5150' in port_line:
+                        services_found.append('NetworkMap')
+        
+        tests['Service Discovery'] = {
+            'success': len(services_found) > 0,
+            'description': f'Identified {len(services_found)} common services',
+            'details': f"Services discovered: {', '.join(set(services_found))}\nService detection completed at {scan_data['timestamp']}"
+        }
+        
+        return tests
     
     def collect_logs(self) -> List[Dict[str, Any]]:
         """Collect system logs"""
