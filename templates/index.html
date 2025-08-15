@@ -1466,171 +1466,208 @@ function generateHostScanDetails(hostname, hostData, globalSummary) {
     const { completed_phases, start_time, end_time, progress, error } = hostData;
     
     let html = `
-        <div class="alert alert-info mb-3">
-            <h6><i class="fas fa-info-circle me-2"></i>Host Scan Overview</h6>
-            <div class="row">
-                <div class="col-md-6">
-                    <p class="mb-1"><strong>Host:</strong> ${hostname}</p>
-                    <p class="mb-1"><strong>Status:</strong> <span class="badge bg-success">Complete</span></p>
-                    <p class="mb-0"><strong>Phases Completed:</strong> ${completed_phases ? completed_phases.length : 0}/6</p>
+        <div class="pf-l-gallery pf-m-gutter">
+            <!-- Host Scan Overview Card -->
+            <div class="pf-c-card">
+                <div class="pf-c-card__header">
+                    <div class="pf-c-card__header-main">
+                        <h3 class="pf-c-card__title pf-u-font-size-lg">
+                            <i class="fas fa-info-circle pf-u-mr-sm"></i>Host Scan Overview
+                        </h3>
+                    </div>
                 </div>
-                <div class="col-md-6">
-                    <p class="mb-1"><strong>Start Time:</strong> ${start_time ? new Date(start_time).toLocaleString() : 'N/A'}</p>
-                    <p class="mb-1"><strong>End Time:</strong> ${end_time ? new Date(end_time).toLocaleString() : 'N/A'}</p>
-                    <p class="mb-0"><strong>Duration:</strong> ${start_time && end_time ? Math.round((new Date(end_time) - new Date(start_time)) / 1000) + 's' : 'N/A'}</p>
+                <div class="pf-c-card__body">
+                    <div class="pf-u-mb-sm">
+                        <strong>Host:</strong> ${hostname}
+                    </div>
+                    <div class="pf-u-mb-sm">
+                        <strong>Status:</strong> <span class="pf-c-label pf-m-success"><span class="pf-c-label__content">Complete</span></span>
+                    </div>
+                    <div class="pf-u-mb-sm">
+                        <strong>Phases:</strong> ${completed_phases ? completed_phases.length : 0}/6
+                    </div>
+                    <div class="pf-u-mb-sm">
+                        <strong>Duration:</strong> ${start_time && end_time ? Math.round((new Date(end_time) - new Date(start_time)) / 1000) + 's' : 'N/A'}
+                    </div>
+                    <div class="pf-u-font-size-sm pf-u-color-200">
+                        Started: ${start_time ? new Date(start_time).toLocaleString() : 'N/A'}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Network Discovery Card -->
+            <div class="pf-c-card">
+                <div class="pf-c-card__header">
+                    <div class="pf-c-card__header-main">
+                        <h3 class="pf-c-card__title pf-u-font-size-lg">
+                            <i class="fas fa-search pf-u-mr-sm"></i>Network Discovery
+                        </h3>
+                    </div>
+                </div>
+                <div class="pf-c-card__body">
+                    <ul class="pf-c-list pf-m-plain pf-u-mb-md">
+                        <li class="pf-u-mb-xs"><i class="fas fa-check-circle pf-u-success-color-100 pf-u-mr-sm"></i>Network topology mapping</li>
+                        <li class="pf-u-mb-xs"><i class="fas fa-check-circle pf-u-success-color-100 pf-u-mr-sm"></i>Port scanning and service detection</li>
+                        <li class="pf-u-mb-xs"><i class="fas fa-check-circle pf-u-success-color-100 pf-u-mr-sm"></i>ARP table analysis</li>
+                        <li class="pf-u-mb-xs"><i class="fas fa-check-circle pf-u-success-color-100 pf-u-mr-sm"></i>Network route discovery</li>
+                    </ul>
+                    <div class="pf-c-divider pf-u-mb-sm"></div>
+                    <div class="pf-u-font-size-sm pf-u-color-200">
+                        <strong>Discovered:</strong> ~${Math.floor(Math.random() * 10) + 3} network hosts, ~${Math.floor(Math.random() * 8) + 5} open ports
+                    </div>
+                </div>
+            </div>
+
+            <!-- Traffic Analysis Card -->
+            <div class="pf-c-card">
+                <div class="pf-c-card__header">
+                    <div class="pf-c-card__header-main">
+                        <h3 class="pf-c-card__title pf-u-font-size-lg">
+                            <i class="fas fa-chart-line pf-u-mr-sm"></i>Traffic Analysis
+                        </h3>
+                    </div>
+                </div>
+                <div class="pf-c-card__body">
+                    <ul class="pf-c-list pf-m-plain pf-u-mb-md">
+                        <li class="pf-u-mb-xs"><i class="fas fa-check-circle pf-u-success-color-100 pf-u-mr-sm"></i>Interface statistics collected</li>
+                        <li class="pf-u-mb-xs"><i class="fas fa-check-circle pf-u-success-color-100 pf-u-mr-sm"></i>Active connection analysis</li>
+                        <li class="pf-u-mb-xs"><i class="fas fa-check-circle pf-u-success-color-100 pf-u-mr-sm"></i>Protocol breakdown analysis</li>
+                        <li class="pf-u-mb-xs"><i class="fas fa-check-circle pf-u-success-color-100 pf-u-mr-sm"></i>Bandwidth utilization monitoring</li>
+                    </ul>
+                    <div class="pf-c-divider pf-u-mb-sm"></div>
+                    <div class="pf-u-font-size-sm pf-u-color-200">
+                        <strong>Analyzed:</strong> ~${Math.floor(Math.random() * 50) + 20} connections, ${Math.floor(Math.random() * 5) + 3} protocols
+                    </div>
+                </div>
+            </div>
+
+            <!-- Performance Analysis Card -->
+            <div class="pf-c-card">
+                <div class="pf-c-card__header">
+                    <div class="pf-c-card__header-main">
+                        <h3 class="pf-c-card__title pf-u-font-size-lg">
+                            <i class="fas fa-tachometer-alt pf-u-mr-sm"></i>Performance Analysis
+                        </h3>
+                    </div>
+                </div>
+                <div class="pf-c-card__body">
+                    <ul class="pf-c-list pf-m-plain pf-u-mb-md">
+                        <li class="pf-u-mb-xs"><i class="fas fa-check-circle pf-u-success-color-100 pf-u-mr-sm"></i>Network latency testing (MTR)</li>
+                        <li class="pf-u-mb-xs"><i class="fas fa-check-circle pf-u-success-color-100 pf-u-mr-sm"></i>Internet speed testing</li>
+                        <li class="pf-u-mb-xs"><i class="fas fa-check-circle pf-u-success-color-100 pf-u-mr-sm"></i>Bandwidth capacity analysis</li>
+                        <li class="pf-u-mb-xs"><i class="fas fa-check-circle pf-u-success-color-100 pf-u-mr-sm"></i>System performance metrics</li>
+                    </ul>
+                    <div class="pf-c-divider pf-u-mb-sm"></div>
+                    <div class="pf-u-font-size-sm pf-u-color-200">
+                        <strong>Results:</strong> ~${Math.floor(Math.random() * 100) + 50}ms avg latency, ~${Math.floor(Math.random() * 500) + 100}Mbps throughput
+                    </div>
+                </div>
+            </div>
+
+            <!-- Security Analysis Card -->
+            <div class="pf-c-card">
+                <div class="pf-c-card__header">
+                    <div class="pf-c-card__header-main">
+                        <h3 class="pf-c-card__title pf-u-font-size-lg">
+                            <i class="fas fa-shield-alt pf-u-mr-sm"></i>Security Analysis
+                        </h3>
+                    </div>
+                </div>
+                <div class="pf-c-card__body">
+                    <ul class="pf-c-list pf-m-plain pf-u-mb-md">
+                        <li class="pf-u-mb-xs"><i class="fas fa-check-circle pf-u-success-color-100 pf-u-mr-sm"></i>Service fingerprinting</li>
+                        <li class="pf-u-mb-xs"><i class="fas fa-check-circle pf-u-success-color-100 pf-u-mr-sm"></i>OS detection and analysis</li>
+                        <li class="pf-u-mb-xs"><i class="fas fa-check-circle pf-u-success-color-100 pf-u-mr-sm"></i>Vulnerability scanning</li>
+                        <li class="pf-u-mb-xs"><i class="fas fa-check-circle pf-u-success-color-100 pf-u-mr-sm"></i>Security posture assessment</li>
+                    </ul>
+                    <div class="pf-c-divider pf-u-mb-sm"></div>
+                    <div class="pf-u-font-size-sm pf-u-color-200">
+                        <strong>Findings:</strong> ${Math.floor(Math.random() * 3) + 1} services identified, ${Math.floor(Math.random() * 2)} potential issues
+                    </div>
+                </div>
+            </div>
+
+            <!-- Infrastructure Discovery Card -->
+            <div class="pf-c-card">
+                <div class="pf-c-card__header">
+                    <div class="pf-c-card__header-main">
+                        <h3 class="pf-c-card__title pf-u-font-size-lg">
+                            <i class="fas fa-building pf-u-mr-sm"></i>Infrastructure Discovery
+                        </h3>
+                    </div>
+                </div>
+                <div class="pf-c-card__body">
+                    <ul class="pf-c-list pf-m-plain pf-u-mb-md">
+                        <li class="pf-u-mb-xs"><i class="fas fa-check-circle pf-u-success-color-100 pf-u-mr-sm"></i>SNMP device discovery</li>
+                        <li class="pf-u-mb-xs"><i class="fas fa-check-circle pf-u-success-color-100 pf-u-mr-sm"></i>Hardware information gathering</li>
+                        <li class="pf-u-mb-xs"><i class="fas fa-check-circle pf-u-success-color-100 pf-u-mr-sm"></i>Network infrastructure mapping</li>
+                        <li class="pf-u-mb-xs"><i class="fas fa-check-circle pf-u-success-color-100 pf-u-mr-sm"></i>Device role classification</li>
+                    </ul>
+                    <div class="pf-c-divider pf-u-mb-sm"></div>
+                    <div class="pf-u-font-size-sm pf-u-color-200">
+                        <strong>Discovered:</strong> Network infrastructure details, device capabilities
+                    </div>
+                </div>
+            </div>
+
+            <!-- Internet Connectivity Card -->
+            <div class="pf-c-card">
+                <div class="pf-c-card__header">
+                    <div class="pf-c-card__header-main">
+                        <h3 class="pf-c-card__title pf-u-font-size-lg">
+                            <i class="fas fa-globe pf-u-mr-sm"></i>Internet Connectivity
+                        </h3>
+                    </div>
+                </div>
+                <div class="pf-c-card__body">
+                    <ul class="pf-c-list pf-m-plain pf-u-mb-md">
+                        <li class="pf-u-mb-xs"><i class="fas fa-check-circle pf-u-success-color-100 pf-u-mr-sm"></i>Internet connectivity testing</li>
+                        <li class="pf-u-mb-xs"><i class="fas fa-check-circle pf-u-success-color-100 pf-u-mr-sm"></i>DNS resolution analysis</li>
+                        <li class="pf-u-mb-xs"><i class="fas fa-check-circle pf-u-success-color-100 pf-u-mr-sm"></i>Routing path analysis</li>
+                        <li class="pf-u-mb-xs"><i class="fas fa-check-circle pf-u-success-color-100 pf-u-mr-sm"></i>Gateway performance testing</li>
+                    </ul>
+                    <div class="pf-c-divider pf-u-mb-sm"></div>
+                    <div class="pf-u-font-size-sm pf-u-color-200">
+                        <strong>Results:</strong> Internet connectivity confirmed, routing optimized
+                    </div>
+                </div>
+            </div>
+
+            <!-- Scan Statistics Card -->
+            <div class="pf-c-card">
+                <div class="pf-c-card__header">
+                    <div class="pf-c-card__header-main">
+                        <h3 class="pf-c-card__title pf-u-font-size-lg">
+                            <i class="fas fa-chart-bar pf-u-mr-sm"></i>Scan Statistics
+                        </h3>
+                    </div>
+                </div>
+                <div class="pf-c-card__body">
+                    <div class="pf-l-grid pf-m-all-6-col-on-md pf-m-gutter">
+                        <div class="pf-l-grid__item pf-u-text-align-center">
+                            <div class="pf-u-font-size-xl pf-u-font-weight-bold pf-u-primary-color-100">${Math.floor(Math.random() * 15) + 8}</div>
+                            <div class="pf-u-font-size-sm pf-u-color-200">Hosts Discovered</div>
+                        </div>
+                        <div class="pf-l-grid__item pf-u-text-align-center">
+                            <div class="pf-u-font-size-xl pf-u-font-weight-bold pf-u-success-color-100">${Math.floor(Math.random() * 20) + 10}</div>
+                            <div class="pf-u-font-size-sm pf-u-color-200">Open Ports</div>
+                        </div>
+                        <div class="pf-l-grid__item pf-u-text-align-center">
+                            <div class="pf-u-font-size-xl pf-u-font-weight-bold pf-u-info-color-100">${Math.floor(Math.random() * 8) + 4}</div>
+                            <div class="pf-u-font-size-sm pf-u-color-200">Services</div>
+                        </div>
+                        <div class="pf-l-grid__item pf-u-text-align-center">
+                            <div class="pf-u-font-size-xl pf-u-font-weight-bold pf-u-warning-color-100">${Math.floor(Math.random() * 100) + 85}%</div>
+                            <div class="pf-u-font-size-sm pf-u-color-200">Scan Coverage</div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
         
-        <div class="row">
-            <div class="col-md-6">
-                <div class="card mb-3">
-                    <div class="card-header">
-                        <h6 class="mb-0"><i class="fas fa-search me-2"></i>Network Discovery</h6>
-                    </div>
-                    <div class="card-body">
-                        <ul class="list-unstyled mb-0">
-                            <li><i class="fas fa-check-circle text-success me-2"></i>Network topology mapping</li>
-                            <li><i class="fas fa-check-circle text-success me-2"></i>Port scanning and service detection</li>
-                            <li><i class="fas fa-check-circle text-success me-2"></i>ARP table analysis</li>
-                            <li><i class="fas fa-check-circle text-success me-2"></i>Network route discovery</li>
-                        </ul>
-                        <hr class="my-2">
-                        <div class="small text-muted">
-                            <strong>Discovered:</strong> ~${Math.floor(Math.random() * 10) + 3} network hosts, 
-                            ~${Math.floor(Math.random() * 8) + 5} open ports
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="card mb-3">
-                    <div class="card-header">
-                        <h6 class="mb-0"><i class="fas fa-chart-line me-2"></i>Traffic Analysis</h6>
-                    </div>
-                    <div class="card-body">
-                        <ul class="list-unstyled mb-0">
-                            <li><i class="fas fa-check-circle text-success me-2"></i>Interface statistics collected</li>
-                            <li><i class="fas fa-check-circle text-success me-2"></i>Active connection analysis</li>
-                            <li><i class="fas fa-check-circle text-success me-2"></i>Protocol breakdown analysis</li>
-                            <li><i class="fas fa-check-circle text-success me-2"></i>Bandwidth utilization monitoring</li>
-                        </ul>
-                        <hr class="my-2">
-                        <div class="small text-muted">
-                            <strong>Analyzed:</strong> ~${Math.floor(Math.random() * 50) + 20} connections, 
-                            ${Math.floor(Math.random() * 5) + 3} protocols
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="card mb-3">
-                    <div class="card-header">
-                        <h6 class="mb-0"><i class="fas fa-tachometer-alt me-2"></i>Performance Analysis</h6>
-                    </div>
-                    <div class="card-body">
-                        <ul class="list-unstyled mb-0">
-                            <li><i class="fas fa-check-circle text-success me-2"></i>Network latency testing (MTR)</li>
-                            <li><i class="fas fa-check-circle text-success me-2"></i>Internet speed testing</li>
-                            <li><i class="fas fa-check-circle text-success me-2"></i>Bandwidth capacity analysis</li>
-                            <li><i class="fas fa-check-circle text-success me-2"></i>System performance metrics</li>
-                        </ul>
-                        <hr class="my-2">
-                        <div class="small text-muted">
-                            <strong>Results:</strong> ~${Math.floor(Math.random() * 100) + 50}ms avg latency, 
-                            ~${Math.floor(Math.random() * 500) + 100}Mbps throughput
-                        </div>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="col-md-6">
-                <div class="card mb-3">
-                    <div class="card-header">
-                        <h6 class="mb-0"><i class="fas fa-shield-alt me-2"></i>Security Analysis</h6>
-                    </div>
-                    <div class="card-body">
-                        <ul class="list-unstyled mb-0">
-                            <li><i class="fas fa-check-circle text-success me-2"></i>Service fingerprinting</li>
-                            <li><i class="fas fa-check-circle text-success me-2"></i>OS detection and analysis</li>
-                            <li><i class="fas fa-check-circle text-success me-2"></i>Vulnerability scanning</li>
-                            <li><i class="fas fa-check-circle text-success me-2"></i>Security posture assessment</li>
-                        </ul>
-                        <hr class="my-2">
-                        <div class="small text-muted">
-                            <strong>Findings:</strong> ${Math.floor(Math.random() * 3) + 1} services identified, 
-                            ${Math.floor(Math.random() * 2)} potential issues
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="card mb-3">
-                    <div class="card-header">
-                        <h6 class="mb-0"><i class="fas fa-building me-2"></i>Infrastructure Discovery</h6>
-                    </div>
-                    <div class="card-body">
-                        <ul class="list-unstyled mb-0">
-                            <li><i class="fas fa-check-circle text-success me-2"></i>SNMP device discovery</li>
-                            <li><i class="fas fa-check-circle text-success me-2"></i>Hardware information gathering</li>
-                            <li><i class="fas fa-check-circle text-success me-2"></i>Network infrastructure mapping</li>
-                            <li><i class="fas fa-check-circle text-success me-2"></i>Device role classification</li>
-                        </ul>
-                        <hr class="my-2">
-                        <div class="small text-muted">
-                            <strong>Discovered:</strong> Network infrastructure details, 
-                            device capabilities
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="card mb-3">
-                    <div class="card-header">
-                        <h6 class="mb-0"><i class="fas fa-globe me-2"></i>Internet Connectivity</h6>
-                    </div>
-                    <div class="card-body">
-                        <ul class="list-unstyled mb-0">
-                            <li><i class="fas fa-check-circle text-success me-2"></i>Internet connectivity testing</li>
-                            <li><i class="fas fa-check-circle text-success me-2"></i>DNS resolution analysis</li>
-                            <li><i class="fas fa-check-circle text-success me-2"></i>Routing path analysis</li>
-                            <li><i class="fas fa-check-circle text-success me-2"></i>Gateway performance testing</li>
-                        </ul>
-                        <hr class="my-2">
-                        <div class="small text-muted">
-                            <strong>Results:</strong> Internet connectivity confirmed, 
-                            routing optimized
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        
-        <div class="card mt-3">
-            <div class="card-header">
-                <h6 class="mb-0"><i class="fas fa-chart-bar me-2"></i>Scan Statistics for ${hostname}</h6>
-            </div>
-            <div class="card-body">
-                <div class="row text-center">
-                    <div class="col-md-3">
-                        <h4 class="text-primary">${Math.floor(Math.random() * 15) + 8}</h4>
-                        <small class="text-muted">Hosts Discovered</small>
-                    </div>
-                    <div class="col-md-3">
-                        <h4 class="text-success">${Math.floor(Math.random() * 20) + 10}</h4>
-                        <small class="text-muted">Open Ports</small>
-                    </div>
-                    <div class="col-md-3">
-                        <h4 class="text-info">${Math.floor(Math.random() * 8) + 4}</h4>
-                        <small class="text-muted">Services</small>
-                    </div>
-                    <div class="col-md-3">
-                        <h4 class="text-warning">${Math.floor(Math.random() * 100) + 85}%</h4>
-                        <small class="text-muted">Scan Coverage</small>
-                    </div>
-                </div>
-            </div>
-        </div>
-        
-        <div class="text-center mt-3">
-            <button class="btn btn-outline-primary btn-sm" onclick="resetScanSummaryView()">
-                <i class="fas fa-arrow-left me-2"></i>Back to Overall Summary
+        <div class="pf-u-text-align-center pf-u-mt-md">
+            <button class="pf-c-button pf-m-secondary pf-m-small" onclick="resetScanSummaryView()">
+                <i class="fas fa-arrow-left pf-u-mr-sm"></i>Back to Overall Summary
             </button>
         </div>
     `;
