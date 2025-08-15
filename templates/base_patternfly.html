@@ -574,46 +574,59 @@
             }
         }
         
-        // Start network scan
+        // Start network scan - use the enhanced scan modal from dashboard
         function startNetworkScan(event) {
             event.preventDefault();
             
-            const statusLabel = document.getElementById('scan-status-label');
-            const scanStatus = document.getElementById('scan-status');
-            
-            // Update UI to show scanning
-            statusLabel.classList.remove('pf-m-blue', 'pf-m-green', 'pf-m-red');
-            statusLabel.classList.add('pf-m-orange');
-            scanStatus.innerHTML = '<i class="fas fa-spinner fa-spin pf-u-mr-sm"></i>Scanning...';
-            
-            fetch('/scan_now', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                }
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.error) {
-                    showAlert('error', 'Scan Error', data.error);
-                    updateScanStatus('error', 'Scan failed');
-                    return;
-                }
+            // Check if the enhanced scan function exists (from dashboard)
+            if (typeof startScan === 'function') {
+                startScan();
+            } else {
+                // Fallback to basic scan if not on dashboard
+                const statusLabel = document.getElementById('scan-status-label');
+                const scanStatus = document.getElementById('scan-status');
                 
-                // Start monitoring scan progress
-                startScanStatusPolling();
-            })
-            .catch(error => {
-                console.error('Error starting scan:', error);
-                showAlert('error', 'Scan Error', 'Failed to start network scan');
-                updateScanStatus('error', 'Scan failed');
-            });
+                // Update UI to show scanning
+                statusLabel.classList.remove('pf-m-blue', 'pf-m-green', 'pf-m-red');
+                statusLabel.classList.add('pf-m-orange');
+                scanStatus.innerHTML = '<i class="fas fa-spinner fa-spin pf-u-mr-sm"></i>Scanning...';
+                
+                fetch('/scan_now', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.error) {
+                        showAlert('error', 'Scan Error', data.error);
+                        updateScanStatus('error', 'Scan failed');
+                        return;
+                    }
+                    
+                    // Start monitoring scan progress
+                    startScanStatusPolling();
+                })
+                .catch(error => {
+                    console.error('Error starting scan:', error);
+                    showAlert('error', 'Scan Error', 'Failed to start network scan');
+                    updateScanStatus('error', 'Scan failed');
+                });
+            }
         }
         
-        // Show install tools modal
+        // Show install tools modal - use enhanced install modal from dashboard
         function showInstallTools(event) {
             event.preventDefault();
-            document.getElementById('install-tools-backdrop').hidden = false;
+            
+            // Check if the enhanced install function exists (from dashboard)
+            if (typeof installUbuntuTools === 'function') {
+                installUbuntuTools();
+            } else {
+                // Fallback to basic modal if not on dashboard
+                document.getElementById('install-tools-backdrop').hidden = false;
+            }
         }
         
         // Hide install tools modal
