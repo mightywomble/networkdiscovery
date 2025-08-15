@@ -2784,8 +2784,8 @@ function showDataSummary(data) {
                         <dl class="row">
                             <dt class="col-sm-5">Last Scan:</dt>
                             <dd class="col-sm-7">${data.last_scan ? new Date(data.last_scan).toLocaleString() : 'Never'}</dd>
-                            <dt class="col-sm-5">Scan Duration:</dt>
-                            <dd class="col-sm-7">${data.scan_duration || 'Unknown'}</dd>
+            <dt class="col-sm-5">Agent Version:</dt>
+            <dd class="col-sm-7">${data.agent_info ? data.agent_info.agent_version || 'Unknown' : 'Unknown'}</dd>
                             <dt class="col-sm-5">Status:</dt>
                             <dd class="col-sm-7"><span class="badge bg-${data.scan_status === 'completed' ? 'success' : 'warning'}">${data.scan_status || 'Unknown'}</span></dd>
                         </dl>
@@ -3175,37 +3175,49 @@ function showTestResults(data) {
                 </h2>
                 <div id="test${accordionIndex}Collapse" class="accordion-collapse collapse ${isFirstCategory ? 'show' : ''}" data-bs-parent="#testResultsAccordion">
                     <div class="accordion-body">
+                        <div class="table-responsive">
+                            <table class="table table-sm table-striped">
+                                <thead>
+                                    <tr>
+                                        <th style="width: 5%">Status</th>
+                                        <th style="width: 20%">Test Name</th>
+                                        <th style="width: 35%">Description</th>
+                                        <th style="width: 40%">Details</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
         `;
         
         if (testDetails.length > 0) {
             // Add individual test results
             testDetails.forEach(test => {
                 testsHtml += `
-                    <div class="card mb-3 border-${test.success ? 'success' : 'danger'}">
-                        <div class="card-header bg-${test.success ? 'light' : 'light'} d-flex justify-content-between align-items-center">
-                            <div>
-                                <strong>${test.name}</strong>
-                                ${test.description ? `<br><small class="text-muted">${test.description}</small>` : ''}
-                            </div>
+                    <tr>
+                        <td>
                             <span class="badge bg-${test.success ? 'success' : 'danger'}">
-                                <i class="fas fa-${test.success ? 'check' : 'times'}"></i> ${test.success ? 'Pass' : 'Fail'}
+                                <i class="fas fa-${test.success ? 'check' : 'times'}"></i>
                             </span>
-                        </div>
-                        ${test.details ? `
-                            <div class="card-body">
-                                <div class="test-details" style="background: #f8f9fa; padding: 0.75rem; border-radius: 0.375rem; font-family: monospace; font-size: 0.875rem; white-space: pre-wrap;">
-                                    ${test.details}
-                                </div>
-                            </div>
-                        ` : ''}
-                    </div>
+                        </td>
+                        <td>
+                            <strong>${test.name}</strong>
+                        </td>
+                        <td>
+                            ${test.description || '-'}
+                        </td>
+                        <td>
+                            ${test.details ? `<div class="text-wrap" style="white-space: pre-line; font-family: monospace; font-size: 0.8rem; background: #f8f9fa; padding: 0.5rem; border-radius: 0.25rem;">${test.details}</div>` : '-'}
+                        </td>
+                    </tr>
                 `;
             });
         } else {
-            testsHtml += '<div class="alert alert-info">No detailed test results available for this category</div>';
+            testsHtml += '<tr><td colspan="4" class="text-center text-muted">No detailed test results available for this category</td></tr>';
         }
         
         testsHtml += `
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                 </div>
             </div>
