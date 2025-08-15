@@ -350,6 +350,24 @@
                         <div class="form-text">Comma-separated list of log paths to monitor</div>
                     </div>
                     
+                    <!-- Test Configuration Section -->
+                    <div class="mb-3">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <label class="form-label">Network Test Configuration</label>
+                            <button type="button" class="btn btn-outline-secondary btn-sm" onclick="loadDefaultTestConfiguration()" id="load-default-tests-btn">
+                                <i class="fas fa-refresh"></i> Load Defaults
+                            </button>
+                        </div>
+                        <div class="form-text mb-3">Select which network tests this agent should perform. Tests are grouped by category.</div>
+                        
+                        <!-- Test Categories Container -->
+                        <div id="test-configuration-container" class="border rounded p-3 bg-light" style="max-height: 400px; overflow-y: auto;">
+                            <div class="text-center text-muted py-3" id="test-config-loading">
+                                <i class="fas fa-spinner fa-spin"></i> Loading test configuration...
+                            </div>
+                        </div>
+                    </div>
+                    
                     <div class="alert alert-info">
                         <i class="fas fa-info-circle"></i>
                         <strong>Note:</strong> Configuration changes will be applied to the agent immediately and may take up to the heartbeat interval to take effect.
@@ -1296,6 +1314,9 @@ async function loadAgentConfiguration(agentId) {
             document.getElementById('scan-enabled').checked = config.scan_enabled !== false;
             document.getElementById('log-collection-enabled').checked = config.log_collection_enabled !== false;
             document.getElementById('log-paths').value = config.log_paths || '/var/log,/var/log/syslog,/var/log/auth.log';
+            
+            // Load test configuration
+            await loadTestConfigurationSection(config.test_configuration);
         } else {
             console.error('Failed to load agent configuration:', data.error);
             // Set default values
@@ -1304,9 +1325,14 @@ async function loadAgentConfiguration(agentId) {
             document.getElementById('scan-enabled').checked = true;
             document.getElementById('log-collection-enabled').checked = true;
             document.getElementById('log-paths').value = '/var/log,/var/log/syslog,/var/log/auth.log';
+            
+            // Load default test configuration
+            await loadTestConfigurationSection();
         }
     } catch (error) {
         console.error('Error loading agent configuration:', error);
+        // Load default test configuration even on error
+        await loadTestConfigurationSection();
     }
 }
 
@@ -1348,7 +1374,8 @@ async function saveAgentConfig() {
             heartbeat_interval: heartbeatInterval,
             scan_enabled: document.getElementById('scan-enabled').checked,
             log_collection_enabled: document.getElementById('log-collection-enabled').checked,
-            log_paths: document.getElementById('log-paths').value.trim()
+            log_paths: document.getElementById('log-paths').value.trim(),
+            test_configuration: getTestConfigurationForSave()
         };
         
         // Save configuration
@@ -1575,6 +1602,231 @@ async function removeAgentsByHost() {
         btn.innerHTML = originalText;
         btn.disabled = false;
     }
+}
+
+// Test Configuration Functions
+let availableTestConfigurations = {};
+let currentTestConfiguration = {};
+
+async function loadTestConfigurationSection(existingConfig = null) {
+    const container = document.getElementById('test-configuration-container');
+    const loadingElement = document.getElementById('test-config-loading');
+    
+    try {
+        // Fetch available test configurations from the API
+        const response = await fetch('/api/agent/test_configurations');
+        const data = await response.json();
+        
+        if (!data.success) {
+            throw new Error(data.error || 'Failed to load test configurations');
+        }
+        
+        availableTestConfigurations = data.test_configurations;
+        
+        // Use existing config or default configuration
+        currentTestConfiguration = existingConfig || data.default_configuration || {};
+        
+        // Render the test configuration UI
+        renderTestConfigurationUI();
+        
+    } catch (error) {
+        console.error('Error loading test configuration:', error);
+        loadingElement.innerHTML = `
+            <div class="text-center text-danger py-3">
+                <i class="fas fa-exclamation-triangle"></i> 
+                Failed to load test configuration: ${error.message}
+            </div>
+        `;
+    }
+}
+
+function renderTestConfigurationUI() {
+    const container = document.getElementById('test-configuration-container');
+    
+    if (!availableTestConfigurations || Object.keys(availableTestConfigurations).length === 0) {
+        container.innerHTML = `
+            <div class="text-center text-muted py-3">
+                <i class="fas fa-info-circle"></i> 
+                No test configurations available
+            </div>
+        `;
+        return;
+    }
+    
+    let html = '';
+    
+    // Render each category
+    for (const [categoryName, categoryTests] of Object.entries(availableTestConfigurations)) {
+        const categoryId = categoryName.toLowerCase().replace(/\s+/g, '-');
+        const categoryEnabled = currentTestConfiguration[categoryName] && 
+                               Object.keys(currentTestConfiguration[categoryName]).length > 0;
+        
+        html += `
+            <div class="test-category mb-3">
+                <div class="card border-0">
+                    <div class="card-header bg-light py-2">
+                        <div class="form-check">
+                            <input class="form-check-input category-checkbox" type="checkbox" 
+                                   id="category-${categoryId}" 
+                                   ${categoryEnabled ? 'checked' : ''}
+                                   onchange="toggleTestCategory('${categoryName}')">
+                            <label class="form-check-label fw-bold" for="category-${categoryId}">
+                                ${categoryName}
+                            </label>
+                        </div>
+                    </div>
+                    <div class="card-body p-2" id="category-body-${categoryId}" 
+                         style="display: ${categoryEnabled ? 'block' : 'none'}">
+        `;
+        
+        // Render individual tests in this category
+        for (const [testName, testConfig] of Object.entries(categoryTests)) {
+            const testId = `${categoryId}-${testName.toLowerCase().replace(/\s+/g, '-')}`;
+            const testEnabled = currentTestConfiguration[categoryName] && 
+                               currentTestConfiguration[categoryName][testName];
+            
+            html += `
+                <div class="form-check ms-3 mb-2">
+                    <input class="form-check-input test-checkbox" type="checkbox" 
+                           id="test-${testId}" 
+                           data-category="${categoryName}"
+                           data-test="${testName}"
+                           ${testEnabled ? 'checked' : ''}
+                           onchange="toggleIndividualTest('${categoryName}', '${testName}')">
+                    <label class="form-check-label" for="test-${testId}">
+                        <strong>${testName}</strong>
+                        ${testConfig.description ? `<br><small class="text-muted">${testConfig.description}</small>` : ''}
+                    </label>
+                </div>
+            `;
+        }
+        
+        html += `
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+    
+    container.innerHTML = html;
+}
+
+function toggleTestCategory(categoryName) {
+    const categoryId = categoryName.toLowerCase().replace(/\s+/g, '-');
+    const categoryCheckbox = document.getElementById(`category-${categoryId}`);
+    const categoryBody = document.getElementById(`category-body-${categoryId}`);
+    
+    if (categoryCheckbox.checked) {
+        // Enable category - show tests and enable all tests
+        categoryBody.style.display = 'block';
+        
+        if (!currentTestConfiguration[categoryName]) {
+            currentTestConfiguration[categoryName] = {};
+        }
+        
+        // Enable all tests in this category
+        const categoryTests = availableTestConfigurations[categoryName];
+        for (const testName of Object.keys(categoryTests)) {
+            currentTestConfiguration[categoryName][testName] = true;
+            
+            // Update the checkbox
+            const testId = `${categoryId}-${testName.toLowerCase().replace(/\s+/g, '-')}`;
+            const testCheckbox = document.getElementById(`test-${testId}`);
+            if (testCheckbox) {
+                testCheckbox.checked = true;
+            }
+        }
+    } else {
+        // Disable category - hide tests and disable all tests
+        categoryBody.style.display = 'none';
+        
+        if (currentTestConfiguration[categoryName]) {
+            // Disable all tests in this category
+            for (const testName of Object.keys(currentTestConfiguration[categoryName])) {
+                const testId = `${categoryId}-${testName.toLowerCase().replace(/\s+/g, '-')}`;
+                const testCheckbox = document.getElementById(`test-${testId}`);
+                if (testCheckbox) {
+                    testCheckbox.checked = false;
+                }
+            }
+            
+            delete currentTestConfiguration[categoryName];
+        }
+    }
+}
+
+function toggleIndividualTest(categoryName, testName) {
+    const categoryId = categoryName.toLowerCase().replace(/\s+/g, '-');
+    const testId = `${categoryId}-${testName.toLowerCase().replace(/\s+/g, '-')}`;
+    const testCheckbox = document.getElementById(`test-${testId}`);
+    
+    if (!currentTestConfiguration[categoryName]) {
+        currentTestConfiguration[categoryName] = {};
+    }
+    
+    if (testCheckbox.checked) {
+        // Enable the test
+        currentTestConfiguration[categoryName][testName] = true;
+    } else {
+        // Disable the test
+        delete currentTestConfiguration[categoryName][testName];
+        
+        // If no tests are enabled in this category, remove the category
+        if (Object.keys(currentTestConfiguration[categoryName]).length === 0) {
+            delete currentTestConfiguration[categoryName];
+            
+            // Uncheck the category checkbox
+            const categoryCheckbox = document.getElementById(`category-${categoryId}`);
+            if (categoryCheckbox) {
+                categoryCheckbox.checked = false;
+            }
+        }
+    }
+    
+    // Update category checkbox state
+    updateCategoryCheckboxState(categoryName);
+}
+
+function updateCategoryCheckboxState(categoryName) {
+    const categoryId = categoryName.toLowerCase().replace(/\s+/g, '-');
+    const categoryCheckbox = document.getElementById(`category-${categoryId}`);
+    
+    if (!categoryCheckbox) return;
+    
+    const hasEnabledTests = currentTestConfiguration[categoryName] && 
+                           Object.keys(currentTestConfiguration[categoryName]).length > 0;
+    
+    categoryCheckbox.checked = hasEnabledTests;
+}
+
+async function loadDefaultTestConfiguration() {
+    const btn = document.getElementById('load-default-tests-btn');
+    const originalText = btn.innerHTML;
+    
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Loading...';
+    btn.disabled = true;
+    
+    try {
+        const response = await fetch('/api/agent/test_configurations');
+        const data = await response.json();
+        
+        if (data.success) {
+            currentTestConfiguration = data.default_configuration || {};
+            renderTestConfigurationUI();
+        } else {
+            alert('Failed to load default configuration: ' + data.error);
+        }
+    } catch (error) {
+        alert('Error loading default configuration: ' + error.message);
+    } finally {
+        btn.innerHTML = originalText;
+        btn.disabled = false;
+    }
+}
+
+function getTestConfigurationForSave() {
+    // Return the current test configuration for inclusion in the save payload
+    return currentTestConfiguration;
 }
 
 </script>

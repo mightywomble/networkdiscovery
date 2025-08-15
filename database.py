@@ -174,12 +174,35 @@ class Database:
                     log_collection_enabled BOOLEAN DEFAULT 1,
                     log_paths TEXT DEFAULT '/var/log',
                     scan_enabled BOOLEAN DEFAULT 1,
+                    test_configuration TEXT DEFAULT NULL,
                     config_version INTEGER DEFAULT 1,
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                     FOREIGN KEY (agent_id) REFERENCES agents (agent_id)
                 )
             ''')
+            
+            # Update existing agent_configs table to add test_configuration column if it doesn't exist
+            try:
+                conn.execute('ALTER TABLE agent_configs ADD COLUMN test_configuration TEXT DEFAULT NULL')
+            except:
+                pass  # Column already exists
+            
+            # Update agents table to add version tracking columns if they don't exist
+            try:
+                conn.execute('ALTER TABLE agents ADD COLUMN build_date TEXT DEFAULT NULL')
+            except:
+                pass  # Column already exists
+            
+            try:
+                conn.execute('ALTER TABLE agents ADD COLUMN last_update_date TIMESTAMP DEFAULT NULL')
+            except:
+                pass  # Column already exists
+                
+            try:
+                conn.execute('ALTER TABLE agents ADD COLUMN platform TEXT DEFAULT NULL')
+            except:
+                pass  # Column already exists
             
             # Agent logs collection
             conn.execute('''
@@ -616,7 +639,7 @@ class Database:
             return cursor.rowcount > 0
     
     # Agent management methods
-    def register_agent(self, agent_id, hostname, ip_address, username, agent_version=None, host_id=None):
+    def register_agent(self, agent_id, hostname, ip_address, username, agent_version=None, host_id=None, platform=None):
         """Register a new agent or update existing one"""
         with self.get_connection() as conn:
             # Check if agent already exists
@@ -628,28 +651,36 @@ class Database:
                 conn.execute('''
                     UPDATE agents 
                     SET hostname = ?, ip_address = ?, username = ?, agent_version = ?, 
-                        host_id = ?, status = 'active', updated_at = CURRENT_TIMESTAMP
+                        host_id = ?, platform = ?, status = 'active', updated_at = CURRENT_TIMESTAMP
                     WHERE agent_id = ?
-                ''', (hostname, ip_address, username, agent_version, host_id, agent_id))
+                ''', (hostname, ip_address, username, agent_version, host_id, platform, agent_id))
             else:
                 # Insert new agent
                 conn.execute('''
                     INSERT INTO agents 
-                    (agent_id, hostname, ip_address, username, agent_version, host_id, status)
-                    VALUES (?, ?, ?, ?, ?, ?, 'active')
-                ''', (agent_id, hostname, ip_address, username, agent_version, host_id))
+                    (agent_id, hostname, ip_address, username, agent_version, host_id, platform, status)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, 'active')
+                ''', (agent_id, hostname, ip_address, username, agent_version, host_id, platform))
             
             conn.commit()
     
-    def update_agent_heartbeat(self, agent_id, status='active', error_message=None):
+    def update_agent_heartbeat(self, agent_id, status='active', error_message=None, agent_version=None, build_date=None):
         """Update agent heartbeat and status"""
         with self.get_connection() as conn:
-            conn.execute('''
-                UPDATE agents 
-                SET last_heartbeat = CURRENT_TIMESTAMP, status = ?, error_message = ?,
-                    updated_at = CURRENT_TIMESTAMP
-                WHERE agent_id = ?
-            ''', (status, error_message, agent_id))
+            if agent_version and build_date:
+                conn.execute('''
+                    UPDATE agents 
+                    SET last_heartbeat = CURRENT_TIMESTAMP, status = ?, error_message = ?,
+                        agent_version = ?, build_date = ?, updated_at = CURRENT_TIMESTAMP
+                    WHERE agent_id = ?
+                ''', (status, error_message, agent_version, build_date, agent_id))
+            else:
+                conn.execute('''
+                    UPDATE agents 
+                    SET last_heartbeat = CURRENT_TIMESTAMP, status = ?, error_message = ?,
+                        updated_at = CURRENT_TIMESTAMP
+                    WHERE agent_id = ?
+                ''', (status, error_message, agent_id))
             conn.commit()
     
     def update_agent_scan_time(self, agent_id):
@@ -823,12 +854,15 @@ class Database:
     
     # Agent configuration management
     def save_agent_config(self, agent_id, server_url, scan_interval=300, heartbeat_interval=60,
-                         log_collection_enabled=True, log_paths='/var/log', scan_enabled=True):
+                         log_collection_enabled=True, log_paths='/var/log', scan_enabled=True, test_configuration=None):
         """Save agent configuration"""
         with self.get_connection() as conn:
             # Check if config exists
             cursor = conn.execute('SELECT id FROM agent_configs WHERE agent_id = ?', (agent_id,))
             existing = cursor.fetchone()
+            
+            # Convert test_configuration to JSON if provided
+            test_config_json = json.dumps(test_configuration) if test_configuration is not None else None
             
             if existing:
                 # Update existing config
@@ -836,19 +870,19 @@ class Database:
                     UPDATE agent_configs 
                     SET server_url = ?, scan_interval = ?, heartbeat_interval = ?,
                         log_collection_enabled = ?, log_paths = ?, scan_enabled = ?,
-                        config_version = config_version + 1, updated_at = CURRENT_TIMESTAMP
+                        test_configuration = ?, config_version = config_version + 1, updated_at = CURRENT_TIMESTAMP
                     WHERE agent_id = ?
                 ''', (server_url, scan_interval, heartbeat_interval, log_collection_enabled,
-                     log_paths, scan_enabled, agent_id))
+                     log_paths, scan_enabled, test_config_json, agent_id))
             else:
                 # Insert new config
                 conn.execute('''
                     INSERT INTO agent_configs 
                     (agent_id, server_url, scan_interval, heartbeat_interval, 
-                     log_collection_enabled, log_paths, scan_enabled)
-                    VALUES (?, ?, ?, ?, ?, ?, ?)
+                     log_collection_enabled, log_paths, scan_enabled, test_configuration)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
                 ''', (agent_id, server_url, scan_interval, heartbeat_interval,
-                     log_collection_enabled, log_paths, scan_enabled))
+                     log_collection_enabled, log_paths, scan_enabled, test_config_json))
             
             conn.commit()
     
@@ -857,7 +891,16 @@ class Database:
         with self.get_connection() as conn:
             cursor = conn.execute('SELECT * FROM agent_configs WHERE agent_id = ?', (agent_id,))
             row = cursor.fetchone()
-            return dict(row) if row else None
+            if row:
+                config = dict(row)
+                # Parse test_configuration JSON if present
+                if config.get('test_configuration'):
+                    try:
+                        config['test_configuration'] = json.loads(config['test_configuration'])
+                    except json.JSONDecodeError:
+                        config['test_configuration'] = None
+                return config
+            return None
     
     # Agent logs management
     def save_agent_logs(self, agent_id, logs):
@@ -935,6 +978,85 @@ class Database:
                 WHERE id = ?
             ''', (scan_id,))
             conn.commit()
+    
+    def update_agent_version(self, agent_id, agent_version, build_date=None):
+        """Update agent version and build date"""
+        with self.get_connection() as conn:
+            conn.execute('''
+                UPDATE agents 
+                SET agent_version = ?, build_date = ?, last_update_date = CURRENT_TIMESTAMP,
+                    updated_at = CURRENT_TIMESTAMP
+                WHERE agent_id = ?
+            ''', (agent_version, build_date, agent_id))
+            conn.commit()
+    
+    def mark_agent_update_started(self, agent_id):
+        """Mark that an agent update has started"""
+        with self.get_connection() as conn:
+            conn.execute('''
+                UPDATE agents 
+                SET status = 'updating', error_message = NULL, updated_at = CURRENT_TIMESTAMP
+                WHERE agent_id = ?
+            ''', (agent_id,))
+            conn.commit()
+    
+    def mark_agent_update_completed(self, agent_id, agent_version, build_date):
+        """Mark that an agent update has completed successfully"""
+        with self.get_connection() as conn:
+            conn.execute('''
+                UPDATE agents 
+                SET status = 'active', agent_version = ?, build_date = ?, 
+                    last_update_date = CURRENT_TIMESTAMP, error_message = NULL,
+                    updated_at = CURRENT_TIMESTAMP
+                WHERE agent_id = ?
+            ''', (agent_version, build_date, agent_id))
+            conn.commit()
+    
+    def mark_agent_update_failed(self, agent_id, error_message):
+        """Mark that an agent update has failed"""
+        with self.get_connection() as conn:
+            conn.execute('''
+                UPDATE agents 
+                SET status = 'update_failed', error_message = ?, updated_at = CURRENT_TIMESTAMP
+                WHERE agent_id = ?
+            ''', (error_message, agent_id))
+            conn.commit()
+    
+    def get_agents_by_version(self, agent_version=None):
+        """Get agents filtered by version"""
+        with self.get_connection() as conn:
+            if agent_version:
+                cursor = conn.execute('''
+                    SELECT a.*, h.name as host_name 
+                    FROM agents a
+                    LEFT JOIN hosts h ON a.host_id = h.id
+                    WHERE a.agent_version = ?
+                    ORDER BY a.hostname
+                ''', (agent_version,))
+            else:
+                cursor = conn.execute('''
+                    SELECT a.*, h.name as host_name 
+                    FROM agents a
+                    LEFT JOIN hosts h ON a.host_id = h.id
+                    WHERE a.agent_version IS NULL
+                    ORDER BY a.hostname
+                ''')
+            return [dict(row) for row in cursor.fetchall()]
+    
+    def get_agent_version_summary(self):
+        """Get summary of agent versions"""
+        with self.get_connection() as conn:
+            cursor = conn.execute('''
+                SELECT 
+                    agent_version,
+                    build_date,
+                    COUNT(*) as count,
+                    COUNT(CASE WHEN status = 'active' THEN 1 END) as active_count
+                FROM agents 
+                GROUP BY agent_version, build_date
+                ORDER BY agent_version DESC, build_date DESC
+            ''')
+            return [dict(row) for row in cursor.fetchall()]
     
     def get_agent_stats(self):
         """Get agent statistics"""

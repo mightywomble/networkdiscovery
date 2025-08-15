@@ -2140,6 +2140,7 @@ def get_agent_config(agent_id):
             'log_collection_enabled': config.get('log_collection_enabled', True),
             'log_paths': config.get('log_paths', '/var/log'),
             'scan_enabled': config.get('scan_enabled', True),
+            'test_configuration': config.get('test_configuration'),
             'config_version': config.get('config_version', 1)
         }
         
@@ -2173,6 +2174,7 @@ def update_agent_config(agent_id):
         log_collection_enabled = data.get('log_collection_enabled', True)
         log_paths = data.get('log_paths', '/var/log')
         scan_enabled = data.get('scan_enabled', True)
+        test_configuration = data.get('test_configuration')
         
         # Validate ranges
         if not (60 <= scan_interval <= 86400):
@@ -2187,6 +2189,16 @@ def update_agent_config(agent_id):
                 'error': 'Heartbeat interval must be between 30 and 300 seconds'
             }), 400
         
+        # Validate test configuration if provided
+        if test_configuration is not None:
+            from network_test_suite import NetworkTestSuite
+            validation_errors = NetworkTestSuite.validate_configuration(test_configuration)
+            if validation_errors:
+                return jsonify({
+                    'success': False,
+                    'error': f'Invalid test configuration: {"; ".join(validation_errors)}'
+                }), 400
+        
         # Update agent configuration
         db.save_agent_config(
             agent_id=agent_id,
@@ -2195,7 +2207,8 @@ def update_agent_config(agent_id):
             heartbeat_interval=heartbeat_interval,
             log_collection_enabled=log_collection_enabled,
             log_paths=log_paths,
-            scan_enabled=scan_enabled
+            scan_enabled=scan_enabled,
+            test_configuration=test_configuration
         )
         
         return jsonify({
@@ -2374,6 +2387,30 @@ def get_agent_stats():
             'error': str(e)
         }), 500
 
+@app.route('/api/agent/test_configurations', methods=['GET'])
+def get_test_configurations():
+    """Get available test configurations for agents"""
+    try:
+        from network_test_suite import NetworkTestSuite
+        
+        # Get all test categories and definitions
+        test_categories = NetworkTestSuite.get_all_test_categories()
+        default_config = NetworkTestSuite.get_default_configuration()
+        
+        return jsonify({
+            'success': True,
+            'test_categories': test_categories,
+            'default_configuration': default_config,
+            'timestamp': datetime.now().isoformat()
+        })
+        
+    except Exception as e:
+        print(f"Error getting test configurations: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
 # Agent cleanup endpoints
 @app.route('/api/agent/cleanup/duplicates', methods=['POST'])
 def cleanup_duplicate_agents():
@@ -2506,6 +2543,107 @@ def remove_agents_by_host():
         
     except Exception as e:
         print(f"Error removing agents by host: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@app.route('/api/agent/versions', methods=['GET'])
+def get_agent_versions():
+    """Get agent version summary"""
+    try:
+        version_summary = db.get_agent_version_summary()
+        
+        return jsonify({
+            'success': True,
+            'versions': version_summary,
+            'timestamp': datetime.now().isoformat()
+        })
+        
+    except Exception as e:
+        print(f"Error getting agent versions: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@app.route('/api/agent/update', methods=['POST'])
+def update_single_agent():
+    """Update a single agent to the latest version"""
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({
+                'success': False,
+                'error': 'No data provided'
+            }), 400
+        
+        agent_id = data.get('agent_id')
+        if not agent_id:
+            return jsonify({
+                'success': False,
+                'error': 'agent_id is required'
+            }), 400
+        
+        # Get agent info
+        agent = db.get_agent(agent_id)
+        if not agent:
+            return jsonify({
+                'success': False,
+                'error': f'Agent {agent_id} not found'
+            }), 404
+        
+        # Mark update as started
+        db.mark_agent_update_started(agent_id)
+        
+        # Start update process in background thread
+        thread = threading.Thread(target=perform_agent_update, args=(agent,))
+        thread.daemon = True
+        thread.start()
+        
+        return jsonify({
+            'success': True,
+            'message': f'Update started for agent {agent.get("hostname", "unknown")}',
+            'agent_id': agent_id,
+            'timestamp': datetime.now().isoformat()
+        })
+        
+    except Exception as e:
+        print(f"Error starting agent update: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@app.route('/api/agent/update_all', methods=['POST'])
+def update_all_agents():
+    """Update all agents to the latest version"""
+    try:
+        agents = db.get_all_agents()
+        active_agents = [agent for agent in agents if agent.get('status') == 'active']
+        
+        if not active_agents:
+            return jsonify({
+                'success': False,
+                'error': 'No active agents found'
+            }), 400
+        
+        # Start update process for all agents
+        for agent in active_agents:
+            db.mark_agent_update_started(agent['agent_id'])
+            thread = threading.Thread(target=perform_agent_update, args=(agent,))
+            thread.daemon = True
+            thread.start()
+        
+        return jsonify({
+            'success': True,
+            'message': f'Update started for {len(active_agents)} active agents',
+            'agent_count': len(active_agents),
+            'timestamp': datetime.now().isoformat()
+        })
+        
+    except Exception as e:
+        print(f"Error starting agent updates: {e}")
         return jsonify({
             'success': False,
             'error': str(e)
@@ -3020,6 +3158,102 @@ echo "Agent uninstallation completed successfully"
             'error': f'Exception during uninstallation: {str(e)}',
             'output': ''
         }
+
+def perform_agent_update(agent):
+    """Perform agent update via SSH"""
+    try:
+        agent_id = agent['agent_id']
+        hostname = agent.get('hostname', 'unknown')
+        ip_address = agent.get('ip_address')
+        
+        print(f"Starting agent update for {hostname} ({ip_address})")
+        
+        # Find the corresponding host in host_manager
+        hosts = host_manager.get_all_hosts()
+        host = None
+        for h in hosts:
+            if h.get('ip_address') == ip_address or h.get('name') == hostname:
+                host = h
+                break
+        
+        if not host:
+            error_msg = f"Host configuration not found for agent {hostname} ({ip_address})"
+            print(error_msg)
+            db.mark_agent_update_failed(agent_id, error_msg)
+            return
+        
+        # Get current agent version and build date
+        from datetime import datetime
+        current_version = "1.2.0"  # This would come from the actual agent script
+        build_date = datetime.now().strftime('%Y-%m-%d')
+        
+        # Create agent update script
+        server_url = request.url_root.rstrip('/') if 'request' in globals() else 'http://localhost:5150'
+        
+        update_script = f"""
+#!/bin/bash
+set -e
+
+echo "Starting NetworkMap agent update..."
+
+# Stop the current agent service
+echo "Stopping agent service..."
+sudo systemctl stop networkmap-agent || true
+
+# Backup current configuration
+echo "Backing up configuration..."
+sudo cp /etc/networkmap/agent.conf /etc/networkmap/agent.conf.backup 2>/dev/null || true
+
+# Download latest agent script
+echo "Downloading latest agent version..."
+curl -f -o /tmp/networkmap_agent.py {server_url}/static/networkmap_agent.py
+sudo cp /tmp/networkmap_agent.py /opt/networkmap-agent/networkmap_agent.py
+sudo chmod +x /opt/networkmap-agent/networkmap_agent.py
+
+# Update Python dependencies if needed
+echo "Updating dependencies..."
+sudo /opt/networkmap-agent/venv/bin/pip install --quiet --upgrade requests psutil
+
+# Restart the agent service
+echo "Starting agent service..."
+sudo systemctl start networkmap-agent
+
+# Wait and verify service is running
+sleep 5
+if sudo systemctl is-active --quiet networkmap-agent; then
+    echo "✅ Agent update completed successfully"
+    echo "Service status: $(sudo systemctl is-active networkmap-agent)"
+    echo "Version: {current_version}"
+    echo "Build date: {build_date}"
+else
+    echo "❌ Agent service failed to start after update"
+    sudo systemctl status networkmap-agent --no-pager -l
+    exit 1
+fi
+
+# Cleanup
+rm -f /tmp/networkmap_agent.py
+
+echo "Agent update completed successfully!"
+"""
+        
+        # Execute update script via SSH
+        result, error = host_manager.execute_command(host, update_script, timeout=300)
+        
+        if result and result['success']:
+            # Mark update as completed
+            db.mark_agent_update_completed(agent_id, current_version, build_date)
+            print(f"✅ Agent update completed successfully for {hostname}")
+        else:
+            # Mark update as failed
+            error_msg = result.get('stderr', error) if result else str(error)
+            db.mark_agent_update_failed(agent_id, f"Update script failed: {error_msg[:200]}")
+            print(f"❌ Agent update failed for {hostname}: {error_msg}")
+            
+    except Exception as e:
+        error_msg = f"Exception during agent update: {str(e)}"
+        print(f"❌ {error_msg}")
+        db.mark_agent_update_failed(agent_id, error_msg)
 
 def update_scan_status(phase, message, progress=None, current_host=None, step=None):
     """Helper to update scan status with consistent format"""
