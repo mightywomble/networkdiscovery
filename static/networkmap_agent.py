@@ -25,7 +25,7 @@ import requests
 import hashlib
 
 # Agent version and build information
-__version__ = "1.5.2"
+__version__ = "1.6.1"
 __build_date__ = "2025-08-15"
 
 VERSION = __version__
@@ -1015,3 +1015,4 @@ def main():
 
 if __name__ == '__main__':
     main()
+# Test comment for auto-versioning
