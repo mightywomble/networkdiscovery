@@ -396,6 +396,12 @@
                             </a>
                         </li>
                         <li class="nm-nav-item">
+                            <a href="#" class="nm-nav-link" onclick="showImportHosts(event)">
+                                <i class="fas fa-upload"></i>
+                                <span>Import Hosts</span>
+                            </a>
+                        </li>
+                        <li class="nm-nav-item">
                             <a href="#" class="nm-nav-link" onclick="showInstallTools(event)">
                                 <i class="fas fa-download"></i>
                                 <span>Install Tools</span>
@@ -613,6 +619,26 @@
                     showAlert('error', 'Scan Error', 'Failed to start network scan');
                     updateScanStatus('error', 'Scan failed');
                 });
+            }
+        }
+        
+        // Show import hosts modal
+        function showImportHosts(event) {
+            event.preventDefault();
+            
+            // Check if the import function exists (from hosts page)
+            if (typeof showImportModal === 'function') {
+                showImportModal();
+            } else {
+                // Redirect to hosts page if not already there
+                if (window.location.pathname !== '/hosts') {
+                    showAlert('info', 'Import Hosts', 'Redirecting to Host Management page...');
+                    setTimeout(() => {
+                        window.location.href = '/hosts';
+                    }, 1000);
+                } else {
+                    showAlert('error', 'Import Error', 'Import functionality is not available on this page');
+                }
             }
         }
         
