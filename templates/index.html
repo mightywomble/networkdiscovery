@@ -1208,7 +1208,7 @@ function showFinalScanResults(data) {
     const resultContainer = document.querySelector('.scan-result');
     const loadingSpinner = document.querySelector('.scan-loading-spinner');
     
-    // Hide progress, show results
+    // Hide progress and loading spinner, show results
     if (progressContainer) progressContainer.style.display = 'none';
     if (loadingSpinner) loadingSpinner.style.display = 'none';
     if (resultContainer) resultContainer.style.display = 'block';
@@ -1232,30 +1232,25 @@ function showFinalScanResults(data) {
             </div>
         </div>
         
-        <div class="pf-l-grid pf-m-all-12-col-on-sm pf-m-all-6-col-on-md pf-m-all-4-col-on-lg">
-            <div class="pf-l-grid__item">
-                <div class="pf-c-card">
-                    <div class="pf-c-card__header">
-                        <div class="pf-c-card__header-main">
-                            <h2 class="pf-c-card__title"><i class="fas fa-server pf-u-mr-sm"></i>Host Results</h2>
-                        </div>
-                    </div>
-                    <div class="pf-c-card__body">
-                        ${generateInteractiveHostResultsAsCards(hosts)}
-                    </div>
+        <div class="pf-c-card pf-u-mb-md">
+            <div class="pf-c-card__header">
+                <div class="pf-c-card__header-main">
+                    <h2 class="pf-c-card__title"><i class="fas fa-server pf-u-mr-sm"></i>Host Results</h2>
                 </div>
             </div>
-            <div class="pf-l-grid__item">
-                <div class="pf-c-card">
-                    <div class="pf-c-card__header">
-                        <div class="pf-c-card__header-main">
-                            <h2 class="pf-c-card__title" id="scanSummaryTitle"><i class="fas fa-chart-bar pf-u-mr-sm"></i>Scan Summary</h2>
-                        </div>
-                    </div>
-                    <div class="pf-c-card__body" id="scanSummaryContent">
-                        ${generateScanSummary(scan_summary)}
-                    </div>
+            <div class="pf-c-card__body">
+                ${generateInteractiveHostResultsAsCards(hosts)}
+            </div>
+        </div>
+        
+        <div class="pf-c-card">
+            <div class="pf-c-card__header">
+                <div class="pf-c-card__header-main">
+                    <h2 class="pf-c-card__title" id="scanSummaryTitle"><i class="fas fa-chart-bar pf-u-mr-sm"></i>Scan Summary</h2>
                 </div>
+            </div>
+            <div class="pf-c-card__body" id="scanSummaryContent">
+                ${generateScanSummary(scan_summary)}
             </div>
         </div>
     `;
