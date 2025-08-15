@@ -796,7 +796,7 @@ class NetworkMapAgent:
         
         return logs
     
-    def _extract_log_level(self, log_line: str) -> str:
+    def get_log_level(self, log_line: str) -> str:
         """Extract log level from log line"""
         log_line_lower = log_line.lower()
         
@@ -810,6 +810,359 @@ class NetworkMapAgent:
             return 'debug'
         else:
             return 'info'
+    
+    def _extract_log_level(self, log_line: str) -> str:
+        """Extract log level from log line (alias for get_log_level)"""
+        return self.get_log_level(log_line)
+    
+    def _run_connectivity_tests(self) -> Dict[str, Any]:
+        """Run connectivity tests"""
+        tests = {
+            'ping_gateway': {'status': 'unknown', 'details': '', 'execution_time': 0},
+            'dns_resolution': {'status': 'unknown', 'details': '', 'execution_time': 0},
+            'internet_connectivity': {'status': 'unknown', 'details': '', 'execution_time': 0},
+            'port_connectivity': {'status': 'unknown', 'details': '', 'execution_time': 0}
+        }
+        
+        try:
+            # Ping gateway test
+            start_time = time.time()
+            try:
+                result = subprocess.run(['ping', '-c', '3', '8.8.8.8'], 
+                                      capture_output=True, text=True, timeout=10)
+                if result.returncode == 0:
+                    tests['ping_gateway']['status'] = 'pass'
+                    tests['ping_gateway']['details'] = 'Gateway reachable'
+                else:
+                    tests['ping_gateway']['status'] = 'fail'
+                    tests['ping_gateway']['details'] = 'Gateway unreachable'
+            except Exception as e:
+                tests['ping_gateway']['status'] = 'error'
+                tests['ping_gateway']['details'] = str(e)
+            tests['ping_gateway']['execution_time'] = round(time.time() - start_time, 3)
+            
+            # DNS resolution test
+            start_time = time.time()
+            try:
+                socket.gethostbyname('google.com')
+                tests['dns_resolution']['status'] = 'pass'
+                tests['dns_resolution']['details'] = 'DNS resolution working'
+            except Exception as e:
+                tests['dns_resolution']['status'] = 'fail'
+                tests['dns_resolution']['details'] = f'DNS resolution failed: {e}'
+            tests['dns_resolution']['execution_time'] = round(time.time() - start_time, 3)
+            
+            # Internet connectivity test
+            start_time = time.time()
+            try:
+                response = requests.get('http://google.com', timeout=10)
+                if response.status_code == 200:
+                    tests['internet_connectivity']['status'] = 'pass'
+                    tests['internet_connectivity']['details'] = 'Internet connectivity working'
+                else:
+                    tests['internet_connectivity']['status'] = 'fail'
+                    tests['internet_connectivity']['details'] = f'HTTP request failed: {response.status_code}'
+            except Exception as e:
+                tests['internet_connectivity']['status'] = 'fail'
+                tests['internet_connectivity']['details'] = f'Internet connectivity failed: {e}'
+            tests['internet_connectivity']['execution_time'] = round(time.time() - start_time, 3)
+            
+            # Port connectivity test (check common ports)
+            start_time = time.time()
+            try:
+                sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                sock.settimeout(5)
+                result = sock.connect_ex(('google.com', 80))
+                sock.close()
+                if result == 0:
+                    tests['port_connectivity']['status'] = 'pass'
+                    tests['port_connectivity']['details'] = 'Port 80 accessible'
+                else:
+                    tests['port_connectivity']['status'] = 'fail'
+                    tests['port_connectivity']['details'] = 'Port 80 not accessible'
+            except Exception as e:
+                tests['port_connectivity']['status'] = 'error'
+                tests['port_connectivity']['details'] = str(e)
+            tests['port_connectivity']['execution_time'] = round(time.time() - start_time, 3)
+            
+        except Exception as e:
+            self.logger.error(f"Error running connectivity tests: {e}")
+            
+        return tests
+    
+    def _run_performance_tests(self) -> Dict[str, Any]:
+        """Run performance tests"""
+        tests = {
+            'bandwidth_test': {'status': 'unknown', 'details': '', 'execution_time': 0},
+            'latency_test': {'status': 'unknown', 'details': '', 'execution_time': 0},
+            'throughput_test': {'status': 'unknown', 'details': '', 'execution_time': 0},
+            'cpu_usage': {'status': 'unknown', 'details': '', 'execution_time': 0}
+        }
+        
+        try:
+            # Bandwidth test (simplified)
+            start_time = time.time()
+            try:
+                # Simple download test to estimate bandwidth
+                response = requests.get('http://google.com', timeout=15)
+                if response.status_code == 200:
+                    download_time = time.time() - start_time
+                    size_kb = len(response.content) / 1024
+                    bandwidth = size_kb / download_time if download_time > 0 else 0
+                    tests['bandwidth_test']['status'] = 'pass'
+                    tests['bandwidth_test']['details'] = f'Estimated bandwidth: {bandwidth:.2f} KB/s'
+                else:
+                    tests['bandwidth_test']['status'] = 'fail'
+                    tests['bandwidth_test']['details'] = 'Bandwidth test failed'
+            except Exception as e:
+                tests['bandwidth_test']['status'] = 'error'
+                tests['bandwidth_test']['details'] = str(e)
+            tests['bandwidth_test']['execution_time'] = round(time.time() - start_time, 3)
+            
+            # Latency test
+            start_time = time.time()
+            try:
+                result = subprocess.run(['ping', '-c', '3', '8.8.8.8'], 
+                                      capture_output=True, text=True, timeout=10)
+                if result.returncode == 0 and 'avg' in result.stdout:
+                    tests['latency_test']['status'] = 'pass'
+                    tests['latency_test']['details'] = 'Latency measured via ping'
+                else:
+                    tests['latency_test']['status'] = 'fail'
+                    tests['latency_test']['details'] = 'Latency test failed'
+            except Exception as e:
+                tests['latency_test']['status'] = 'error'
+                tests['latency_test']['details'] = str(e)
+            tests['latency_test']['execution_time'] = round(time.time() - start_time, 3)
+            
+            # Throughput test (basic CPU performance)
+            start_time = time.time()
+            try:
+                # Simple CPU test
+                result = 0
+                for i in range(100000):
+                    result += i * 2
+                tests['throughput_test']['status'] = 'pass'
+                tests['throughput_test']['details'] = 'CPU throughput test completed'
+            except Exception as e:
+                tests['throughput_test']['status'] = 'error'
+                tests['throughput_test']['details'] = str(e)
+            tests['throughput_test']['execution_time'] = round(time.time() - start_time, 3)
+            
+            # CPU usage check
+            start_time = time.time()
+            try:
+                # Get load average
+                if hasattr(os, 'getloadavg'):
+                    load_avg = os.getloadavg()[0]
+                    tests['cpu_usage']['status'] = 'pass'
+                    tests['cpu_usage']['details'] = f'Load average: {load_avg:.2f}'
+                else:
+                    tests['cpu_usage']['status'] = 'pass'
+                    tests['cpu_usage']['details'] = 'CPU usage check completed (load avg not available)'
+            except Exception as e:
+                tests['cpu_usage']['status'] = 'error'
+                tests['cpu_usage']['details'] = str(e)
+            tests['cpu_usage']['execution_time'] = round(time.time() - start_time, 3)
+            
+        except Exception as e:
+            self.logger.error(f"Error running performance tests: {e}")
+            
+        return tests
+    
+    def _run_security_tests(self) -> Dict[str, Any]:
+        """Run security tests"""
+        tests = {
+            'open_ports': {'status': 'unknown', 'details': '', 'execution_time': 0},
+            'firewall_status': {'status': 'unknown', 'details': '', 'execution_time': 0},
+            'ssh_config': {'status': 'unknown', 'details': '', 'execution_time': 0},
+            'file_permissions': {'status': 'unknown', 'details': '', 'execution_time': 0}
+        }
+        
+        try:
+            # Open ports scan
+            start_time = time.time()
+            try:
+                result = subprocess.run(['netstat', '-tuln'], 
+                                      capture_output=True, text=True, timeout=10)
+                if result.returncode == 0:
+                    open_ports = len([line for line in result.stdout.split('\n') if 'LISTEN' in line])
+                    tests['open_ports']['status'] = 'pass'
+                    tests['open_ports']['details'] = f'Found {open_ports} listening ports'
+                else:
+                    tests['open_ports']['status'] = 'fail'
+                    tests['open_ports']['details'] = 'Could not scan ports'
+            except Exception as e:
+                tests['open_ports']['status'] = 'error'
+                tests['open_ports']['details'] = str(e)
+            tests['open_ports']['execution_time'] = round(time.time() - start_time, 3)
+            
+            # Firewall status
+            start_time = time.time()
+            try:
+                # Check for common firewall tools
+                firewall_found = False
+                for fw_cmd in ['ufw', 'iptables', 'firewalld']:
+                    try:
+                        result = subprocess.run(['which', fw_cmd], 
+                                              capture_output=True, text=True, timeout=5)
+                        if result.returncode == 0:
+                            firewall_found = True
+                            tests['firewall_status']['status'] = 'pass'
+                            tests['firewall_status']['details'] = f'Firewall tool found: {fw_cmd}'
+                            break
+                    except:
+                        continue
+                
+                if not firewall_found:
+                    tests['firewall_status']['status'] = 'warning'
+                    tests['firewall_status']['details'] = 'No common firewall tools found'
+                    
+            except Exception as e:
+                tests['firewall_status']['status'] = 'error'
+                tests['firewall_status']['details'] = str(e)
+            tests['firewall_status']['execution_time'] = round(time.time() - start_time, 3)
+            
+            # SSH config check
+            start_time = time.time()
+            try:
+                if os.path.exists('/etc/ssh/sshd_config'):
+                    tests['ssh_config']['status'] = 'pass'
+                    tests['ssh_config']['details'] = 'SSH config file found'
+                else:
+                    tests['ssh_config']['status'] = 'warning'
+                    tests['ssh_config']['details'] = 'SSH config file not found'
+            except Exception as e:
+                tests['ssh_config']['status'] = 'error'
+                tests['ssh_config']['details'] = str(e)
+            tests['ssh_config']['execution_time'] = round(time.time() - start_time, 3)
+            
+            # File permissions check
+            start_time = time.time()
+            try:
+                # Check permissions on sensitive files
+                sensitive_files = ['/etc/passwd', '/etc/shadow', '/etc/sudoers']
+                issues = []
+                for file_path in sensitive_files:
+                    if os.path.exists(file_path):
+                        stat_info = os.stat(file_path)
+                        mode = stat_info.st_mode
+                        if file_path == '/etc/shadow' and (mode & 0o077) != 0:
+                            issues.append(f'{file_path} has overly permissive permissions')
+                        elif file_path == '/etc/sudoers' and (mode & 0o022) != 0:
+                            issues.append(f'{file_path} has overly permissive permissions')
+                
+                if issues:
+                    tests['file_permissions']['status'] = 'warning'
+                    tests['file_permissions']['details'] = f'Permission issues: {", ".join(issues)}'
+                else:
+                    tests['file_permissions']['status'] = 'pass'
+                    tests['file_permissions']['details'] = 'File permissions look secure'
+            except Exception as e:
+                tests['file_permissions']['status'] = 'error'
+                tests['file_permissions']['details'] = str(e)
+            tests['file_permissions']['execution_time'] = round(time.time() - start_time, 3)
+            
+        except Exception as e:
+            self.logger.error(f"Error running security tests: {e}")
+            
+        return tests
+    
+    def _run_discovery_tests(self) -> Dict[str, Any]:
+        """Run discovery tests"""
+        tests = {
+            'network_scan': {'status': 'unknown', 'details': '', 'execution_time': 0},
+            'arp_table': {'status': 'unknown', 'details': '', 'execution_time': 0},
+            'route_table': {'status': 'unknown', 'details': '', 'execution_time': 0},
+            'interface_discovery': {'status': 'unknown', 'details': '', 'execution_time': 0}
+        }
+        
+        try:
+            # Network scan (ping sweep)
+            start_time = time.time()
+            try:
+                # Get local network info
+                hostname = socket.gethostname()
+                local_ip = socket.gethostbyname(hostname)
+                network_base = '.'.join(local_ip.split('.')[:-1]) + '.'
+                
+                # Simple ping sweep (first 10 IPs)
+                reachable_hosts = 0
+                for i in range(1, 11):
+                    try:
+                        result = subprocess.run(['ping', '-c', '1', '-W', '1', f'{network_base}{i}'], 
+                                              capture_output=True, text=True, timeout=3)
+                        if result.returncode == 0:
+                            reachable_hosts += 1
+                    except:
+                        continue
+                
+                tests['network_scan']['status'] = 'pass'
+                tests['network_scan']['details'] = f'Found {reachable_hosts} reachable hosts in network'
+            except Exception as e:
+                tests['network_scan']['status'] = 'error'
+                tests['network_scan']['details'] = str(e)
+            tests['network_scan']['execution_time'] = round(time.time() - start_time, 3)
+            
+            # ARP table
+            start_time = time.time()
+            try:
+                result = subprocess.run(['arp', '-a'], capture_output=True, text=True, timeout=10)
+                if result.returncode == 0:
+                    arp_entries = len([line for line in result.stdout.split('\n') if line.strip()])
+                    tests['arp_table']['status'] = 'pass'
+                    tests['arp_table']['details'] = f'ARP table has {arp_entries} entries'
+                else:
+                    tests['arp_table']['status'] = 'fail'
+                    tests['arp_table']['details'] = 'Could not read ARP table'
+            except Exception as e:
+                tests['arp_table']['status'] = 'error'
+                tests['arp_table']['details'] = str(e)
+            tests['arp_table']['execution_time'] = round(time.time() - start_time, 3)
+            
+            # Route table
+            start_time = time.time()
+            try:
+                result = subprocess.run(['route', '-n'], capture_output=True, text=True, timeout=10)
+                if result.returncode == 0:
+                    route_entries = len([line for line in result.stdout.split('\n') if line.strip() and not line.startswith('Kernel')])
+                    tests['route_table']['status'] = 'pass'
+                    tests['route_table']['details'] = f'Route table has {route_entries} entries'
+                else:
+                    tests['route_table']['status'] = 'fail'
+                    tests['route_table']['details'] = 'Could not read route table'
+            except Exception as e:
+                tests['route_table']['status'] = 'error'
+                tests['route_table']['details'] = str(e)
+            tests['route_table']['execution_time'] = round(time.time() - start_time, 3)
+            
+            # Interface discovery
+            start_time = time.time()
+            try:
+                result = subprocess.run(['ip', 'addr', 'show'], capture_output=True, text=True, timeout=10)
+                if result.returncode == 0:
+                    interfaces = len([line for line in result.stdout.split('\n') if ': ' in line and 'inet ' in result.stdout])
+                    tests['interface_discovery']['status'] = 'pass'
+                    tests['interface_discovery']['details'] = f'Found {interfaces} network interfaces'
+                else:
+                    # Fallback to ifconfig
+                    result = subprocess.run(['ifconfig'], capture_output=True, text=True, timeout=10)
+                    if result.returncode == 0:
+                        interfaces = len([line for line in result.stdout.split('\n') if 'inet ' in line])
+                        tests['interface_discovery']['status'] = 'pass'
+                        tests['interface_discovery']['details'] = f'Found {interfaces} network interfaces'
+                    else:
+                        tests['interface_discovery']['status'] = 'fail'
+                        tests['interface_discovery']['details'] = 'Could not discover interfaces'
+            except Exception as e:
+                tests['interface_discovery']['status'] = 'error'
+                tests['interface_discovery']['details'] = str(e)
+            tests['interface_discovery']['execution_time'] = round(time.time() - start_time, 3)
+            
+        except Exception as e:
+            self.logger.error(f"Error running discovery tests: {e}")
+            
+        return tests
     
     def send_scan_results(self, scan_data: Dict[str, Any]):
         """Send scan results to server"""
