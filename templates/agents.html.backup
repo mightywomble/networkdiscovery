@@ -1033,14 +1033,14 @@ async function deploySelectedAgents() {
             progressBar.style.width = progress + '%';
             statusElement.textContent = `Deploying to ${host.name} (${i + 1}/${selectedHostsArray.length})`;
             
-            logsElement.innerHTML += `<br>[${new Date().toLocaleTimeString()}] Starting deployment to ${host.name} (${host.ip_address})<br>`;
+            logsElement.textContent += `\n[${new Date().toLocaleTimeString()}] Starting deployment to ${host.name} (${host.ip_address})\n`;
             logsElement.scrollTop = logsElement.scrollHeight;
             
             try {
                 await deployAgentToHost(host);
-                logsElement.textContent += `[${new Date().toLocaleTimeString()}] ✓ Successfully deployed to ${host.name}<br>`;
+                logsElement.textContent += `[${new Date().toLocaleTimeString()}] ✓ Successfully deployed to ${host.name}\n`;
             } catch (error) {
-                logsElement.textContent += `[${new Date().toLocaleTimeString()}] ✗ Failed to deploy to ${host.name}: ${error.message}<br>`;
+                logsElement.textContent += `[${new Date().toLocaleTimeString()}] ✗ Failed to deploy to ${host.name}: ${error.message}\n`;
             }
             
             logsElement.scrollTop = logsElement.scrollHeight;
@@ -2316,7 +2316,7 @@ async function performAgentUpdates(hostsToUpdate) {
             statusElement.textContent = `Updating ${host.name} (${i + 1}/${hostsToUpdate.length})`;
             
             const timestamp = new Date().toLocaleTimeString();
-            logsElement.innerHTML += `<br>🚀 [${timestamp}] Starting update for ${host.name} (${host.ip_address})<br>`;
+            logsElement.textContent += `\n🚀 [${timestamp}] Starting update for ${host.name} (${host.ip_address})\n`;
             logsElement.scrollTop = logsElement.scrollHeight;
             
             try {
@@ -2339,14 +2339,14 @@ async function performAgentUpdates(hostsToUpdate) {
                 const data = await response.json();
                 
                 if (data.success) {
-                    logsElement.innerHTML += `✅ [${new Date().toLocaleTimeString()}] Successfully updated ${host.name}<br>`;
+                    logsElement.textContent += `✅ [${new Date().toLocaleTimeString()}] Successfully updated ${host.name}\n`;
                     successCount++;
                 } else {
-                    logsElement.innerHTML += `❌ [${new Date().toLocaleTimeString()}] Failed to update ${host.name}: ${data.error}<br>`;
+                    logsElement.textContent += `❌ [${new Date().toLocaleTimeString()}] Failed to update ${host.name}: ${data.error}\n`;
                     errorCount++;
                 }
             } catch (error) {
-                logsElement.textContent += `💥 [${new Date().toLocaleTimeString()}] Exception updating ${host.name}: ${error.message}<br>`;
+                logsElement.textContent += `💥 [${new Date().toLocaleTimeString()}] Exception updating ${host.name}: ${error.message}\n`;
                 errorCount++;
             }
             
@@ -2367,7 +2367,7 @@ async function performAgentUpdates(hostsToUpdate) {
         statusElement.textContent = summaryText;
         
         // Add a final summary to logs
-        const finalSummary = `\n${'═'.repeat(50)}\n🏁 UPDATE SUMMARY:\n   ✅ Successful: ${successCount}\n   ❌ Failed: ${errorCount}\n   📊 Total: ${successCount + errorCount}\n${'═'.repeat(50)}<br>`;
+        const finalSummary = `\n${'═'.repeat(50)}\n🏁 UPDATE SUMMARY:\n   ✅ Successful: ${successCount}\n   ❌ Failed: ${errorCount}\n   📊 Total: ${successCount + errorCount}\n${'═'.repeat(50)}\n`;
         logsElement.textContent += finalSummary;
         
         // Refresh data to show updated versions
@@ -2486,7 +2486,7 @@ async function performAgentRun(agent, progressBar, statusElement, logsElement, c
         // Step 1: Send signal to agent
         progressBar.style.width = '10%';
         statusElement.textContent = 'Sending scan trigger signal to agent...';
-        logsElement.innerHTML += `🚀 [${timestamp}] Initiating immediate scan on ${agent.hostname}<br>`;
+        logsElement.textContent += `🚀 [${timestamp}] Initiating immediate scan on ${agent.hostname}\n`;
         logsElement.scrollTop = logsElement.scrollHeight;
         
         const response = await fetch('/api/agent/run_now', {
@@ -2509,7 +2509,7 @@ async function performAgentRun(agent, progressBar, statusElement, logsElement, c
         
         progressBar.style.width = '25%';
         statusElement.textContent = 'Signal sent successfully. Monitoring progress...';
-        logsElement.innerHTML += `✅ [${new Date().toLocaleTimeString()}] Signal sent successfully: ${data.message}<br>`;
+        logsElement.textContent += `✅ [${new Date().toLocaleTimeString()}] Signal sent successfully: ${data.message}\n`;
         logsElement.scrollTop = logsElement.scrollHeight;
         
         // Step 2: Monitor progress (simulate progress monitoring)
@@ -2519,7 +2519,7 @@ async function performAgentRun(agent, progressBar, statusElement, logsElement, c
         progressBar.style.width = '100%';
         progressBar.className = 'progress-bar bg-danger';
         statusElement.textContent = 'Failed: ' + error.message;
-        logsElement.innerHTML += `❌ [${new Date().toLocaleTimeString()}] Error: ${error.message}<br>`;
+        logsElement.textContent += `❌ [${new Date().toLocaleTimeString()}] Error: ${error.message}\n`;
         logsElement.scrollTop = logsElement.scrollHeight;
     } finally {
         closeBtn.disabled = false;
@@ -2616,7 +2616,7 @@ async function monitorAgentProgress(agent, progressBar, statusElement, logsEleme
                         progressBar.style.width = '100%';
                         progressBar.className = 'progress-bar bg-success';
                         statusElement.textContent = '✅ Agent scan trigger completed!';
-                        logsElement.innerHTML += `<br>✅ [${new Date().toLocaleTimeString()}] Agent run completed. Check logs for scan results.<br>`;
+                        logsElement.textContent += `\n✅ [${new Date().toLocaleTimeString()}] Agent run completed. Check logs for scan results.\n`;
                         logsElement.scrollTop = logsElement.scrollHeight;
                         
                         setTimeout(() => {
@@ -2649,8 +2649,8 @@ async function monitorAgentProgress(agent, progressBar, statusElement, logsEleme
                     progressBar.style.width = '100%';
                     progressBar.className = 'progress-bar bg-warning';
                     statusElement.textContent = '⏰ Scan monitoring timed out (scan may still be running)';
-                    logsElement.innerHTML += `<br>⏰ [${new Date().toLocaleTimeString()}] Progress monitoring timed out after ${maxWaitTime} seconds.<br>`;
-                    logsElement.innerHTML += `<br>🔄 The scan may still be running. Check agent logs or network data for results.<br>`;
+                    logsElement.textContent += `\n⏰ [${new Date().toLocaleTimeString()}] Progress monitoring timed out after ${maxWaitTime} seconds.\n`;
+                    logsElement.textContent += `\n🔄 The scan may still be running. Check agent logs or network data for results.\n`;
                     logsElement.scrollTop = logsElement.scrollHeight;
                     resolve();
                 } else {
@@ -2663,8 +2663,8 @@ async function monitorAgentProgress(agent, progressBar, statusElement, logsEleme
                 progressBar.style.width = '100%';
                 progressBar.className = 'progress-bar bg-warning';
                 statusElement.textContent = 'Scan triggered, but progress monitoring failed';
-                logsElement.innerHTML += `⚠️ [${new Date().toLocaleTimeString()}] Progress monitoring error: ${error.message}<br>`;
-                logsElement.innerHTML += `<br>🔄 The scan may still be running. Check agent logs or network data for results.<br>`;
+                logsElement.textContent += `⚠️ [${new Date().toLocaleTimeString()}] Progress monitoring error: ${error.message}\n`;
+                logsElement.textContent += `\n🔄 The scan may still be running. Check agent logs or network data for results.\n`;
                 logsElement.scrollTop = logsElement.scrollHeight;
                 resolve();
             }

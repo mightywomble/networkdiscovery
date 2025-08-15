@@ -3774,7 +3774,10 @@ def get_agent_last_data(agent_id):
                 'error': 'No scan data available for this agent'
             }), 404
         
-        # Parse and organize the data
+        # Parse scan data
+        scan_data = scan_results.get('scan_data', {})
+        
+        # Initialize agent data structure
         agent_data = {
             'agent_info': {
                 'agent_id': agent_id,
@@ -3788,21 +3791,57 @@ def get_agent_last_data(agent_id):
             'scan_status': scan_results.get('scan_status', 'completed'),
             'network_data': [],
             'test_results': {},
-            'errors': []
+            'errors': [],
+            'system_info': {},
+            'network_interfaces': {},
+            'listening_ports': [],
+            'active_connections': [],
+            'routing_table': [],
+            'arp_table': []
         }
         
-        # Parse scan data based on scan type
-        scan_data = scan_results.get('scan_data', {})
-        
-        # Handle different scan result formats
+        # Handle current agent data format
         if isinstance(scan_data, dict):
-            # Extract network discovery data
+            # Extract system information
+            if 'system_info' in scan_data:
+                agent_data['system_info'] = scan_data['system_info']
+            
+            if 'network_interfaces' in scan_data:
+                agent_data['network_interfaces'] = scan_data['network_interfaces']
+            
+            if 'listening_ports' in scan_data:
+                agent_data['listening_ports'] = scan_data['listening_ports']
+            
+            if 'active_connections' in scan_data:
+                agent_data['active_connections'] = scan_data['active_connections']
+            
+            if 'routing_table' in scan_data:
+                agent_data['routing_table'] = scan_data['routing_table']
+            
+            if 'arp_table' in scan_data:
+                agent_data['arp_table'] = scan_data['arp_table']
+                
+                # Convert ARP table entries to network discovery format
+                if agent_data['arp_table']:
+                    for arp_entry in agent_data['arp_table']:
+                        if isinstance(arp_entry, dict) and 'ip_address' in arp_entry:
+                            network_host = {
+                                'ip_address': arp_entry['ip_address'],
+                                'mac_address': arp_entry.get('mac_address', ''),
+                                'hostname': arp_entry.get('hostname', ''),
+                                'status': 'up',
+                                'last_seen': scan_results.get('scan_timestamp'),
+                                'source': 'arp_table'
+                            }
+                            agent_data['network_data'].append(network_host)
+            
+            # Extract network discovery data (legacy formats)
             if 'network_scan' in scan_data:
                 network_results = scan_data['network_scan']
                 if isinstance(network_results, list):
-                    agent_data['network_data'] = network_results
+                    agent_data['network_data'].extend(network_results)
                 elif isinstance(network_results, dict) and 'hosts' in network_results:
-                    agent_data['network_data'] = network_results['hosts']
+                    agent_data['network_data'].extend(network_results['hosts'])
             
             # Extract test results
             if 'test_results' in scan_data:
@@ -3814,29 +3853,42 @@ def get_agent_last_data(agent_id):
             
             # Handle legacy format where scan_data itself contains hosts
             if 'hosts' in scan_data:
-                agent_data['network_data'] = scan_data['hosts']
+                agent_data['network_data'].extend(scan_data['hosts'])
         
         elif isinstance(scan_data, list):
             # If scan_data is directly a list of hosts
             agent_data['network_data'] = scan_data
         
-        # If no structured data found, try to extract from raw scan results
-        if not agent_data['network_data'] and not agent_data['test_results']:
-            # Get all scan results for this agent (last few)
-            all_results = db.get_agent_scan_results(agent_id, limit=5)
+        # Create synthetic test results from available data
+        if agent_data['listening_ports'] or agent_data['active_connections'] or agent_data['network_interfaces']:
+            agent_data['test_results'] = {
+                'System Monitoring': {
+                    'Network Interfaces': {
+                        'success': bool(agent_data['network_interfaces']),
+                        'description': f"Found {len(agent_data['network_interfaces'])} network interfaces" if agent_data['network_interfaces'] else "No network interfaces data",
+                        'details': f"Interface data collected at {agent_data['last_scan']}"
+                    },
+                    'Port Scanning': {
+                        'success': bool(agent_data['listening_ports']),
+                        'description': f"Found {len(agent_data['listening_ports'])} listening ports" if agent_data['listening_ports'] else "No listening ports found",
+                        'details': f"Ports scanned at {agent_data['last_scan']}"
+                    },
+                    'Connection Monitoring': {
+                        'success': bool(agent_data['active_connections']),
+                        'description': f"Found {len(agent_data['active_connections'])} active connections" if agent_data['active_connections'] else "No active connections",
+                        'details': f"Connections monitored at {agent_data['last_scan']}"
+                    }
+                }
+            }
             
-            for result in all_results:
-                result_data = result.get('scan_data', {})
-                
-                # Try to extract network data
-                if isinstance(result_data, dict):
-                    if 'hosts' in result_data:
-                        agent_data['network_data'].extend(result_data['hosts'])
-                    elif 'discovered_hosts' in result_data:
-                        agent_data['network_data'].extend(result_data['discovered_hosts'])
-                
-                elif isinstance(result_data, list):
-                    agent_data['network_data'].extend(result_data)
+            if agent_data['arp_table']:
+                agent_data['test_results']['Network Discovery'] = {
+                    'ARP Table Analysis': {
+                        'success': True,
+                        'description': f"Found {len(agent_data['arp_table'])} entries in ARP table",
+                        'details': f"ARP data collected at {agent_data['last_scan']}"
+                    }
+                }
         
         # Remove duplicates from network data based on IP address
         if agent_data['network_data']:
