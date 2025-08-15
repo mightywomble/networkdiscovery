@@ -3349,7 +3349,7 @@ def perform_agent_update(agent, server_url):
         import os
         import re
         
-        current_version = "1.3.0"  # Default fallback
+        current_version = "1.4.0"  # Default fallback
         build_date = datetime.now().strftime('%Y-%m-%d')
         
         try:
@@ -4016,7 +4016,7 @@ def run_agent_with_progress(agent, host):
                 AGENT_PID=$(pgrep -f "networkmap.*agent" | head -1)
                 if [ -n "$AGENT_PID" ]; then
                     echo "Sending USR1 signal to agent process $AGENT_PID"
-                    kill -USR1 $AGENT_PID && echo "Signal sent successfully" || echo "Signal failed"
+                    sudo kill -USR1 $AGENT_PID && echo "Signal sent successfully" || echo "Signal failed"
                 else
                     echo "Agent process not found"
                     exit 1
