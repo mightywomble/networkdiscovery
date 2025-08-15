@@ -2635,23 +2635,48 @@ def get_agent_versions():
         
         try:
             import os
-            agent_script_path = os.path.join(os.path.dirname(__file__), 'agent.py')
-            if os.path.exists(agent_script_path):
-                with open(agent_script_path, 'r') as f:
-                    content = f.read()
-                    # Look for version information in the agent script
-                    import re
-                    version_match = re.search(r'VERSION\s*=\s*["\']([^"\'\']+)["\']', content)
-                    build_match = re.search(r'BUILD_DATE\s*=\s*["\']([^"\'\']+)["\']', content)
-                    
-                    if version_match:
-                        server_version = version_match.group(1)
-                    if build_match:
-                        server_build_date = build_match.group(1)
+            import re
+            # Check the static agent script first
+            agent_script_paths = [
+                os.path.join(os.path.dirname(__file__), 'static', 'networkmap_agent.py'),
+                os.path.join(os.path.dirname(__file__), 'networkmap_agent.py'),
+                os.path.join(os.path.dirname(__file__), 'agent.py')
+            ]
+            
+            for agent_script_path in agent_script_paths:
+                if os.path.exists(agent_script_path):
+                    try:
+                        with open(agent_script_path, 'r') as f:
+                            content = f.read()
+                            # Look for version information in the agent script
+                            version_match = re.search(r'__version__\s*=\s*["\']([^"\'\']+)["\']', content)
+                            build_match = re.search(r'__build_date__\s*=\s*["\']([^"\'\']+)["\']', content)
+                            
+                            # Also try alternative formats
+                            if not version_match:
+                                version_match = re.search(r'VERSION\s*=\s*["\']([^"\'\']+)["\']', content)
+                            if not build_match:
+                                build_match = re.search(r'BUILD_DATE\s*=\s*["\']([^"\'\']+)["\']', content)
+                            
+                            if version_match:
+                                server_version = version_match.group(1)
+                                print(f"Found server version: {server_version} from {agent_script_path}")
+                            if build_match:
+                                server_build_date = build_match.group(1)
+                                print(f"Found server build date: {server_build_date} from {agent_script_path}")
+                            
+                            if version_match or build_match:
+                                break  # Found version info, stop searching
+                    except Exception as e:
+                        print(f"Error reading {agent_script_path}: {e}")
+                        continue
         except Exception as e:
             print(f"Warning: Could not read server version: {e}")
-            # Fallback to a default version
-            server_version = "1.0.0"
+        
+        # Fallback to default version if not found
+        if server_version == "Unknown":
+            server_version = "1.3.0"
+        if server_build_date == "Unknown":
             server_build_date = datetime.now().strftime("%Y-%m-%d")
         
         return jsonify({
@@ -3295,10 +3320,31 @@ def perform_agent_update(agent, server_url):
             db.mark_agent_update_failed(agent_id, error_msg)
             return
         
-        # Get current agent version and build date
-        from datetime import datetime
-        current_version = "1.2.0"  # This would come from the actual agent script
+        # Get current agent version and build date from the actual agent script
+        import os
+        import re
+        
+        current_version = "1.3.0"  # Default fallback
         build_date = datetime.now().strftime('%Y-%m-%d')
+        
+        try:
+            # Read version from the agent script
+            agent_script_path = os.path.join(os.path.dirname(__file__), 'static', 'networkmap_agent.py')
+            if os.path.exists(agent_script_path):
+                with open(agent_script_path, 'r') as f:
+                    content = f.read()
+                    # Look for version information
+                    version_match = re.search(r'__version__\s*=\s*["\']([^"\'\']+)["\']', content)
+                    build_match = re.search(r'__build_date__\s*=\s*["\']([^"\'\']+)["\']', content)
+                    
+                    if version_match:
+                        current_version = version_match.group(1)
+                        print(f"Found agent version to deploy: {current_version}")
+                    if build_match:
+                        build_date = build_match.group(1)
+                        print(f"Found agent build date: {build_date}")
+        except Exception as e:
+            print(f"Warning: Could not read agent version from script: {e}")
         
         # Create agent update script
         
