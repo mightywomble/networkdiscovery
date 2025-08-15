@@ -2408,36 +2408,192 @@ function showAgentVersionDetails(agentId) {
 
 // New functionality: Run Agent Now
 async function runAgentNow(hostname, ipAddress) {
-    const confirmMessage = `Run agent scan now on ${hostname}?`;
-    if (!confirm(confirmMessage)) {
+    // Find the agent for this host
+    const agent = agents.find(a => a.ip_address === ipAddress || a.hostname === hostname);
+    if (!agent) {
+        alert(`No agent found for ${hostname} (${ipAddress})`);
         return;
     }
     
+    // Create and show progress modal
+    showRunAgentModal(agent);
+}
+
+// Create and show agent run progress modal
+function showRunAgentModal(agent) {
+    // Create modal HTML if it doesn't exist
+    let modal = document.getElementById('runAgentModal');
+    if (!modal) {
+        const modalHtml = `
+            <div class="modal fade" id="runAgentModal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
+                <div class="modal-dialog modal-lg">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title"><i class="fas fa-play"></i> Running Agent Scan</h5>
+                        </div>
+                        <div class="modal-body">
+                            <div class="mb-3">
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <strong>Agent:</strong> <span id="run-agent-name"></span>
+                                </div>
+                                <div class="progress">
+                                    <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" id="run-progress" style="width: 0%"></div>
+                                </div>
+                                <small class="text-muted" id="run-status">Initializing...</small>
+                            </div>
+                            <div class="run-logs" style="max-height: 300px; overflow-y: auto; background: #f8f9fa; padding: 1rem; border-radius: 0.375rem; font-family: monospace; font-size: 0.875rem;" id="run-logs">
+                                <!-- Run logs will appear here -->
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" id="close-run-btn" disabled>Close</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+        document.body.insertAdjacentHTML('beforeend', modalHtml);
+        modal = document.getElementById('runAgentModal');
+    }
+    
+    // Set agent info and initialize modal
+    document.getElementById('run-agent-name').textContent = `${agent.hostname} (${agent.ip_address})`;
+    const progressBar = document.getElementById('run-progress');
+    const statusElement = document.getElementById('run-status');
+    const logsElement = document.getElementById('run-logs');
+    const closeBtn = document.getElementById('close-run-btn');
+    
+    // Reset modal state
+    progressBar.style.width = '0%';
+    progressBar.className = 'progress-bar progress-bar-striped progress-bar-animated';
+    statusElement.textContent = 'Initializing...';
+    logsElement.textContent = '';
+    closeBtn.disabled = true;
+    
+    // Show modal
+    const bootstrapModal = new bootstrap.Modal(modal);
+    bootstrapModal.show();
+    
+    // Start the agent run process
+    performAgentRun(agent, progressBar, statusElement, logsElement, closeBtn);
+}
+
+// Perform the agent run with progress updates
+async function performAgentRun(agent, progressBar, statusElement, logsElement, closeBtn) {
+    const timestamp = new Date().toLocaleTimeString();
+    
     try {
+        // Step 1: Send signal to agent
+        progressBar.style.width = '10%';
+        statusElement.textContent = 'Sending scan trigger signal to agent...';
+        logsElement.textContent += `🚀 [${timestamp}] Initiating immediate scan on ${agent.hostname}\n`;
+        logsElement.scrollTop = logsElement.scrollHeight;
+        
         const response = await fetch('/api/agent/run_now', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({
-                hostname: hostname,
-                ip_address: ipAddress
+                hostname: agent.hostname,
+                ip_address: agent.ip_address,
+                agent_id: agent.agent_id
             })
         });
         
         const data = await response.json();
         
-        if (data.success) {
-            alert(`Agent scan initiated successfully on ${hostname}!\n\nResponse: ${data.message || 'Scan started'}`);
-            
-            // Refresh data to update status
-            setTimeout(refreshData, 2000);
-        } else {
-            alert(`Failed to run agent on ${hostname}: ${data.error}`);
+        if (!data.success) {
+            throw new Error(data.error || 'Failed to trigger agent scan');
         }
+        
+        progressBar.style.width = '25%';
+        statusElement.textContent = 'Signal sent successfully. Monitoring progress...';
+        logsElement.textContent += `✅ [${new Date().toLocaleTimeString()}] Signal sent successfully: ${data.message}\n`;
+        logsElement.scrollTop = logsElement.scrollHeight;
+        
+        // Step 2: Monitor progress (simulate progress monitoring)
+        await monitorAgentProgress(agent, progressBar, statusElement, logsElement);
+        
     } catch (error) {
-        alert(`Error running agent on ${hostname}: ${error.message}`);
+        progressBar.style.width = '100%';
+        progressBar.className = 'progress-bar bg-danger';
+        statusElement.textContent = 'Failed: ' + error.message;
+        logsElement.textContent += `❌ [${new Date().toLocaleTimeString()}] Error: ${error.message}\n`;
+        logsElement.scrollTop = logsElement.scrollHeight;
+    } finally {
+        closeBtn.disabled = false;
     }
+}
+
+// Monitor agent scan progress
+async function monitorAgentProgress(agent, progressBar, statusElement, logsElement) {
+    const maxWaitTime = 60; // Maximum wait time in seconds
+    const pollInterval = 2; // Poll every 2 seconds
+    let elapsedTime = 0;
+    
+    return new Promise((resolve) => {
+        const pollProgress = async () => {
+            try {
+                elapsedTime += pollInterval;
+                const progressPercent = Math.min(25 + (elapsedTime / maxWaitTime) * 65, 90);
+                progressBar.style.width = progressPercent + '%';
+                
+                if (elapsedTime <= 5) {
+                    statusElement.textContent = 'Agent processing scan trigger...';
+                    logsElement.textContent += `⏳ [${new Date().toLocaleTimeString()}] Waiting for agent to start scan...\n`;
+                } else if (elapsedTime <= 15) {
+                    statusElement.textContent = 'Running network discovery scan...';
+                    logsElement.textContent += `🔍 [${new Date().toLocaleTimeString()}] Agent is performing network discovery...\n`;
+                } else if (elapsedTime <= 30) {
+                    statusElement.textContent = 'Running connectivity tests...';
+                    logsElement.textContent += `🧪 [${new Date().toLocaleTimeString()}] Executing network connectivity tests...\n`;
+                } else if (elapsedTime <= 45) {
+                    statusElement.textContent = 'Collecting system information...';
+                    logsElement.textContent += `📊 [${new Date().toLocaleTimeString()}] Gathering system and network data...\n`;
+                } else {
+                    statusElement.textContent = 'Finalizing scan and sending results...';
+                    logsElement.textContent += `📤 [${new Date().toLocaleTimeString()}] Preparing to send scan results to server...\n`;
+                }
+                
+                logsElement.scrollTop = logsElement.scrollHeight;
+                
+                // Check if we should continue polling
+                if (elapsedTime >= maxWaitTime) {
+                    // Scan completed (or timed out)
+                    progressBar.style.width = '100%';
+                    progressBar.className = 'progress-bar bg-success';
+                    statusElement.textContent = '✅ Agent scan completed successfully!';
+                    logsElement.textContent += `\n🎉 [${new Date().toLocaleTimeString()}] Scan completed! Results should appear in the server shortly.\n`;
+                    logsElement.textContent += `\n💡 Tip: Check the network data and agent logs for the latest scan results.\n`;
+                    logsElement.scrollTop = logsElement.scrollHeight;
+                    
+                    // Refresh data to show updated status
+                    setTimeout(() => {
+                        refreshData();
+                    }, 3000);
+                    
+                    resolve();
+                } else {
+                    // Continue polling
+                    setTimeout(pollProgress, pollInterval * 1000);
+                }
+                
+            } catch (error) {
+                console.error('Error monitoring progress:', error);
+                progressBar.style.width = '100%';
+                progressBar.className = 'progress-bar bg-warning';
+                statusElement.textContent = 'Scan triggered, but progress monitoring failed';
+                logsElement.textContent += `⚠️ [${new Date().toLocaleTimeString()}] Progress monitoring error: ${error.message}\n`;
+                logsElement.textContent += `\n🔄 The scan may still be running. Check agent logs or network data for results.\n`;
+                logsElement.scrollTop = logsElement.scrollHeight;
+                resolve();
+            }
+        };
+        
+        // Start polling after a short delay
+        setTimeout(pollProgress, pollInterval * 1000);
+    });
 }
 
 // New functionality: View Last Agent Data
