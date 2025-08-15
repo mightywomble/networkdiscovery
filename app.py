@@ -3541,6 +3541,204 @@ def test_host_connectivity(host_id):
             'error': str(e)
         }), 500
 
+@app.route('/api/agent/run_now', methods=['POST'])
+def run_agent_now():
+    """Trigger an immediate agent scan"""
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({
+                'success': False,
+                'error': 'No data provided'
+            }), 400
+        
+        hostname = data.get('hostname')
+        ip_address = data.get('ip_address')
+        
+        if not all([hostname, ip_address]):
+            return jsonify({
+                'success': False,
+                'error': 'hostname and ip_address are required'
+            }), 400
+        
+        # Find host by IP or name
+        hosts = host_manager.get_all_hosts()
+        host = next((h for h in hosts if h['ip_address'] == ip_address or h['name'] == hostname), None)
+        
+        if not host:
+            return jsonify({
+                'success': False,
+                'error': f'Host {hostname} ({ip_address}) not found in configuration'
+            }), 404
+        
+        # Find the agent for this host
+        agents = db.get_all_agents()
+        agent = next((a for a in agents if a.get('ip_address') == ip_address or a.get('hostname') == hostname), None)
+        
+        if not agent:
+            return jsonify({
+                'success': False,
+                'error': f'No agent found for host {hostname} ({ip_address})'
+            }), 404
+        
+        # Send run command to agent via SSH
+        try:
+            # Command to trigger agent scan immediately by sending USR1 signal
+            run_cmd = '''
+            # Find agent process and send USR1 signal to trigger immediate scan
+            AGENT_PID=$(pgrep -f "networkmap.*agent" | head -1)
+            if [ -n "$AGENT_PID" ]; then
+                echo "Sending USR1 signal to agent process $AGENT_PID to trigger immediate scan"
+                kill -USR1 $AGENT_PID
+                sleep 2
+                echo "Signal sent successfully - agent should start scanning immediately"
+            else
+                echo "Agent process not found - attempting to start scan via service"
+                # Alternative: restart agent service to trigger scan
+                sudo systemctl restart networkmap-agent
+                echo "Agent service restarted - scan will begin shortly"
+            fi
+            '''
+            
+            result, error = host_manager.execute_command(host, run_cmd, timeout=30)
+            
+            if result and result.get('success'):
+                return jsonify({
+                    'success': True,
+                    'message': f'Agent scan triggered successfully on {hostname}',
+                    'output': result.get('stdout', ''),
+                    'agent_id': agent.get('agent_id'),
+                    'timestamp': datetime.now().isoformat()
+                })
+            else:
+                return jsonify({
+                    'success': False,
+                    'error': f'Failed to trigger agent scan: {error or "Command failed"}',
+                    'output': result.get('stderr', '') if result else ''
+                }), 500
+                
+        except Exception as e:
+            return jsonify({
+                'success': False,
+                'error': f'Error executing run command: {str(e)}'
+            }), 500
+        
+    except Exception as e:
+        print(f"Error triggering agent run: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@app.route('/api/agent/last_data/<agent_id>', methods=['GET'])
+def get_agent_last_data(agent_id):
+    """Get the last data collected by an agent"""
+    try:
+        # Get the agent info
+        agent = db.get_agent(agent_id)
+        if not agent:
+            return jsonify({
+                'success': False,
+                'error': f'Agent {agent_id} not found'
+            }), 404
+        
+        # Get latest scan results from the database
+        scan_results = db.get_latest_agent_scan_results(agent_id)
+        
+        if not scan_results:
+            return jsonify({
+                'success': False,
+                'error': 'No scan data available for this agent'
+            }), 404
+        
+        # Parse and organize the data
+        agent_data = {
+            'agent_info': {
+                'agent_id': agent_id,
+                'hostname': agent.get('hostname'),
+                'ip_address': agent.get('ip_address'),
+                'last_heartbeat': agent.get('last_heartbeat'),
+                'status': agent.get('status')
+            },
+            'last_scan': scan_results.get('scan_timestamp'),
+            'scan_duration': scan_results.get('scan_duration'),
+            'scan_status': scan_results.get('scan_status', 'completed'),
+            'network_data': [],
+            'test_results': {},
+            'errors': []
+        }
+        
+        # Parse scan data based on scan type
+        scan_data = scan_results.get('scan_data', {})
+        
+        # Handle different scan result formats
+        if isinstance(scan_data, dict):
+            # Extract network discovery data
+            if 'network_scan' in scan_data:
+                network_results = scan_data['network_scan']
+                if isinstance(network_results, list):
+                    agent_data['network_data'] = network_results
+                elif isinstance(network_results, dict) and 'hosts' in network_results:
+                    agent_data['network_data'] = network_results['hosts']
+            
+            # Extract test results
+            if 'test_results' in scan_data:
+                agent_data['test_results'] = scan_data['test_results']
+            
+            # Extract errors if any
+            if 'errors' in scan_data:
+                agent_data['errors'] = scan_data['errors']
+            
+            # Handle legacy format where scan_data itself contains hosts
+            if 'hosts' in scan_data:
+                agent_data['network_data'] = scan_data['hosts']
+        
+        elif isinstance(scan_data, list):
+            # If scan_data is directly a list of hosts
+            agent_data['network_data'] = scan_data
+        
+        # If no structured data found, try to extract from raw scan results
+        if not agent_data['network_data'] and not agent_data['test_results']:
+            # Get all scan results for this agent (last few)
+            all_results = db.get_agent_scan_results(agent_id, limit=5)
+            
+            for result in all_results:
+                result_data = result.get('scan_data', {})
+                
+                # Try to extract network data
+                if isinstance(result_data, dict):
+                    if 'hosts' in result_data:
+                        agent_data['network_data'].extend(result_data['hosts'])
+                    elif 'discovered_hosts' in result_data:
+                        agent_data['network_data'].extend(result_data['discovered_hosts'])
+                
+                elif isinstance(result_data, list):
+                    agent_data['network_data'].extend(result_data)
+        
+        # Remove duplicates from network data based on IP address
+        if agent_data['network_data']:
+            seen_ips = set()
+            unique_hosts = []
+            for host in agent_data['network_data']:
+                if isinstance(host, dict) and 'ip_address' in host:
+                    if host['ip_address'] not in seen_ips:
+                        seen_ips.add(host['ip_address'])
+                        unique_hosts.append(host)
+            agent_data['network_data'] = unique_hosts
+        
+        return jsonify({
+            'success': True,
+            'agent_data': agent_data,
+            'timestamp': datetime.now().isoformat()
+        })
+        
+    except Exception as e:
+        print(f"Error getting agent last data: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
 if __name__ == '__main__':
     print("Initializing NetworkMap Flask Application...")
     
