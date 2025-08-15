@@ -1129,3 +1129,405 @@ class Database:
                 'recent_heartbeats': recent_heartbeats,
                 'recent_logs': recent_logs
             }
+    
+    # Advanced statistics methods for the statistics dashboard
+    def get_network_overview_stats(self):
+        """Get comprehensive network overview statistics"""
+        with self.get_connection() as conn:
+            stats = {}
+            
+            # Host statistics
+            cursor = conn.execute('''
+                SELECT 
+                    COUNT(*) as total_hosts,
+                    COUNT(CASE WHEN status = 'online' THEN 1 END) as online_hosts,
+                    COUNT(CASE WHEN status = 'offline' THEN 1 END) as offline_hosts,
+                    COUNT(CASE WHEN last_seen > datetime('now', '-1 hour') THEN 1 END) as active_last_hour,
+                    COUNT(CASE WHEN last_seen > datetime('now', '-24 hour') THEN 1 END) as active_last_day
+                FROM hosts
+            ''')
+            stats['hosts'] = dict(cursor.fetchone())
+            
+            # Connection statistics
+            cursor = conn.execute('''
+                SELECT 
+                    COUNT(*) as total_connections,
+                    COUNT(DISTINCT source_host_id) as hosts_with_connections,
+                    SUM(connection_count) as total_connection_count,
+                    SUM(bytes_sent) as total_bytes_sent,
+                    SUM(bytes_received) as total_bytes_received,
+                    COUNT(CASE WHEN last_seen > datetime('now', '-1 hour') THEN 1 END) as active_last_hour
+                FROM network_connections
+            ''')
+            stats['connections'] = dict(cursor.fetchone())
+            
+            # Convert None values to 0
+            for key in stats['connections']:
+                if stats['connections'][key] is None:
+                    stats['connections'][key] = 0
+            
+            # Port statistics
+            cursor = conn.execute('''
+                SELECT 
+                    COUNT(*) as total_open_ports,
+                    COUNT(DISTINCT host_id) as hosts_with_open_ports,
+                    COUNT(DISTINCT port) as unique_ports
+                FROM port_scans
+                WHERE state = 'open'
+            ''')
+            stats['ports'] = dict(cursor.fetchone())
+            
+            # Agent statistics
+            cursor = conn.execute('''
+                SELECT 
+                    COUNT(*) as total_agents,
+                    COUNT(CASE WHEN status = 'active' THEN 1 END) as active_agents,
+                    COUNT(CASE WHEN last_heartbeat > datetime('now', '-10 minute') THEN 1 END) as recently_active,
+                    COUNT(DISTINCT hostname) as unique_hosts
+                FROM agents
+            ''')
+            stats['agents'] = dict(cursor.fetchone())
+            
+            # Recent scan statistics
+            cursor = conn.execute('''
+                SELECT 
+                    COUNT(*) as total_scans,
+                    COUNT(DISTINCT agent_id) as unique_agents,
+                    COUNT(CASE WHEN scan_timestamp > datetime('now', '-24 hour') THEN 1 END) as scans_last_day,
+                    COUNT(CASE WHEN scan_timestamp > datetime('now', '-1 hour') THEN 1 END) as scans_last_hour
+                FROM agent_scan_results
+            ''')
+            stats['scans'] = dict(cursor.fetchone())
+            
+            return stats
+    
+    def get_lan_vs_external_stats(self, local_subnets=None):
+        """Get statistics comparing LAN vs external network connections
+        
+        Args:
+            local_subnets: List of local subnet CIDR patterns (e.g. ['192.168.%', '10.%'])
+                           If None, will use common private IP patterns
+        """
+        if local_subnets is None:
+            # Default local subnet patterns
+            local_subnets = ['192.168.%', '10.%', '172.1_.%', '172.2_.%', '172.3_.%', '127.%']
+        
+        with self.get_connection() as conn:
+            results = {
+                'lan': {},
+                'external': {},
+                'total': {},
+                'ratios': {}
+            }
+            
+            # Build the SQL WHERE clause for local subnets
+            local_conditions = []
+            for subnet in local_subnets:
+                local_conditions.append(f"dest_ip LIKE '{subnet}'")
+            local_where = " OR ".join(local_conditions)
+            
+            # LAN connections
+            cursor = conn.execute(f'''
+                SELECT 
+                    COUNT(*) as connection_count,
+                    COUNT(DISTINCT source_host_id) as source_hosts,
+                    COUNT(DISTINCT dest_ip) as destination_ips,
+                    SUM(connection_count) as total_connections,
+                    SUM(bytes_sent) as bytes_sent,
+                    SUM(bytes_received) as bytes_received,
+                    COUNT(DISTINCT dest_port) as unique_ports
+                FROM network_connections
+                WHERE {local_where}
+            ''')
+            results['lan'] = dict(cursor.fetchone())
+            
+            # External connections (not matching local subnets)
+            cursor = conn.execute(f'''
+                SELECT 
+                    COUNT(*) as connection_count,
+                    COUNT(DISTINCT source_host_id) as source_hosts,
+                    COUNT(DISTINCT dest_ip) as destination_ips,
+                    SUM(connection_count) as total_connections,
+                    SUM(bytes_sent) as bytes_sent,
+                    SUM(bytes_received) as bytes_received,
+                    COUNT(DISTINCT dest_port) as unique_ports
+                FROM network_connections
+                WHERE NOT ({local_where})
+            ''')
+            results['external'] = dict(cursor.fetchone())
+            
+            # Total connections
+            cursor = conn.execute('''
+                SELECT 
+                    COUNT(*) as connection_count,
+                    COUNT(DISTINCT source_host_id) as source_hosts,
+                    COUNT(DISTINCT dest_ip) as destination_ips,
+                    SUM(connection_count) as total_connections,
+                    SUM(bytes_sent) as bytes_sent,
+                    SUM(bytes_received) as bytes_received,
+                    COUNT(DISTINCT dest_port) as unique_ports
+                FROM network_connections
+            ''')
+            results['total'] = dict(cursor.fetchone())
+            
+            # Convert None values to 0
+            for category in ['lan', 'external', 'total']:
+                for key in results[category]:
+                    if results[category][key] is None:
+                        results[category][key] = 0
+            
+            # Calculate ratios
+            if results['total']['connection_count'] > 0:
+                results['ratios']['lan_pct'] = round(results['lan']['connection_count'] / results['total']['connection_count'] * 100, 1)
+                results['ratios']['external_pct'] = round(results['external']['connection_count'] / results['total']['connection_count'] * 100, 1)
+            else:
+                results['ratios']['lan_pct'] = 0
+                results['ratios']['external_pct'] = 0
+                
+            if results['total']['bytes_sent'] > 0:
+                results['ratios']['lan_bytes_pct'] = round((results['lan']['bytes_sent'] + results['lan']['bytes_received']) / 
+                                                   (results['total']['bytes_sent'] + results['total']['bytes_received']) * 100, 1)
+                results['ratios']['external_bytes_pct'] = round((results['external']['bytes_sent'] + results['external']['bytes_received']) / 
+                                                      (results['total']['bytes_sent'] + results['total']['bytes_received']) * 100, 1)
+            else:
+                results['ratios']['lan_bytes_pct'] = 0
+                results['ratios']['external_bytes_pct'] = 0
+            
+            return results
+    
+    def get_historical_connection_stats(self, time_periods=None):
+        """Get historical connection statistics over different time periods
+        
+        Args:
+            time_periods: List of time periods in hours to analyze.
+                         If None, will use [1, 6, 24, 72, 168] (1 hour, 6 hours, 1 day, 3 days, 1 week)
+        """
+        if time_periods is None:
+            time_periods = [1, 6, 24, 72, 168]  # hours
+        
+        results = {}
+        
+        with self.get_connection() as conn:
+            for hours in time_periods:
+                period_name = f"{hours}h"
+                if hours == 24:
+                    period_name = "1d"  # 1 day
+                elif hours == 168:
+                    period_name = "1w"  # 1 week
+                elif hours == 72:
+                    period_name = "3d"  # 3 days
+                
+                cutoff = datetime.now() - timedelta(hours=hours)
+                
+                cursor = conn.execute('''
+                    SELECT 
+                        COUNT(*) as connections,
+                        COUNT(DISTINCT source_host_id) as active_hosts,
+                        COUNT(DISTINCT dest_ip) as dest_ips,
+                        SUM(connection_count) as total_connects,
+                        SUM(bytes_sent) as bytes_sent,
+                        SUM(bytes_received) as bytes_received
+                    FROM network_connections
+                    WHERE last_seen > ?
+                ''', (cutoff,))
+                
+                period_stats = dict(cursor.fetchone())
+                
+                # Convert None values to 0
+                for key in period_stats:
+                    if period_stats[key] is None:
+                        period_stats[key] = 0
+                
+                # Add human-readable traffic volume
+                period_stats['total_traffic_bytes'] = period_stats['bytes_sent'] + period_stats['bytes_received']
+                period_stats['total_traffic'] = self._format_bytes(period_stats['total_traffic_bytes'])
+                
+                results[period_name] = period_stats
+            
+            return results
+    
+    def get_top_hosts_by_connections(self, limit=10):
+        """Get top hosts by connection count"""
+        with self.get_connection() as conn:
+            cursor = conn.execute('''
+                SELECT 
+                    h.id as host_id,
+                    h.name as host_name,
+                    h.ip_address,
+                    COUNT(nc.id) as connection_count,
+                    SUM(nc.bytes_sent) as bytes_sent,
+                    SUM(nc.bytes_received) as bytes_received,
+                    COUNT(DISTINCT nc.dest_ip) as unique_destinations,
+                    MAX(nc.last_seen) as last_activity
+                FROM hosts h
+                JOIN network_connections nc ON h.id = nc.source_host_id
+                GROUP BY h.id
+                ORDER BY connection_count DESC
+                LIMIT ?
+            ''', (limit,))
+            
+            results = []
+            for row in cursor.fetchall():
+                host_data = dict(row)
+                host_data['total_traffic_bytes'] = host_data['bytes_sent'] + host_data['bytes_received']
+                host_data['total_traffic'] = self._format_bytes(host_data['total_traffic_bytes'])
+                results.append(host_data)
+            
+            return results
+    
+    def get_top_external_destinations(self, limit=10, local_subnets=None):
+        """Get top external destinations by connection count
+        
+        Args:
+            limit: Number of top destinations to return
+            local_subnets: List of local subnet CIDR patterns (e.g. ['192.168.%', '10.%'])
+                           If None, will use common private IP patterns
+        """
+        if local_subnets is None:
+            # Default local subnet patterns
+            local_subnets = ['192.168.%', '10.%', '172.1_.%', '172.2_.%', '172.3_.%', '127.%']
+        
+        # Build the SQL WHERE clause for non-local subnets
+        local_conditions = []
+        for subnet in local_subnets:
+            local_conditions.append(f"dest_ip NOT LIKE '{subnet}'")
+        external_where = " AND ".join(local_conditions)
+        
+        with self.get_connection() as conn:
+            cursor = conn.execute(f'''
+                SELECT 
+                    dest_ip,
+                    COUNT(*) as connection_count,
+                    SUM(connection_count) as total_connections,
+                    COUNT(DISTINCT source_host_id) as source_hosts,
+                    COUNT(DISTINCT dest_port) as dest_ports,
+                    SUM(bytes_sent) as bytes_sent,
+                    SUM(bytes_received) as bytes_received,
+                    MAX(last_seen) as last_seen
+                FROM network_connections
+                WHERE {external_where}
+                GROUP BY dest_ip
+                ORDER BY connection_count DESC
+                LIMIT ?
+            ''', (limit,))
+            
+            results = []
+            for row in cursor.fetchall():
+                dest_data = dict(row)
+                dest_data['total_traffic_bytes'] = dest_data['bytes_sent'] + dest_data['bytes_received']
+                dest_data['total_traffic'] = self._format_bytes(dest_data['total_traffic_bytes'])
+                results.append(dest_data)
+            
+            return results
+    
+    def get_connection_history_by_hour(self, hours=24):
+        """Get connection history aggregated by hour for the last N hours"""
+        with self.get_connection() as conn:
+            results = []
+            
+            # Get hour boundaries from most recent connection down to X hours ago
+            cutoff = datetime.now() - timedelta(hours=hours)
+            
+            # Query hourly connection stats
+            cursor = conn.execute('''
+                SELECT 
+                    strftime('%Y-%m-%d %H:00:00', last_seen) as hour,
+                    COUNT(*) as connections,
+                    COUNT(DISTINCT source_host_id) as unique_hosts,
+                    SUM(connection_count) as total_connections,
+                    SUM(bytes_sent) as bytes_sent,
+                    SUM(bytes_received) as bytes_received
+                FROM network_connections
+                WHERE last_seen > ?
+                GROUP BY strftime('%Y-%m-%d %H', last_seen)
+                ORDER BY hour ASC
+            ''', (cutoff,))
+            
+            for row in cursor.fetchall():
+                hour_data = dict(row)
+                hour_data['total_traffic_bytes'] = hour_data.get('bytes_sent', 0) + hour_data.get('bytes_received', 0)
+                hour_data['total_traffic'] = self._format_bytes(hour_data['total_traffic_bytes'])
+                results.append(hour_data)
+            
+            return results
+    
+    def get_host_activity_timeline(self, host_id, days=7):
+        """Get timeline of host activity over the specified number of days"""
+        with self.get_connection() as conn:
+            cutoff = datetime.now() - timedelta(days=days)
+            
+            # Get daily connection stats for this host
+            cursor = conn.execute('''
+                SELECT 
+                    strftime('%Y-%m-%d', last_seen) as date,
+                    COUNT(*) as connections,
+                    COUNT(DISTINCT dest_ip) as unique_destinations,
+                    SUM(connection_count) as total_connections,
+                    SUM(bytes_sent) as bytes_sent,
+                    SUM(bytes_received) as bytes_received
+                FROM network_connections
+                WHERE source_host_id = ? AND last_seen > ?
+                GROUP BY strftime('%Y-%m-%d', last_seen)
+                ORDER BY date ASC
+            ''', (host_id, cutoff))
+            
+            daily_stats = []
+            for row in cursor.fetchall():
+                day_data = dict(row)
+                day_data['total_traffic_bytes'] = day_data.get('bytes_sent', 0) + day_data.get('bytes_received', 0)
+                day_data['total_traffic'] = self._format_bytes(day_data['total_traffic_bytes'])
+                daily_stats.append(day_data)
+            
+            # Get port scan history
+            cursor = conn.execute('''
+                SELECT 
+                    strftime('%Y-%m-%d', scan_time) as date,
+                    COUNT(*) as open_ports,
+                    GROUP_CONCAT(DISTINCT port) as port_list
+                FROM port_scans
+                WHERE host_id = ? AND scan_time > ?
+                GROUP BY strftime('%Y-%m-%d', scan_time)
+                ORDER BY date ASC
+            ''', (host_id, cutoff))
+            
+            port_history = [dict(row) for row in cursor.fetchall()]
+            
+            # Get agent scan history if this host has agents
+            cursor = conn.execute('''
+                SELECT agent_id FROM agents WHERE host_id = ?
+            ''', (host_id,))
+            
+            agent_history = []
+            for agent_row in cursor.fetchall():
+                agent_id = agent_row[0]
+                cursor = conn.execute('''
+                    SELECT 
+                        strftime('%Y-%m-%d', scan_timestamp) as date,
+                        COUNT(*) as scan_count,
+                        MAX(scan_timestamp) as last_scan
+                    FROM agent_scan_results
+                    WHERE agent_id = ? AND scan_timestamp > ?
+                    GROUP BY strftime('%Y-%m-%d', scan_timestamp)
+                    ORDER BY date ASC
+                ''', (agent_id, cutoff))
+                
+                for row in cursor.fetchall():
+                    agent_history.append(dict(row))
+            
+            return {
+                'daily_connections': daily_stats,
+                'port_history': port_history,
+                'agent_scans': agent_history
+            }
+    
+    # Helper methods
+    def _format_bytes(self, bytes_value):
+        """Format bytes into human-readable format"""
+        if bytes_value is None:
+            return "0 B"
+            
+        bytes_value = int(bytes_value)
+        for unit in ['B', 'KB', 'MB', 'GB', 'TB']:
+            if bytes_value < 1024 or unit == 'TB':
+                return f"{bytes_value:.1f} {unit}"
+            bytes_value /= 1024

@@ -4222,6 +4222,249 @@ def run_agent_with_progress(agent, host):
         cleanup_thread.daemon = True
         cleanup_thread.start()
 
+# Statistics API endpoints
+@app.route('/api/stats/overview', methods=['GET'])
+def get_statistics_overview():
+    """Get comprehensive network overview statistics"""
+    try:
+        overview_stats = db.get_network_overview_stats()
+        agent_stats = db.get_agent_stats()
+        network_stats = db.get_network_stats()
+        
+        # Combine all overview data
+        combined_stats = {
+            'hosts': overview_stats.get('hosts', {}),
+            'connections': overview_stats.get('connections', {}),
+            'ports': overview_stats.get('ports', {}),
+            'agents': overview_stats.get('agents', {}),
+            'scans': overview_stats.get('scans', {}),
+            'network_legacy': network_stats,  # Keep legacy stats for compatibility
+            'timestamp': datetime.now().isoformat()
+        }
+        
+        return jsonify({
+            'success': True,
+            'data': combined_stats
+        })
+        
+    except Exception as e:
+        print(f"Error getting overview statistics: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@app.route('/api/stats/lan_analysis', methods=['GET'])
+def get_lan_analysis_stats():
+    """Get LAN vs external connection analysis"""
+    try:
+        # Get custom subnets from query parameters if provided
+        custom_subnets = request.args.get('subnets')
+        if custom_subnets:
+            subnets = [s.strip() for s in custom_subnets.split(',')]
+        else:
+            subnets = None  # Use default subnets
+        
+        lan_stats = db.get_lan_vs_external_stats(local_subnets=subnets)
+        top_external = db.get_top_external_destinations(limit=10, local_subnets=subnets)
+        
+        return jsonify({
+            'success': True,
+            'data': {
+                'lan_vs_external': lan_stats,
+                'top_external_destinations': top_external,
+                'timestamp': datetime.now().isoformat()
+            }
+        })
+        
+    except Exception as e:
+        print(f"Error getting LAN analysis: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@app.route('/api/stats/hosts', methods=['GET'])
+def get_host_statistics():
+    """Get detailed host statistics"""
+    try:
+        limit = int(request.args.get('limit', 10))
+        top_hosts = db.get_top_hosts_by_connections(limit=limit)
+        
+        # Get individual host details if requested
+        host_id = request.args.get('host_id')
+        host_timeline = None
+        if host_id:
+            days = int(request.args.get('days', 7))
+            host_timeline = db.get_host_activity_timeline(int(host_id), days=days)
+        
+        return jsonify({
+            'success': True,
+            'data': {
+                'top_hosts': top_hosts,
+                'host_timeline': host_timeline,
+                'timestamp': datetime.now().isoformat()
+            }
+        })
+        
+    except Exception as e:
+        print(f"Error getting host statistics: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@app.route('/api/stats/historical', methods=['GET'])
+def get_historical_statistics():
+    """Get historical network statistics"""
+    try:
+        # Get time periods from query parameters
+        periods_param = request.args.get('periods', '1,6,24,72,168')
+        time_periods = [int(p.strip()) for p in periods_param.split(',')]
+        
+        historical_stats = db.get_historical_connection_stats(time_periods=time_periods)
+        
+        # Get hourly breakdown for charts
+        hours = int(request.args.get('hours', 24))
+        hourly_history = db.get_connection_history_by_hour(hours=hours)
+        
+        return jsonify({
+            'success': True,
+            'data': {
+                'period_stats': historical_stats,
+                'hourly_history': hourly_history,
+                'timestamp': datetime.now().isoformat()
+            }
+        })
+        
+    except Exception as e:
+        print(f"Error getting historical statistics: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@app.route('/api/stats/connections', methods=['GET'])
+def get_connection_statistics():
+    """Get detailed connection statistics"""
+    try:
+        hours = int(request.args.get('hours', 24))
+        recent_connections = db.get_recent_connections(hours=hours)
+        
+        # Get connection breakdown by protocol, port, etc.
+        with db.get_connection() as conn:
+            # Protocol breakdown
+            cursor = conn.execute('''
+                SELECT 
+                    protocol,
+                    COUNT(*) as connection_count,
+                    SUM(connection_count) as total_connections,
+                    SUM(bytes_sent + bytes_received) as total_traffic
+                FROM network_connections
+                WHERE last_seen > datetime('now', '-{} hour')
+                GROUP BY protocol
+                ORDER BY connection_count DESC
+            '''.format(hours))
+            protocol_stats = [dict(row) for row in cursor.fetchall()]
+            
+            # Top ports
+            cursor = conn.execute('''
+                SELECT 
+                    dest_port,
+                    COUNT(*) as connection_count,
+                    SUM(connection_count) as total_connections,
+                    COUNT(DISTINCT source_host_id) as unique_sources
+                FROM network_connections
+                WHERE last_seen > datetime('now', '-{} hour')
+                GROUP BY dest_port
+                ORDER BY connection_count DESC
+                LIMIT 20
+            '''.format(hours))
+            port_stats = [dict(row) for row in cursor.fetchall()]
+        
+        return jsonify({
+            'success': True,
+            'data': {
+                'recent_connections': recent_connections[:100],  # Limit for performance
+                'protocol_breakdown': protocol_stats,
+                'top_ports': port_stats,
+                'hours_analyzed': hours,
+                'timestamp': datetime.now().isoformat()
+            }
+        })
+        
+    except Exception as e:
+        print(f"Error getting connection statistics: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@app.route('/api/stats/realtime', methods=['GET'])
+def get_realtime_statistics():
+    """Get real-time statistics for dashboard updates"""
+    try:
+        # Get current timestamp for real-time data
+        current_time = datetime.now()
+        
+        # Get very recent data (last 5 minutes) for real-time monitoring
+        recent_cutoff = current_time - timedelta(minutes=5)
+        
+        with db.get_connection() as conn:
+            # Recent activity counters
+            cursor = conn.execute('''
+                SELECT COUNT(*) as recent_connections
+                FROM network_connections 
+                WHERE last_seen > ?
+            ''', (recent_cutoff,))
+            recent_activity = dict(cursor.fetchone())
+            
+            # Active hosts in last 5 minutes
+            cursor = conn.execute('''
+                SELECT COUNT(DISTINCT source_host_id) as active_hosts
+                FROM network_connections 
+                WHERE last_seen > ?
+            ''', (recent_cutoff,))
+            active_hosts = dict(cursor.fetchone())
+            
+            # Recent agent activity
+            cursor = conn.execute('''
+                SELECT 
+                    COUNT(*) as recent_heartbeats,
+                    COUNT(CASE WHEN status = 'active' THEN 1 END) as active_agents
+                FROM agents 
+                WHERE last_heartbeat > ?
+            ''', (recent_cutoff,))
+            agent_activity = dict(cursor.fetchone())
+        
+        realtime_data = {
+            'current_time': current_time.isoformat(),
+            'recent_connections': recent_activity.get('recent_connections', 0),
+            'active_hosts': active_hosts.get('active_hosts', 0),
+            'recent_heartbeats': agent_activity.get('recent_heartbeats', 0),
+            'active_agents': agent_activity.get('active_agents', 0),
+            'update_interval': 5,  # seconds
+            'last_update': current_time.isoformat()
+        }
+        
+        return jsonify({
+            'success': True,
+            'data': realtime_data
+        })
+        
+    except Exception as e:
+        print(f"Error getting real-time statistics: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+# Statistics page route
+@app.route('/statistics')
+def statistics_dashboard():
+    """Render the statistics dashboard page"""
+    return render_template('statistics.html')
+
 if __name__ == '__main__':
     print("Initializing NetworkMap Flask Application...")
     
