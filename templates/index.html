@@ -1088,7 +1088,7 @@ function updateHostScanStatusCards(hosts) {
                     <div class="pf-c-progress pf-u-mb-sm" style="--pf-c-progress--Height: 8px;">
                         <div class="pf-c-progress__bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${progress || 0}">
                             <div class="pf-c-progress__indicator ${status === 'scanning' ? 'pf-m-progress-bar-animated' : ''}" 
-                                 style="width: ${progress || 0}%; background-color: var(--pf-global--${statusClass === 'primary' ? 'primary' : statusClass === 'success' ? 'success' : statusClass === 'danger' ? 'danger' : 'info'}--color--100);">
+                                 style="width: ${progress || 0}%; background-color: var(--pf-global--${statusClass === 'primary' ? 'primary' : statusClass === 'success' ? 'success' : statusClass === 'danger' ? 'danger' : 'secondary'}--color--100);">
                                 <span class="pf-screen-reader">${progress || 0}% complete</span>
                             </div>
                         </div>
