@@ -2593,62 +2593,164 @@ function showFinalInstallationResults(data) {
     const successRate = totalHosts > 0 ? Math.round((successfulHosts / totalHosts) * 100) : 0;
     
     let resultHtml = `
-        <div class="alert alert-${successRate === 100 ? 'success' : successRate > 70 ? 'warning' : 'danger'}">
-            <h5><i class="fas fa-${successRate === 100 ? 'check-circle' : successRate > 70 ? 'exclamation-triangle' : 'times-circle'} me-2"></i>
+        <div class="pf-c-alert pf-m-${successRate === 100 ? 'success' : successRate > 70 ? 'warning' : 'danger'}" aria-label="Installation completion alert">
+            <div class="pf-c-alert__icon">
+                <i class="fas fa-${successRate === 100 ? 'check-circle' : successRate > 70 ? 'exclamation-triangle' : 'times-circle'}" aria-hidden="true"></i>
+            </div>
+            <div class="pf-c-alert__title">
                 Installation ${successRate === 100 ? 'Completed Successfully' : successRate > 70 ? 'Mostly Successful' : 'Completed with Errors'}
-            </h5>
-            <p><strong>Success Rate:</strong> ${successRate}% (${successfulHosts}/${totalHosts} hosts)</p>
-            ${errorHosts > 0 ? `<p class="text-danger"><strong>Failed Hosts:</strong> ${errorHosts}</p>` : ''}
+            </div>
+            <div class="pf-c-alert__description">
+                <p><strong>Success Rate:</strong> ${successRate}% (${successfulHosts}/${totalHosts} hosts)</p>
+                ${errorHosts > 0 ? `<p><strong>Failed Hosts:</strong> ${errorHosts}</p>` : ''}
+            </div>
         </div>
         
-        <div class="card">
-            <div class="card-header">
-                <h6 class="mb-0"><i class="fas fa-list-check me-2"></i>Detailed Host Results</h6>
+        <div class="pf-c-card pf-u-mt-md">
+            <div class="pf-c-card__header">
+                <div class="pf-c-card__header-main">
+                    <h2 class="pf-c-card__title">
+                        <i class="fas fa-server pf-u-mr-sm"></i>Host Installation Results
+                    </h2>
+                </div>
             </div>
-            <div class="card-body">
-                <div class="row">
+            <div class="pf-c-card__body">
+                <div class="pf-l-gallery pf-m-gutter" style="--pf-l-gallery--GridTemplateColumns--min: 300px;">
     `;
     
     Object.entries(hosts).forEach(([hostname, hostData]) => {
-        const { status, installed_tools, missing_tools, error, tool_categories } = hostData;
+        const { status, installed_tools, missing_tools, error, tool_categories, progress, current_action } = hostData;
         
         const isSuccess = status === 'complete';
         const statusClass = isSuccess ? 'success' : 'danger';
         const statusIcon = isSuccess ? 'check-circle' : 'times-circle';
         
-        let toolsInfo = '';
+        // Calculate tools summary
+        let totalTools = 0;
+        let installedToolsCount = 0;
+        let categoryBreakdown = '';
+        
         if (tool_categories) {
-            const totalTools = Object.values(tool_categories).reduce((sum, cat) => sum + cat.total, 0);
-            const installedToolsCount = Object.values(tool_categories).reduce((sum, cat) => sum + cat.installed, 0);
-            toolsInfo = `${installedToolsCount}/${totalTools} tools available`;
+            totalTools = Object.values(tool_categories).reduce((sum, cat) => sum + cat.total, 0);
+            installedToolsCount = Object.values(tool_categories).reduce((sum, cat) => sum + cat.installed, 0);
             
-            // Add category breakdown
-            const categoryBreakdown = Object.entries(tool_categories)
-                .map(([cat, data]) => `${cat.replace(/_/g, ' ')}: ${data.installed}/${data.total}`)
-                .join(', ');
-            toolsInfo += `<br><small class="text-muted">${categoryBreakdown}</small>`;
+            // Create detailed category breakdown
+            categoryBreakdown = '<div class="pf-u-mt-sm">';
+            Object.entries(tool_categories).forEach(([category, categoryData]) => {
+                const { total, installed, missing } = categoryData;
+                const percentage = total > 0 ? Math.round((installed / total) * 100) : 0;
+                const categoryClass = percentage === 100 ? 'success' : percentage > 50 ? 'warning' : 'danger';
+                const categoryName = category.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+                
+                categoryBreakdown += `
+                    <div class="pf-u-display-flex pf-u-justify-content-space-between pf-u-align-items-center pf-u-mb-xs">
+                        <span class="pf-u-font-size-sm">${categoryName}:</span>
+                        <span class="pf-c-label pf-m-${categoryClass}">
+                            <span class="pf-c-label__content">${installed}/${total}</span>
+                        </span>
+                    </div>
+                `;
+            });
+            categoryBreakdown += '</div>';
         } else if (installed_tools && missing_tools) {
-            const totalTools = installed_tools.length + missing_tools.length;
-            toolsInfo = `${installed_tools.length}/${totalTools} tools available`;
+            totalTools = installed_tools.length + missing_tools.length;
+            installedToolsCount = installed_tools.length;
+            
+            categoryBreakdown = `
+                <div class="pf-u-mt-sm">
+                    <div class="pf-u-display-flex pf-u-justify-content-space-between pf-u-mb-xs">
+                        <span class="pf-u-font-size-sm">Installed:</span>
+                        <span class="pf-c-label pf-m-success">
+                            <span class="pf-c-label__content">${installed_tools.length}</span>
+                        </span>
+                    </div>
+                    <div class="pf-u-display-flex pf-u-justify-content-space-between">
+                        <span class="pf-u-font-size-sm">Missing:</span>
+                        <span class="pf-c-label pf-m-danger">
+                            <span class="pf-c-label__content">${missing_tools.length}</span>
+                        </span>
+                    </div>
+                </div>
+            `;
         }
         
+        const completionPercentage = totalTools > 0 ? Math.round((installedToolsCount / totalTools) * 100) : 0;
+        
         resultHtml += `
-            <div class="col-md-6 mb-3">
-                <div class="card border-${statusClass} h-100">
-                    <div class="card-body">
-                        <div class="d-flex justify-content-between align-items-start mb-2">
-                            <div>
-                                <h6 class="card-title mb-1">
-                                    <i class="fas fa-${statusIcon} text-${statusClass} me-2"></i>${hostname}
-                                </h6>
-                                ${toolsInfo ? `<div class="small">${toolsInfo}</div>` : ''}
-                            </div>
-                            <span class="badge bg-${statusClass}">
-                                ${isSuccess ? 'Success' : 'Failed'}
+            <div class="pf-c-card nm-host-result-card ${isSuccess ? 'nm-success-card' : 'nm-error-card'}" style="border-left: 4px solid ${isSuccess ? 'var(--pf-global--success-color--100)' : 'var(--pf-global--danger-color--100)'}; min-height: 280px;">
+                <div class="pf-c-card__header">
+                    <div class="pf-c-card__header-main">
+                        <div class="pf-u-display-flex pf-u-justify-content-space-between pf-u-align-items-center">
+                            <h3 class="pf-c-card__title pf-u-font-size-lg">
+                                <i class="fas fa-server pf-u-mr-sm"></i>${hostname}
+                            </h3>
+                            <span class="pf-c-label pf-m-${statusClass}">
+                                <span class="pf-c-label__content">
+                                    <i class="fas fa-${statusIcon} pf-u-mr-xs"></i>
+                                    ${isSuccess ? 'Success' : 'Failed'}
+                                </span>
                             </span>
                         </div>
-                        ${error ? `<div class="alert alert-danger alert-sm py-1 px-2 mb-0"><small>Error: ${error}</small></div>` : ''}
                     </div>
+                </div>
+                <div class="pf-c-card__body">
+                    <!-- Overall Progress Summary -->
+                    <div class="pf-u-mb-md">
+                        <div class="pf-u-display-flex pf-u-justify-content-space-between pf-u-align-items-center pf-u-mb-xs">
+                            <span class="pf-u-font-weight-bold pf-u-font-size-sm">Installation Progress:</span>
+                            <span class="pf-u-font-weight-bold pf-u-${isSuccess ? 'success' : 'danger'}-color-100">${progress || 100}%</span>
+                        </div>
+                        <div class="nm-custom-progress-container" style="height: 8px; width: 100%; background-color: #EDEDED; border-radius: 4px; overflow: hidden;">
+                            <div role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${progress || 100}"
+                                 class="nm-custom-progress-bar"
+                                 style="height: 100%; width: ${progress || 100}%; 
+                                        background-color: ${isSuccess ? '#3E8635' : '#C9190B'};
+                                        transition: width 0.3s ease-in-out;
+                                        border-radius: 4px;"
+                                 title="${progress || 100}% complete">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Tools Summary -->
+                    <div class="pf-u-mb-md">
+                        <div class="pf-u-display-flex pf-u-justify-content-space-between pf-u-align-items-center pf-u-mb-sm">
+                            <span class="pf-u-font-weight-bold pf-u-font-size-sm">Tools Available:</span>
+                            <span class="pf-c-label pf-m-${completionPercentage === 100 ? 'success' : completionPercentage > 70 ? 'warning' : 'danger'}">
+                                <span class="pf-c-label__content">${installedToolsCount}/${totalTools} (${completionPercentage}%)</span>
+                            </span>
+                        </div>
+                        ${categoryBreakdown}
+                    </div>
+                    
+                    <!-- Status Information -->
+                    <div class="pf-u-mb-sm">
+                        <div class="pf-u-font-size-sm pf-u-color-200">
+                            <strong>Last Action:</strong> ${current_action || (isSuccess ? 'Installation completed successfully' : 'Installation failed')}
+                        </div>
+                    </div>
+                    
+                    <!-- Error Display -->
+                    ${error ? `
+                        <div class="pf-c-alert pf-m-danger pf-m-inline pf-u-mt-sm" style="--pf-c-alert--PaddingTop: 0.5rem; --pf-c-alert--PaddingBottom: 0.5rem;">
+                            <div class="pf-c-alert__icon">
+                                <i class="fas fa-exclamation-triangle" aria-hidden="true"></i>
+                            </div>
+                            <div class="pf-c-alert__title pf-u-font-size-sm">Installation Error</div>
+                            <div class="pf-c-alert__description pf-u-font-size-sm">${error}</div>
+                        </div>
+                    ` : ''}
+                    
+                    <!-- Success Summary -->
+                    ${isSuccess && totalTools > 0 ? `
+                        <div class="pf-c-alert pf-m-success pf-m-inline pf-u-mt-sm" style="--pf-c-alert--PaddingTop: 0.5rem; --pf-c-alert--PaddingBottom: 0.5rem;">
+                            <div class="pf-c-alert__icon">
+                                <i class="fas fa-check-circle" aria-hidden="true"></i>
+                            </div>
+                            <div class="pf-c-alert__title pf-u-font-size-sm">Installation Complete</div>
+                            <div class="pf-c-alert__description pf-u-font-size-sm">All required network analysis tools are now available.</div>
+                        </div>
+                    ` : ''}
                 </div>
             </div>
         `;
@@ -2664,11 +2766,11 @@ function showFinalInstallationResults(data) {
     
     // Show appropriate buttons
     if (successfulHosts > 0) {
-        const verifyButton = document.querySelector('.verify-button');
+        const verifyButton = document.querySelector('.install-verify-button');
         if (verifyButton) verifyButton.style.display = 'inline-block';
     }
     if (errorHosts > 0) {
-        const retryButton = document.querySelector('.retry-button');
+        const retryButton = document.querySelector('.install-retry-button');
         if (retryButton) retryButton.style.display = 'inline-block';
     }
     
