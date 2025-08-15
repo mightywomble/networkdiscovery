@@ -27,119 +27,354 @@
 </section>
 
 <section class="pf-c-page__main-section">
-    <div class="pf-l-grid pf-m-all-12-col-on-sm pf-m-all-12-col-on-md pf-m-4-col-on-lg pf-m-4-col-on-xl">
-        <!-- Add Host Form -->
-        <div class="pf-l-grid__item">
-            <div class="pf-c-card nm-host-form-card">
-                <div class="pf-c-card__header">
-                    <div class="pf-c-card__header-main">
-                        <h2 class="pf-c-card__title">
-                            <i class="fas fa-plus pf-u-mr-sm"></i>
-                            Add New Host
-                        </h2>
-                    </div>
+    <!-- Configured Hosts Section -->
+    <div class="pf-c-card nm-hosts-list-card">
+        <div class="pf-c-card__header">
+            <div class="pf-c-card__header-main">
+                <h2 class="pf-c-card__title">
+                    <i class="fas fa-list pf-u-mr-sm"></i>
+                    Configured Hosts ({{ hosts|length }})
+                </h2>
+            </div>
+            <div class="pf-c-card__actions">
+                <div class="pf-c-button-group" role="group">
+                    <button class="pf-c-button pf-m-primary pf-m-small" onclick="showAddHostModal()">
+                        <i class="fas fa-plus pf-u-mr-sm"></i>Add Host
+                    </button>
+                    {% if hosts %}
+                    <button class="pf-c-button pf-m-secondary pf-m-small" onclick="testAllHosts()">
+                        <i class="fas fa-heartbeat pf-u-mr-sm"></i>Test All
+                    </button>
+                    <button class="pf-c-button pf-m-secondary pf-m-small" onclick="backupHosts()">
+                        <i class="fas fa-download pf-u-mr-sm"></i>Backup
+                    </button>
+                    {% endif %}
                 </div>
-                <div class="pf-c-card__body">
-                    <form method="POST" action="{{ url_for('add_host') }}" class="pf-c-form">
-                        <div class="pf-c-form__group">
-                            <div class="pf-c-form__group-label">
-                                <label class="pf-c-form__label" for="name">
-                                    <span class="pf-c-form__label-text">Host Name</span>
-                                    <span class="pf-c-form__label-required" aria-hidden="true">*</span>
-                                </label>
-                            </div>
-                            <div class="pf-c-form__group-control">
-                                <input class="pf-c-form-control" type="text" id="name" name="name" 
-                                       placeholder="e.g., Web Server 1" required>
-                                <div class="pf-c-form__helper-text">
-                                    <div class="pf-c-helper-text">
-                                        <div class="pf-c-helper-text__item pf-m-dynamic">
-                                            <span class="pf-c-helper-text__item-text">A friendly name for this host</span>
+            </div>
+        </div>
+        <div class="pf-c-card__body">
+            {% if hosts %}
+                <!-- Host Cards Grid -->
+                <div class="pf-l-gallery pf-m-gutter" id="hosts-grid">
+                    {% for host in hosts %}
+                    <div class="pf-c-card nm-host-card" id="host-card-{{ host.id }}" data-host-id="{{ host.id }}">
+                        <div class="pf-c-card__header">
+                            <div class="pf-c-card__header-main">
+                                <div class="pf-u-display-flex pf-u-align-items-center">
+                                    <div class="nm-host-icon pf-u-mr-sm">
+                                        <i class="fas fa-server pf-u-primary-color-100"></i>
+                                    </div>
+                                    <div>
+                                        <h3 class="pf-c-card__title pf-u-font-size-lg pf-u-mb-0">{{ host.name }}</h3>
+                                        <div class="pf-u-font-size-sm pf-u-color-200">
+                                            <code class="pf-c-code pf-m-inline">{{ host.ip_address }}</code>
                                         </div>
                                     </div>
                                 </div>
                             </div>
-                        </div>
-                        
-                        <div class="pf-c-form__group">
-                            <div class="pf-c-form__group-label">
-                                <label class="pf-c-form__label" for="ip_address">
-                                    <span class="pf-c-form__label-text">IP Address</span>
-                                    <span class="pf-c-form__label-required" aria-hidden="true">*</span>
-                                </label>
+                            <div class="pf-c-card__actions">
+                                <span class="pf-c-label nm-status-label status-{{ host.status or 'unknown' }}" id="status-label-{{ host.id }}">
+                                    <span class="pf-c-label__content" id="status-{{ host.id }}">
+                                        {% if host.status == 'online' %}
+                                            <i class="fas fa-check-circle pf-u-mr-xs"></i>Online
+                                        {% elif host.status == 'offline' %}
+                                            <i class="fas fa-times-circle pf-u-mr-xs"></i>Offline
+                                        {% elif host.status == 'ping_only' %}
+                                            <i class="fas fa-exclamation-circle pf-u-mr-xs"></i>Ping Only
+                                        {% else %}
+                                            <i class="fas fa-question-circle pf-u-mr-xs"></i>Unknown
+                                        {% endif %}
+                                    </span>
+                                </span>
                             </div>
-                            <div class="pf-c-form__group-control">
-                                <input class="pf-c-form-control" type="text" id="ip_address" name="ip_address" 
-                                       placeholder="192.168.1.100" pattern="^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$" required>
-                                <div class="pf-c-form__helper-text">
-                                    <div class="pf-c-helper-text">
-                                        <div class="pf-c-helper-text__item pf-m-dynamic">
-                                            <span class="pf-c-helper-text__item-text">IPv4 address of the host</span>
-                                        </div>
+                        </div>
+                        <div class="pf-c-card__body">
+                            {% if host.description %}
+                            <div class="pf-u-mb-sm">
+                                <div class="pf-u-font-size-sm pf-u-color-200">{{ host.description }}</div>
+                            </div>
+                            {% endif %}
+                            
+                            <div class="pf-l-grid pf-m-all-6-col-on-md pf-m-gutter">
+                                <div class="pf-l-grid__item">
+                                    <div class="pf-u-font-size-sm pf-u-mb-xs">
+                                        <i class="fas fa-user pf-u-mr-xs pf-u-color-200"></i>
+                                        <strong>SSH:</strong> {{ host.username }}:{{ host.ssh_port }}
+                                    </div>
+                                    <div class="pf-u-font-size-sm pf-u-mb-xs">
+                                        <i class="fas fa-clock pf-u-mr-xs pf-u-color-200"></i>
+                                        <strong>Last seen:</strong> 
+                                        {% if host.last_seen %}
+                                            {{ host.last_seen.strftime('%m/%d %H:%M') }}
+                                        {% else %}
+                                            <span class="pf-u-color-200">Never</span>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                <div class="pf-l-grid__item">
+                                    <div class="pf-u-font-size-sm pf-u-mb-xs">
+                                        <i class="fas fa-calendar pf-u-mr-xs pf-u-color-200"></i>
+                                        <strong>Added:</strong> 
+                                        {% if host.created_at %}
+                                            {{ host.created_at[:10] if host.created_at|string|length > 10 else host.created_at }}
+                                        {% else %}
+                                            Unknown
+                                        {% endif %}
                                     </div>
                                 </div>
                             </div>
                         </div>
-                        
-                        <div class="pf-c-form__group">
-                            <div class="pf-c-form__group-label">
-                                <label class="pf-c-form__label" for="username">
-                                    <span class="pf-c-form__label-text">SSH Username</span>
-                                </label>
-                            </div>
-                            <div class="pf-c-form__group-control">
-                                <input class="pf-c-form-control" type="text" id="username" name="username" 
-                                       value="root" placeholder="root">
-                                <div class="pf-c-form__helper-text">
-                                    <div class="pf-c-helper-text">
-                                        <div class="pf-c-helper-text__item pf-m-dynamic">
-                                            <span class="pf-c-helper-text__item-text">Username for SSH connections</span>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div class="pf-c-form__group">
-                            <div class="pf-c-form__group-label">
-                                <label class="pf-c-form__label" for="ssh_port">
-                                    <span class="pf-c-form__label-text">SSH Port</span>
-                                </label>
-                            </div>
-                            <div class="pf-c-form__group-control">
-                                <input class="pf-c-form-control" type="number" id="ssh_port" name="ssh_port" 
-                                       value="22" min="1" max="65535">
-                                <div class="pf-c-form__helper-text">
-                                    <div class="pf-c-helper-text">
-                                        <div class="pf-c-helper-text__item pf-m-dynamic">
-                                            <span class="pf-c-helper-text__item-text">SSH port (default: 22)</span>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div class="pf-c-form__group">
-                            <div class="pf-c-form__group-label">
-                                <label class="pf-c-form__label" for="description">
-                                    <span class="pf-c-form__label-text">Description</span>
-                                </label>
-                            </div>
-                            <div class="pf-c-form__group-control">
-                                <textarea class="pf-c-form-control" id="description" name="description" rows="3"
-                                          placeholder="Optional description of this host"></textarea>
-                            </div>
-                        </div>
-                        
-                        <div class="pf-c-form__group pf-m-action">
-                            <div class="pf-c-form__actions">
-                                <button class="pf-c-button pf-m-primary" type="submit">
-                                    <i class="fas fa-plus pf-u-mr-sm"></i>
-                                    Add Host
+                        <div class="pf-c-card__footer">
+                            <div class="pf-c-button-group" role="group">
+                                <button class="pf-c-button pf-m-secondary pf-m-small" onclick="testHost({{ host.id }})" 
+                                        title="Test Connection" id="test-btn-{{ host.id }}">
+                                    <i class="fas fa-heartbeat pf-u-mr-xs"></i>Test
+                                </button>
+                                <button class="pf-c-button pf-m-secondary pf-m-small" onclick="openHostEditModal({{ host.id }})" 
+                                        title="Edit Host">
+                                    <i class="fas fa-edit pf-u-mr-xs"></i>Edit
+                                </button>
+                                <button class="pf-c-button pf-m-secondary pf-m-small" onclick="showHostDetails({{ host.id }})" 
+                                        title="View Details">
+                                    <i class="fas fa-info-circle pf-u-mr-xs"></i>Details
+                                </button>
+                                <button class="pf-c-button pf-m-danger pf-m-small" onclick="showRemoveHostCard({{ host.id }}, '{{ host.name }}')" 
+                                        title="Remove Host">
+                                    <i class="fas fa-trash pf-u-mr-xs"></i>Remove
                                 </button>
                             </div>
                         </div>
-                    </form>
+                    </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="pf-c-empty-state pf-m-lg">
+                    <div class="pf-c-empty-state__content">
+                        <i class="fas fa-server pf-c-empty-state__icon" aria-hidden="true"></i>
+                        <h2 class="pf-c-title pf-m-lg">No hosts configured</h2>
+                        <div class="pf-c-empty-state__body">
+                            Add your first host to start monitoring your network infrastructure. Hosts can be servers, routers, switches, or any device with SSH access.
+                        </div>
+                        <button class="pf-c-button pf-m-primary" onclick="showAddHostModal()">
+                            <i class="fas fa-plus pf-u-mr-sm"></i>
+                            Add Your First Host
+                        </button>
+                    </div>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+    
+    {% if hosts %}
+    <!-- Host Statistics -->
+    <div class="pf-c-card pf-u-mt-md nm-stats-card">
+        <div class="pf-c-card__header">
+            <div class="pf-c-card__header-main">
+                <h2 class="pf-c-card__title">
+                    <i class="fas fa-chart-bar pf-u-mr-sm"></i>
+                    Host Statistics
+                </h2>
+            </div>
+        </div>
+        <div class="pf-c-card__body">
+            <div class="pf-l-gallery pf-m-gutter">
+                <div class="pf-c-card nm-stat-card">
+                    <div class="pf-c-card__body pf-u-text-align-center">
+                        <div class="nm-stat-value" style="color: var(--pf-global--primary-color--100)">{{ hosts|length }}</div>
+                        <div class="nm-stat-label">Total Hosts</div>
+                    </div>
+                </div>
+                <div class="pf-c-card nm-stat-card">
+                    <div class="pf-c-card__body pf-u-text-align-center">
+                        <div class="nm-stat-value" style="color: var(--pf-global--success-color--100)">{{ hosts|selectattr("status", "equalto", "online")|list|length }}</div>
+                        <div class="nm-stat-label">Online</div>
+                    </div>
+                </div>
+                <div class="pf-c-card nm-stat-card">
+                    <div class="pf-c-card__body pf-u-text-align-center">
+                        <div class="nm-stat-value" style="color: var(--pf-global--warning-color--100)">{{ hosts|selectattr("status", "equalto", "ping_only")|list|length }}</div>
+                        <div class="nm-stat-label">Ping Only</div>
+                    </div>
+                </div>
+                <div class="pf-c-card nm-stat-card">
+                    <div class="pf-c-card__body pf-u-text-align-center">
+                        <div class="nm-stat-value" style="color: var(--pf-global--danger-color--100)">{{ hosts|selectattr("status", "equalto", "offline")|list|length }}</div>
+                        <div class="nm-stat-label">Offline</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+    
+    <!-- Host Management Action Cards -->
+    <div class="pf-l-grid pf-m-all-12-col-on-sm pf-m-all-6-col-on-md pf-m-all-4-col-on-lg pf-m-gutter pf-u-mt-md">
+        <!-- Remove Host Card -->
+        <div class="pf-l-grid__item">
+            <div class="pf-c-card nm-action-card nm-remove-card">
+                <div class="pf-c-card__header">
+                    <div class="pf-c-card__header-main">
+                        <h3 class="pf-c-card__title">
+                            <i class="fas fa-trash pf-u-mr-sm"></i>
+                            Remove Hosts
+                        </h3>
+                    </div>
+                </div>
+                <div class="pf-c-card__body">
+                    <p class="pf-u-font-size-sm pf-u-color-200 pf-u-mb-sm">
+                        Safely remove hosts from your network monitoring. This will permanently delete all associated scan history and configuration data.
+                    </p>
+                    <div class="pf-c-alert pf-m-warning pf-m-inline pf-m-plain" aria-label="Warning alert">
+                        <div class="pf-c-alert__icon">
+                            <i class="fas fa-exclamation-triangle" aria-hidden="true"></i>
+                        </div>
+                        <div class="pf-c-alert__title pf-u-font-size-sm">This action cannot be undone</div>
+                    </div>
+                </div>
+                <div class="pf-c-card__footer">
+                    <button class="pf-c-button pf-m-danger pf-m-small" onclick="showRemoveHostOptions()" {% if not hosts %}disabled{% endif %}>
+                        <i class="fas fa-trash pf-u-mr-xs"></i>Remove Hosts
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Import Hosts Card -->
+        <div class="pf-l-grid__item">
+            <div class="pf-c-card nm-action-card nm-import-card">
+                <div class="pf-c-card__header">
+                    <div class="pf-c-card__header-main">
+                        <h3 class="pf-c-card__title">
+                            <i class="fas fa-upload pf-u-mr-sm"></i>
+                            Import Hosts
+                        </h3>
+                    </div>
+                </div>
+                <div class="pf-c-card__body">
+                    <p class="pf-u-font-size-sm pf-u-color-200 pf-u-mb-sm">
+                        Import hosts from a backup file or configuration export. Supports JSON format with validation and merge options.
+                    </p>
+                    <div class="pf-c-alert pf-m-info pf-m-inline pf-m-plain" aria-label="Info alert">
+                        <div class="pf-c-alert__icon">
+                            <i class="fas fa-info-circle" aria-hidden="true"></i>
+                        </div>
+                        <div class="pf-c-alert__title pf-u-font-size-sm">Supports merge and replace modes</div>
+                    </div>
+                </div>
+                <div class="pf-c-card__footer">
+                    <button class="pf-c-button pf-m-secondary pf-m-small" onclick="showImportModal()">
+                        <i class="fas fa-upload pf-u-mr-xs"></i>Import Hosts
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Add Host Modal -->
+<div class="pf-c-backdrop" id="addHostModal" hidden>
+    <div class="pf-l-bullseye">
+        <div class="pf-c-modal-box pf-m-lg" role="dialog" aria-modal="true" aria-labelledby="add-host-title">
+            <button class="pf-c-button pf-m-plain" type="button" aria-label="Close" onclick="closeAddHostModal()">
+                <i class="fas fa-times" aria-hidden="true"></i>
+            </button>
+            <header class="pf-c-modal-box__header">
+                <h1 class="pf-c-modal-box__title" id="add-host-title">
+                    <i class="fas fa-plus pf-u-mr-sm"></i>
+                    Add New Host
+                </h1>
+            </header>
+            <div class="pf-c-modal-box__body">
+                <form id="addHostForm" class="pf-c-form">
+                    <div class="pf-c-form__group">
+                        <div class="pf-c-form__group-label">
+                            <label class="pf-c-form__label" for="modal-name">
+                                <span class="pf-c-form__label-text">Host Name</span>
+                                <span class="pf-c-form__label-required" aria-hidden="true">*</span>
+                            </label>
+                        </div>
+                        <div class="pf-c-form__group-control">
+                            <input class="pf-c-form-control" type="text" id="modal-name" name="name" 
+                                   placeholder="e.g., Web Server 1" required>
+                            <div class="pf-c-form__helper-text">
+                                <div class="pf-c-helper-text">
+                                    <div class="pf-c-helper-text__item pf-m-dynamic">
+                                        <span class="pf-c-helper-text__item-text">A friendly name for this host</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="pf-c-form__group">
+                        <div class="pf-c-form__group-label">
+                            <label class="pf-c-form__label" for="modal-ip_address">
+                                <span class="pf-c-form__label-text">IP Address</span>
+                                <span class="pf-c-form__label-required" aria-hidden="true">*</span>
+                            </label>
+                        </div>
+                        <div class="pf-c-form__group-control">
+                            <input class="pf-c-form-control" type="text" id="modal-ip_address" name="ip_address" 
+                                   placeholder="192.168.1.100" pattern="^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$" required>
+                            <div class="pf-c-form__helper-text">
+                                <div class="pf-c-helper-text">
+                                    <div class="pf-c-helper-text__item pf-m-dynamic">
+                                        <span class="pf-c-helper-text__item-text">IPv4 address of the host</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="pf-c-form__group">
+                        <div class="pf-c-form__group-label">
+                            <label class="pf-c-form__label" for="modal-username">
+                                <span class="pf-c-form__label-text">SSH Username</span>
+                            </label>
+                        </div>
+                        <div class="pf-c-form__group-control">
+                            <input class="pf-c-form-control" type="text" id="modal-username" name="username" 
+                                   value="root" placeholder="root">
+                            <div class="pf-c-form__helper-text">
+                                <div class="pf-c-helper-text">
+                                    <div class="pf-c-helper-text__item pf-m-dynamic">
+                                        <span class="pf-c-helper-text__item-text">Username for SSH connections</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="pf-c-form__group">
+                        <div class="pf-c-form__group-label">
+                            <label class="pf-c-form__label" for="modal-ssh_port">
+                                <span class="pf-c-form__label-text">SSH Port</span>
+                            </label>
+                        </div>
+                        <div class="pf-c-form__group-control">
+                            <input class="pf-c-form-control" type="number" id="modal-ssh_port" name="ssh_port" 
+                                   value="22" min="1" max="65535">
+                            <div class="pf-c-form__helper-text">
+                                <div class="pf-c-helper-text">
+                                    <div class="pf-c-helper-text__item pf-m-dynamic">
+                                        <span class="pf-c-helper-text__item-text">SSH port (default: 22)</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="pf-c-form__group">
+                        <div class="pf-c-form__group-label">
+                            <label class="pf-c-form__label" for="modal-description">
+                                <span class="pf-c-form__label-text">Description</span>
+                            </label>
+                        </div>
+                        <div class="pf-c-form__group-control">
+                            <textarea class="pf-c-form-control" id="modal-description" name="description" rows="3"
+                                      placeholder="Optional description of this host"></textarea>
+                        </div>
+                    </div>
                     
                     <div class="pf-c-divider pf-u-my-md"></div>
                     
@@ -156,189 +391,59 @@
                             </ul>
                         </div>
                     </div>
-                </div>
+                </form>
             </div>
-        </div>
-        
-        <!-- Hosts List -->
-        <div class="pf-l-grid__item">
-            <div class="pf-c-card nm-hosts-list-card">
-                <div class="pf-c-card__header">
-                    <div class="pf-c-card__header-main">
-                        <h2 class="pf-c-card__title">
-                            <i class="fas fa-list pf-u-mr-sm"></i>
-                            Configured Hosts ({{ hosts|length }})
-                        </h2>
-                    </div>
-                    <div class="pf-c-card__actions">
-                        <div class="pf-c-button-group" role="group">
-                            {% if hosts %}
-                            <button class="pf-c-button pf-m-secondary pf-m-small" onclick="testAllHosts()">
-                                <i class="fas fa-heartbeat pf-u-mr-sm"></i>Test All
-                            </button>
-                            <button class="pf-c-button pf-m-secondary pf-m-small" onclick="backupHosts()">
-                                <i class="fas fa-download pf-u-mr-sm"></i>Backup
-                            </button>
-                            {% endif %}
-                            <button class="pf-c-button pf-m-secondary pf-m-small" onclick="showImportModal()">
-                                <i class="fas fa-upload pf-u-mr-sm"></i>Import
-                            </button>
-                        </div>
-                    </div>
-                </div>
-                <div class="pf-c-card__body">
-                    {% if hosts %}
-                        <!-- Host Cards Grid -->
-                        <div class="pf-l-gallery pf-m-gutter" id="hosts-grid">
-                            {% for host in hosts %}
-                            <div class="pf-c-card nm-host-card" id="host-card-{{ host.id }}" data-host-id="{{ host.id }}">
-                                <div class="pf-c-card__header">
-                                    <div class="pf-c-card__header-main">
-                                        <div class="pf-u-display-flex pf-u-align-items-center">
-                                            <div class="nm-host-icon pf-u-mr-sm">
-                                                <i class="fas fa-server pf-u-primary-color-100"></i>
-                                            </div>
-                                            <div>
-                                                <h3 class="pf-c-card__title pf-u-font-size-lg pf-u-mb-0">{{ host.name }}</h3>
-                                                <div class="pf-u-font-size-sm pf-u-color-200">
-                                                    <code class="pf-c-code pf-m-inline">{{ host.ip_address }}</code>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div class="pf-c-card__actions">
-                                        <span class="pf-c-label nm-status-label status-{{ host.status or 'unknown' }}" id="status-label-{{ host.id }}">
-                                            <span class="pf-c-label__content" id="status-{{ host.id }}">
-                                                {% if host.status == 'online' %}
-                                                    <i class="fas fa-check-circle pf-u-mr-xs"></i>Online
-                                                {% elif host.status == 'offline' %}
-                                                    <i class="fas fa-times-circle pf-u-mr-xs"></i>Offline
-                                                {% elif host.status == 'ping_only' %}
-                                                    <i class="fas fa-exclamation-circle pf-u-mr-xs"></i>Ping Only
-                                                {% else %}
-                                                    <i class="fas fa-question-circle pf-u-mr-xs"></i>Unknown
-                                                {% endif %}
-                                            </span>
-                                        </span>
-                                    </div>
-                                </div>
-                                <div class="pf-c-card__body">
-                                    {% if host.description %}
-                                    <div class="pf-u-mb-sm">
-                                        <div class="pf-u-font-size-sm pf-u-color-200">{{ host.description }}</div>
-                                    </div>
-                                    {% endif %}
-                                    
-                                    <div class="pf-l-grid pf-m-all-6-col-on-md pf-m-gutter">
-                                        <div class="pf-l-grid__item">
-                                            <div class="pf-u-font-size-sm pf-u-mb-xs">
-                                                <i class="fas fa-user pf-u-mr-xs pf-u-color-200"></i>
-                                                <strong>SSH:</strong> {{ host.username }}:{{ host.ssh_port }}
-                                            </div>
-                                            <div class="pf-u-font-size-sm pf-u-mb-xs">
-                                                <i class="fas fa-clock pf-u-mr-xs pf-u-color-200"></i>
-                                                <strong>Last seen:</strong> 
-                                                {% if host.last_seen %}
-                                                    {{ host.last_seen.strftime('%m/%d %H:%M') }}
-                                                {% else %}
-                                                    <span class="pf-u-color-200">Never</span>
-                                                {% endif %}
-                                            </div>
-                                        </div>
-                                        <div class="pf-l-grid__item">
-                                            <div class="pf-u-font-size-sm pf-u-mb-xs">
-                                                <i class="fas fa-calendar pf-u-mr-xs pf-u-color-200"></i>
-                                                <strong>Added:</strong> 
-                                                {% if host.created_at %}
-                                                    {{ host.created_at[:10] if host.created_at|string|length > 10 else host.created_at }}
-                                                {% else %}
-                                                    Unknown
-                                                {% endif %}
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="pf-c-card__footer">
-                                    <div class="pf-c-button-group" role="group">
-                                        <button class="pf-c-button pf-m-secondary pf-m-small" onclick="testHost({{ host.id }})" 
-                                                title="Test Connection" id="test-btn-{{ host.id }}">
-                                            <i class="fas fa-heartbeat pf-u-mr-xs"></i>Test
-                                        </button>
-                                        <button class="pf-c-button pf-m-secondary pf-m-small" onclick="showHostDetails({{ host.id }})" 
-                                                title="View Details">
-                                            <i class="fas fa-info-circle pf-u-mr-xs"></i>Details
-                                        </button>
-                                        <button class="pf-c-button pf-m-danger pf-m-small" onclick="confirmRemoveHost({{ host.id }}, '{{ host.name }}')" 
-                                                title="Remove Host">
-                                            <i class="fas fa-trash pf-u-mr-xs"></i>Remove
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-                            {% endfor %}
-                        </div>
-                    {% else %}
-                        <div class="pf-c-empty-state pf-m-lg">
-                            <div class="pf-c-empty-state__content">
-                                <i class="fas fa-server pf-c-empty-state__icon" aria-hidden="true"></i>
-                                <h2 class="pf-c-title pf-m-lg">No hosts configured</h2>
-                                <div class="pf-c-empty-state__body">
-                                    Add your first host to start monitoring your network infrastructure. Hosts can be servers, routers, switches, or any device with SSH access.
-                                </div>
-                                <button class="pf-c-button pf-m-primary" onclick="document.getElementById('name').focus()">
-                                    <i class="fas fa-plus pf-u-mr-sm"></i>
-                                    Add Your First Host
-                                </button>
-                            </div>
-                        </div>
-                    {% endif %}
-                </div>
-            </div>
-            
-            {% if hosts %}
-            <!-- Host Statistics -->
-            <div class="pf-c-card pf-u-mt-md nm-stats-card">
-                <div class="pf-c-card__header">
-                    <div class="pf-c-card__header-main">
-                        <h2 class="pf-c-card__title">
-                            <i class="fas fa-chart-bar pf-u-mr-sm"></i>
-                            Host Statistics
-                        </h2>
-                    </div>
-                </div>
-                <div class="pf-c-card__body">
-                    <div class="pf-l-gallery pf-m-gutter">
-                        <div class="pf-c-card nm-stat-card">
-                            <div class="pf-c-card__body pf-u-text-align-center">
-                                <div class="nm-stat-value" style="color: var(--pf-global--primary-color--100)">{{ hosts|length }}</div>
-                                <div class="nm-stat-label">Total Hosts</div>
-                            </div>
-                        </div>
-                        <div class="pf-c-card nm-stat-card">
-                            <div class="pf-c-card__body pf-u-text-align-center">
-                                <div class="nm-stat-value" style="color: var(--pf-global--success-color--100)">{{ hosts|selectattr("status", "equalto", "online")|list|length }}</div>
-                                <div class="nm-stat-label">Online</div>
-                            </div>
-                        </div>
-                        <div class="pf-c-card nm-stat-card">
-                            <div class="pf-c-card__body pf-u-text-align-center">
-                                <div class="nm-stat-value" style="color: var(--pf-global--warning-color--100)">{{ hosts|selectattr("status", "equalto", "ping_only")|list|length }}</div>
-                                <div class="nm-stat-label">Ping Only</div>
-                            </div>
-                        </div>
-                        <div class="pf-c-card nm-stat-card">
-                            <div class="pf-c-card__body pf-u-text-align-center">
-                                <div class="nm-stat-value" style="color: var(--pf-global--danger-color--100)">{{ hosts|selectattr("status", "equalto", "offline")|list|length }}</div>
-                                <div class="nm-stat-label">Offline</div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            {% endif %}
+            <footer class="pf-c-modal-box__footer">
+                <button class="pf-c-button pf-m-primary" type="button" onclick="submitAddHostForm()">
+                    <i class="fas fa-plus pf-u-mr-sm"></i>
+                    Add Host
+                </button>
+                <button class="pf-c-button pf-m-link" type="button" onclick="closeAddHostModal()">Cancel</button>
+            </footer>
         </div>
     </div>
-</section>
+</div>
+
+<!-- Remove Host Options Modal -->
+<div class="pf-c-backdrop" id="removeHostOptionsModal" hidden>
+    <div class="pf-l-bullseye">
+        <div class="pf-c-modal-box pf-m-lg" role="dialog" aria-modal="true" aria-labelledby="remove-options-title">
+            <button class="pf-c-button pf-m-plain" type="button" aria-label="Close" onclick="closeRemoveHostOptionsModal()">
+                <i class="fas fa-times" aria-hidden="true"></i>
+            </button>
+            <header class="pf-c-modal-box__header">
+                <h1 class="pf-c-modal-box__title" id="remove-options-title">
+                    <i class="fas fa-trash pf-u-mr-sm"></i>
+                    Remove Hosts
+                </h1>
+            </header>
+            <div class="pf-c-modal-box__body">
+                <div class="pf-c-alert pf-m-warning pf-m-inline" aria-label="Warning alert">
+                    <div class="pf-c-alert__icon">
+                        <i class="fas fa-exclamation-triangle" aria-hidden="true"></i>
+                    </div>
+                    <div class="pf-c-alert__title">Choose hosts to remove</div>
+                    <div class="pf-c-alert__description">
+                        Select one or more hosts to remove from your network monitoring. This will permanently delete all associated data.
+                    </div>
+                </div>
+                
+                <div class="pf-u-mt-md">
+                    <div class="pf-l-gallery pf-m-gutter" id="removeHostsList">
+                        <!-- Host cards will be populated here by JavaScript -->
+                    </div>
+                </div>
+            </div>
+            <footer class="pf-c-modal-box__footer">
+                <button class="pf-c-button pf-m-danger" type="button" onclick="confirmRemoveSelectedHosts()" id="removeSelectedBtn" disabled>
+                    <i class="fas fa-trash pf-u-mr-sm"></i>
+                    Remove Selected Hosts
+                </button>
+                <button class="pf-c-button pf-m-link" type="button" onclick="closeRemoveHostOptionsModal()">Cancel</button>
+            </footer>
+        </div>
+    </div>
+</div>
 
 <!-- Remove Host Confirmation Modal -->
 <div class="modal fade" id="removeHostModal" tabindex="-1">
@@ -520,6 +625,76 @@
 
 {% block styles %}
 <style>
+/* Host Management Card Aesthetics */
+.nm-action-card {
+    border: 1px solid var(--pf-global--BorderColor--100);
+    box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+    transition: all 0.2s ease;
+    min-height: 200px;
+}
+
+.nm-action-card:hover {
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    transform: translateY(-2px);
+}
+
+.nm-remove-card {
+    border-left: 4px solid var(--pf-global--danger-color--100);
+}
+
+.nm-remove-card:hover {
+    border-left-color: var(--pf-global--danger-color--200);
+}
+
+.nm-import-card {
+    border-left: 4px solid var(--pf-global--info-color--100);
+}
+
+.nm-import-card:hover {
+    border-left-color: var(--pf-global--info-color--200);
+}
+
+.nm-action-card .pf-c-card__title {
+    color: var(--pf-global--Color--100);
+}
+
+.nm-remove-card .pf-c-card__title i {
+    color: var(--pf-global--danger-color--100);
+}
+
+.nm-import-card .pf-c-card__title i {
+    color: var(--pf-global--info-color--100);
+}
+
+/* Modal Enhancements */
+.pf-c-modal-box {
+    box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+}
+
+/* Remove host selection cards */
+.nm-remove-host-selection-card {
+    border: 2px solid var(--pf-global--BorderColor--100);
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.nm-remove-host-selection-card:hover {
+    border-color: var(--pf-global--danger-color--100);
+    box-shadow: 0 2px 8px rgba(201, 25, 11, 0.2);
+}
+
+.nm-remove-host-selection-card.selected {
+    border-color: var(--pf-global--danger-color--100);
+    background-color: var(--pf-global--danger-color--100);
+    color: var(--pf-global--Color--light-100);
+    box-shadow: 0 2px 8px rgba(201, 25, 11, 0.3);
+}
+
+.nm-remove-host-selection-card.selected .pf-c-card__title,
+.nm-remove-host-selection-card.selected .pf-u-color-200 {
+    color: var(--pf-global--Color--light-100) !important;
+}
+
 /* Host Management Card Aesthetics */
 .nm-host-form-card {
     border-left: 4px solid var(--pf-global--primary-color--100);
@@ -922,8 +1097,191 @@ document.getElementById('ip_address').addEventListener('input', function(e) {
     }
 });
 
-// Auto-focus first input
-document.getElementById('name').focus();
+// Auto-focus first input when not in modal
+if (document.getElementById('name')) {
+    document.getElementById('name').focus();
+}
+
+// ====================================================
+// ADD HOST MODAL FUNCTIONALITY
+// ====================================================
+
+// Show add host modal
+function showAddHostModal() {
+    const modal = document.getElementById('addHostModal');
+    modal.hidden = false;
+    
+    // Reset form
+    document.getElementById('addHostForm').reset();
+    document.getElementById('modal-username').value = 'root';
+    document.getElementById('modal-ssh_port').value = '22';
+    
+    // Focus first input
+    setTimeout(() => {
+        document.getElementById('modal-name').focus();
+    }, 100);
+}
+
+// Close add host modal
+function closeAddHostModal() {
+    const modal = document.getElementById('addHostModal');
+    modal.hidden = true;
+}
+
+// Submit add host form
+function submitAddHostForm() {
+    const form = document.getElementById('addHostForm');
+    const formData = new FormData(form);
+    
+    // Create a hidden form to submit
+    const submitForm = document.createElement('form');
+    submitForm.method = 'POST';
+    submitForm.action = '{{ url_for("add_host") }}';
+    submitForm.style.display = 'none';
+    
+    // Add form data to hidden form
+    for (let [key, value] of formData.entries()) {
+        const input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = key;
+        input.value = value;
+        submitForm.appendChild(input);
+    }
+    
+    document.body.appendChild(submitForm);
+    submitForm.submit();
+}
+
+// Form validation for modal
+document.getElementById('modal-ip_address').addEventListener('input', function(e) {
+    const value = e.target.value;
+    const isValid = /^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$/.test(value);
+    
+    if (value && !isValid) {
+        e.target.setCustomValidity('Please enter a valid IPv4 address');
+    } else {
+        e.target.setCustomValidity('');
+    }
+});
+
+// ====================================================
+// REMOVE HOST OPTIONS FUNCTIONALITY
+// ====================================================
+
+let selectedHostsForRemoval = new Set();
+
+// Show remove host options modal
+function showRemoveHostOptions() {
+    const modal = document.getElementById('removeHostOptionsModal');
+    const hostsList = document.getElementById('removeHostsList');
+    
+    // Clear previous selections
+    selectedHostsForRemoval.clear();
+    
+    // Get all hosts
+    const hosts = {{ hosts|tojson }};
+    
+    // Generate host selection cards
+    let cardsHtml = '';
+    hosts.forEach(host => {
+        cardsHtml += `
+            <div class="pf-c-card nm-remove-host-selection-card pf-m-compact" 
+                 onclick="toggleHostSelection(${host.id}, '${host.name}')"
+                 id="remove-card-${host.id}">
+                <div class="pf-c-card__body pf-u-p-sm">
+                    <div class="pf-u-display-flex pf-u-align-items-center pf-u-justify-content-space-between">
+                        <div>
+                            <h4 class="pf-c-card__title pf-u-font-size-md pf-u-mb-xs">${host.name}</h4>
+                            <div class="pf-u-font-size-sm pf-u-color-200">
+                                <code class="pf-c-code pf-m-inline">${host.ip_address}</code>
+                            </div>
+                        </div>
+                        <div class="pf-u-font-size-lg">
+                            <i class="fas fa-square-check" style="display: none;" id="check-${host.id}"></i>
+                            <i class="far fa-square" id="uncheck-${host.id}"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    });
+    
+    hostsList.innerHTML = cardsHtml;
+    modal.hidden = false;
+    updateRemoveButton();
+}
+
+// Close remove host options modal
+function closeRemoveHostOptionsModal() {
+    const modal = document.getElementById('removeHostOptionsModal');
+    modal.hidden = true;
+    selectedHostsForRemoval.clear();
+}
+
+// Toggle host selection for removal
+function toggleHostSelection(hostId, hostName) {
+    const card = document.getElementById(`remove-card-${hostId}`);
+    const checkIcon = document.getElementById(`check-${hostId}`);
+    const uncheckIcon = document.getElementById(`uncheck-${hostId}`);
+    
+    if (selectedHostsForRemoval.has(hostId)) {
+        // Deselect
+        selectedHostsForRemoval.delete(hostId);
+        card.classList.remove('selected');
+        checkIcon.style.display = 'none';
+        uncheckIcon.style.display = 'inline';
+    } else {
+        // Select
+        selectedHostsForRemoval.add(hostId);
+        card.classList.add('selected');
+        checkIcon.style.display = 'inline';
+        uncheckIcon.style.display = 'none';
+    }
+    
+    updateRemoveButton();
+}
+
+// Update remove button state
+function updateRemoveButton() {
+    const button = document.getElementById('removeSelectedBtn');
+    const count = selectedHostsForRemoval.size;
+    
+    if (count > 0) {
+        button.disabled = false;
+        button.innerHTML = `<i class="fas fa-trash pf-u-mr-sm"></i>Remove ${count} Host${count > 1 ? 's' : ''}`;
+    } else {
+        button.disabled = true;
+        button.innerHTML = '<i class="fas fa-trash pf-u-mr-sm"></i>Remove Selected Hosts';
+    }
+}
+
+// Confirm removal of selected hosts
+function confirmRemoveSelectedHosts() {
+    const count = selectedHostsForRemoval.size;
+    if (count === 0) return;
+    
+    const hostIds = Array.from(selectedHostsForRemoval);
+    const confirmMessage = `Are you sure you want to remove ${count} host${count > 1 ? 's' : ''}? This will permanently delete all associated data including scan history, traffic statistics, and configuration data.`;
+    
+    if (confirm(confirmMessage)) {
+        // Remove hosts one by one
+        hostIds.forEach(hostId => {
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = `/remove_host/${hostId}`;
+            form.style.display = 'none';
+            document.body.appendChild(form);
+            form.submit();
+        });
+        
+        closeRemoveHostOptionsModal();
+    }
+}
+
+// Show remove host card (for individual host removal)
+function showRemoveHostCard(hostId, hostName) {
+    confirmRemoveHost(hostId, hostName);
+}
 
 // ====================================================
 // HOST EDIT FUNCTIONALITY
