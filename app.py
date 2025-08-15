@@ -3056,9 +3056,34 @@ echo "Starting NetworkMap agent deployment..."
 echo "Creating directories..."
 sudo mkdir -p /opt/networkmap-agent /etc/networkmap /var/log/networkmap-agent
 
-# Download agent script
+# Download agent script with verification
 echo "Downloading latest agent script..."
 curl -f -o /tmp/networkmap_agent.py {server_url}/static/networkmap_agent.py
+
+# Verify downloaded file is not empty
+if [ ! -s /tmp/networkmap_agent.py ]; then
+    echo "ERROR: Downloaded agent script is empty (0 bytes)"
+    echo "Trying alternative download method..."
+    wget -O /tmp/networkmap_agent.py {server_url}/static/networkmap_agent.py || \
+      { echo "All download methods failed"; exit 1; }
+    
+    # Check again
+    if [ ! -s /tmp/networkmap_agent.py ]; then
+        echo "ERROR: Downloaded agent script is still empty. Aborting."
+        exit 1
+    fi
+fi
+
+# Verify Python syntax before copying
+echo "Verifying script integrity..."
+python3 -m py_compile /tmp/networkmap_agent.py || { echo "ERROR: Downloaded script has syntax errors"; exit 1; }
+
+# Show file information for verification
+echo "Agent script details:"
+wc -l /tmp/networkmap_agent.py
+head -n 30 /tmp/networkmap_agent.py | grep -E "version|build"
+
+# Only copy if verification passes
 sudo cp /tmp/networkmap_agent.py /opt/networkmap-agent/networkmap_agent.py
 sudo chmod +x /opt/networkmap-agent/networkmap_agent.py
 
@@ -3362,9 +3387,34 @@ sudo systemctl stop networkmap-agent || true
 echo "Backing up configuration..."
 sudo cp /etc/networkmap/agent.conf /etc/networkmap/agent.conf.backup 2>/dev/null || true
 
-# Download latest agent script
+# Download latest agent script with verification
 echo "Downloading latest agent version..."
 curl -f -o /tmp/networkmap_agent.py {server_url}/static/networkmap_agent.py
+
+# Verify downloaded file is not empty
+if [ ! -s /tmp/networkmap_agent.py ]; then
+    echo "ERROR: Downloaded agent script is empty (0 bytes)"
+    echo "Trying alternative download method..."
+    wget -O /tmp/networkmap_agent.py {server_url}/static/networkmap_agent.py || \
+      { echo "All download methods failed"; exit 1; }
+    
+    # Check again
+    if [ ! -s /tmp/networkmap_agent.py ]; then
+        echo "ERROR: Downloaded agent script is still empty. Aborting."
+        exit 1
+    fi
+fi
+
+# Verify Python syntax before copying
+echo "Verifying script integrity..."
+python3 -m py_compile /tmp/networkmap_agent.py || { echo "ERROR: Downloaded script has syntax errors"; exit 1; }
+
+# Show file information for verification
+echo "Agent script details:"
+wc -l /tmp/networkmap_agent.py
+head -n 30 /tmp/networkmap_agent.py | grep -E "version|build"
+
+# Only copy if verification passes
 sudo cp /tmp/networkmap_agent.py /opt/networkmap-agent/networkmap_agent.py
 sudo chmod +x /opt/networkmap-agent/networkmap_agent.py
 
@@ -3372,19 +3422,53 @@ sudo chmod +x /opt/networkmap-agent/networkmap_agent.py
 echo "Updating dependencies..."
 sudo /opt/networkmap-agent/venv/bin/pip install --quiet --upgrade requests psutil
 
-# Restart the agent service
+# Restart the agent service with proper error handling
+echo "Restarting agent service..."
+sudo systemctl daemon-reload
+
+# Enable the service (in case it was disabled)
+sudo systemctl enable networkmap-agent 2>/dev/null || true
+
+# Start the service
 echo "Starting agent service..."
-sudo systemctl start networkmap-agent
+if sudo systemctl start networkmap-agent; then
+    echo "✅ Agent service start command successful"
+else
+    echo "❌ Agent service start command failed"
+    sudo systemctl status networkmap-agent --no-pager -l
+    exit 1
+fi
 
 # Wait and verify service is running
-sleep 5
-if sudo systemctl is-active --quiet networkmap-agent; then
+echo "Waiting for service to stabilize..."
+sleep 8
+
+# Check service status multiple times
+for i in {1..3}; do
+    echo "Service check attempt $i/3..."
+    if sudo systemctl is-active --quiet networkmap-agent; then
+        SERVICE_STATUS="active"
+        break
+    else
+        SERVICE_STATUS="failed"
+        sleep 2
+    fi
+done
+
+if [ "$SERVICE_STATUS" = "active" ]; then
     echo "✅ Agent update completed successfully"
     echo "Service status: $(sudo systemctl is-active networkmap-agent)"
     echo "Version: {current_version}"
     echo "Build date: {build_date}"
+    
+    # Show recent logs to verify agent is working
+    echo "Recent agent logs:"
+    sudo journalctl -u networkmap-agent --since "30 seconds ago" --no-pager -q | tail -5
 else
-    echo "❌ Agent service failed to start after update"
+    echo "❌ Agent service failed to start properly after update"
+    echo "Service status: $(sudo systemctl is-active networkmap-agent)"
+    echo "Service logs:"
+    sudo journalctl -u networkmap-agent --since "2 minutes ago" --no-pager -l | tail -20
     sudo systemctl status networkmap-agent --no-pager -l
     exit 1
 fi

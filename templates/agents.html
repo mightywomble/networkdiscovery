@@ -2526,53 +2526,132 @@ async function performAgentRun(agent, progressBar, statusElement, logsElement, c
     }
 }
 
-// Monitor agent scan progress
+// Monitor agent scan progress with real-time backend data
 async function monitorAgentProgress(agent, progressBar, statusElement, logsElement) {
-    const maxWaitTime = 60; // Maximum wait time in seconds
+    const maxWaitTime = 120; // Maximum wait time in seconds
     const pollInterval = 2; // Poll every 2 seconds
     let elapsedTime = 0;
+    let lastLogCount = 0;
     
     return new Promise((resolve) => {
         const pollProgress = async () => {
             try {
                 elapsedTime += pollInterval;
-                const progressPercent = Math.min(25 + (elapsedTime / maxWaitTime) * 65, 90);
-                progressBar.style.width = progressPercent + '%';
                 
-                if (elapsedTime <= 5) {
-                    statusElement.textContent = 'Agent processing scan trigger...';
-                    logsElement.textContent += `⏳ [${new Date().toLocaleTimeString()}] Waiting for agent to start scan...\n`;
-                } else if (elapsedTime <= 15) {
-                    statusElement.textContent = 'Running network discovery scan...';
-                    logsElement.textContent += `🔍 [${new Date().toLocaleTimeString()}] Agent is performing network discovery...\n`;
-                } else if (elapsedTime <= 30) {
-                    statusElement.textContent = 'Running connectivity tests...';
-                    logsElement.textContent += `🧪 [${new Date().toLocaleTimeString()}] Executing network connectivity tests...\n`;
-                } else if (elapsedTime <= 45) {
-                    statusElement.textContent = 'Collecting system information...';
-                    logsElement.textContent += `📊 [${new Date().toLocaleTimeString()}] Gathering system and network data...\n`;
+                // Try to get real progress from backend
+                const progressResponse = await fetch(`/api/agent/run_progress/${agent.agent_id}`);
+                
+                if (progressResponse.ok) {
+                    const progressData = await progressResponse.json();
+                    
+                    if (progressData.success && progressData.running) {
+                        const runInfo = progressData.run_info;
+                        const logs = progressData.logs || [];
+                        
+                        // Update progress bar
+                        const progress = Math.max(runInfo.progress || 0, 25);
+                        progressBar.style.width = progress + '%';
+                        
+                        // Update status
+                        const phaseEmojis = {
+                            'initializing': '🚀',
+                            'connecting': '🔗',
+                            'checking': '🔍',
+                            'triggering': '⚡',
+                            'monitoring': '📊',
+                            'complete': '✅',
+                            'error': '❌'
+                        };
+                        
+                        const emoji = phaseEmojis[runInfo.current_phase] || '🔄';
+                        statusElement.textContent = `${emoji} ${runInfo.current_action || 'Processing...'}`;
+                        
+                        // Add new logs
+                        if (logs.length > lastLogCount) {
+                            const newLogs = logs.slice(lastLogCount);
+                            newLogs.forEach(log => {
+                                const timestamp = new Date(log.timestamp).toLocaleTimeString();
+                                const levelEmoji = {
+                                    'info': 'ℹ️',
+                                    'warning': '⚠️',
+                                    'error': '❌'
+                                }[log.level] || 'ℹ️';
+                                
+                                logsElement.textContent += `${levelEmoji} [${timestamp}] ${log.message}\n`;
+                            });
+                            logsElement.scrollTop = logsElement.scrollHeight;
+                            lastLogCount = logs.length;
+                        }
+                        
+                        // Check if completed
+                        if (runInfo.status === 'completed') {
+                            progressBar.style.width = '100%';
+                            progressBar.className = 'progress-bar bg-success';
+                            statusElement.textContent = '✅ Agent scan completed successfully!';
+                            
+                            const duration = runInfo.duration_seconds || ((Date.now() - new Date(runInfo.start_time)) / 1000);
+                            logsElement.textContent += `\n🎉 [${new Date().toLocaleTimeString()}] Scan completed in ${duration.toFixed(1)} seconds!\n`;
+                            logsElement.textContent += `\n💡 Tip: Check the network data and agent logs for the latest scan results.\n`;
+                            logsElement.scrollTop = logsElement.scrollHeight;
+                            
+                            // Refresh data to show updated status
+                            setTimeout(() => {
+                                refreshData();
+                            }, 3000);
+                            
+                            resolve();
+                            return;
+                        } else if (runInfo.status === 'error') {
+                            progressBar.style.width = '100%';
+                            progressBar.className = 'progress-bar bg-danger';
+                            statusElement.textContent = '❌ Agent scan failed: ' + (runInfo.error || 'Unknown error');
+                            logsElement.textContent += `\n❌ [${new Date().toLocaleTimeString()}] Scan failed: ${runInfo.error || 'Unknown error'}\n`;
+                            logsElement.scrollTop = logsElement.scrollHeight;
+                            resolve();
+                            return;
+                        }
+                        
+                    } else if (progressData.success === false && !progressData.running) {
+                        // Agent run finished or not found - treat as completed
+                        progressBar.style.width = '100%';
+                        progressBar.className = 'progress-bar bg-success';
+                        statusElement.textContent = '✅ Agent scan trigger completed!';
+                        logsElement.textContent += `\n✅ [${new Date().toLocaleTimeString()}] Agent run completed. Check logs for scan results.\n`;
+                        logsElement.scrollTop = logsElement.scrollHeight;
+                        
+                        setTimeout(() => {
+                            refreshData();
+                        }, 2000);
+                        
+                        resolve();
+                        return;
+                    }
                 } else {
-                    statusElement.textContent = 'Finalizing scan and sending results...';
-                    logsElement.textContent += `📤 [${new Date().toLocaleTimeString()}] Preparing to send scan results to server...\n`;
+                    // Backend progress not available, fall back to estimated progress
+                    const progressPercent = Math.min(25 + (elapsedTime / maxWaitTime) * 65, 90);
+                    progressBar.style.width = progressPercent + '%';
+                    
+                    if (elapsedTime <= 5) {
+                        statusElement.textContent = '🔄 Agent processing scan trigger...';
+                    } else if (elapsedTime <= 15) {
+                        statusElement.textContent = '🔍 Running network discovery scan...';
+                    } else if (elapsedTime <= 30) {
+                        statusElement.textContent = '🧪 Running connectivity tests...';
+                    } else if (elapsedTime <= 45) {
+                        statusElement.textContent = '📊 Collecting system information...';
+                    } else {
+                        statusElement.textContent = '📤 Finalizing scan and sending results...';
+                    }
                 }
                 
-                logsElement.scrollTop = logsElement.scrollHeight;
-                
-                // Check if we should continue polling
+                // Check timeout
                 if (elapsedTime >= maxWaitTime) {
-                    // Scan completed (or timed out)
                     progressBar.style.width = '100%';
-                    progressBar.className = 'progress-bar bg-success';
-                    statusElement.textContent = '✅ Agent scan completed successfully!';
-                    logsElement.textContent += `\n🎉 [${new Date().toLocaleTimeString()}] Scan completed! Results should appear in the server shortly.\n`;
-                    logsElement.textContent += `\n💡 Tip: Check the network data and agent logs for the latest scan results.\n`;
+                    progressBar.className = 'progress-bar bg-warning';
+                    statusElement.textContent = '⏰ Scan monitoring timed out (scan may still be running)';
+                    logsElement.textContent += `\n⏰ [${new Date().toLocaleTimeString()}] Progress monitoring timed out after ${maxWaitTime} seconds.\n`;
+                    logsElement.textContent += `\n🔄 The scan may still be running. Check agent logs or network data for results.\n`;
                     logsElement.scrollTop = logsElement.scrollHeight;
-                    
-                    // Refresh data to show updated status
-                    setTimeout(() => {
-                        refreshData();
-                    }, 3000);
-                    
                     resolve();
                 } else {
                     // Continue polling
