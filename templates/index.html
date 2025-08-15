@@ -884,14 +884,20 @@ function resetScanModal() {
     }
     
     // Hide/show appropriate sections
-    document.getElementById('scanLogs').style.display = 'none';
-    document.getElementById('hostScanStatusContainer').style.display = 'none';
-    document.getElementById('scanPhasesContainer').style.display = 'none';
+    const scanLogs = document.getElementById('scanLogs');
+    const hostScanStatusContainer = document.getElementById('hostScanStatusContainer');
+    const scanPhasesContainer = document.getElementById('scanPhasesContainer');
     
-    // Reset footer buttons
-    document.querySelector('.scan-loading-spinner').style.display = 'flex';
-    document.querySelector('.scan-retry-button').style.display = 'none';
-    document.querySelector('.scan-export-button').style.display = 'none';
+    if (scanLogs) scanLogs.style.display = 'none';
+    if (hostScanStatusContainer) hostScanStatusContainer.style.display = 'none';
+    if (scanPhasesContainer) scanPhasesContainer.style.display = 'none';
+    
+    // Reset footer buttons (safely check if they exist)
+    const retryButton = document.querySelector('.scan-retry-button');
+    const exportButton = document.querySelector('.scan-export-button');
+    
+    if (retryButton) retryButton.style.display = 'none';
+    if (exportButton) exportButton.style.display = 'none';
 }
 
 function displayScanProgress(data) {
