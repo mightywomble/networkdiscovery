@@ -1058,6 +1058,44 @@ class Database:
             ''')
             return [dict(row) for row in cursor.fetchall()]
     
+    def get_latest_agent_scan_results(self, agent_id):
+        """Get the latest scan results for an agent"""
+        with self.get_connection() as conn:
+            cursor = conn.execute('''
+                SELECT * FROM agent_scan_results 
+                WHERE agent_id = ?
+                ORDER BY scan_timestamp DESC
+                LIMIT 1
+            ''', (agent_id,))
+            row = cursor.fetchone()
+            if row:
+                result = dict(row)
+                try:
+                    result['scan_data'] = json.loads(result['scan_data'])
+                except json.JSONDecodeError:
+                    result['scan_data'] = {}
+                return result
+            return None
+    
+    def get_agent_scan_results(self, agent_id, limit=10):
+        """Get scan results for an agent with optional limit"""
+        with self.get_connection() as conn:
+            cursor = conn.execute('''
+                SELECT * FROM agent_scan_results 
+                WHERE agent_id = ?
+                ORDER BY scan_timestamp DESC
+                LIMIT ?
+            ''', (agent_id, limit))
+            results = []
+            for row in cursor.fetchall():
+                result = dict(row)
+                try:
+                    result['scan_data'] = json.loads(result['scan_data'])
+                except json.JSONDecodeError:
+                    result['scan_data'] = {}
+                results.append(result)
+            return results
+    
     def get_agent_stats(self):
         """Get agent statistics"""
         with self.get_connection() as conn:

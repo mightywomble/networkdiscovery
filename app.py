@@ -3611,10 +3611,11 @@ def run_agent_now():
                     'timestamp': datetime.now().isoformat()
                 })
             else:
+                error_msg = error if error else (result.get('stderr', 'Command failed') if result else 'Command failed')
                 return jsonify({
                     'success': False,
-                    'error': f'Failed to trigger agent scan: {error or "Command failed"}',
-                    'output': result.get('stderr', '') if result else ''
+                    'error': f'Failed to trigger agent scan: {error_msg}',
+                    'output': result.get('stdout', '') if result else ''
                 }), 500
                 
         except Exception as e:
