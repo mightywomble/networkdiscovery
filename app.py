@@ -2698,8 +2698,11 @@ def update_single_agent():
         # Mark update as started
         db.mark_agent_update_started(agent_id)
         
-        # Start update process in background thread
-        thread = threading.Thread(target=perform_agent_update, args=(agent,))
+        # Get server URL from current request
+        server_url = request.url_root.rstrip('/')
+        
+        # Start update process in background thread with server URL
+        thread = threading.Thread(target=perform_agent_update, args=(agent, server_url))
         thread.daemon = True
         thread.start()
         
@@ -2730,10 +2733,13 @@ def update_all_agents():
                 'error': 'No active agents found'
             }), 400
         
+        # Get server URL from current request
+        server_url = request.url_root.rstrip('/')
+        
         # Start update process for all agents
         for agent in active_agents:
             db.mark_agent_update_started(agent['agent_id'])
-            thread = threading.Thread(target=perform_agent_update, args=(agent,))
+            thread = threading.Thread(target=perform_agent_update, args=(agent, server_url))
             thread.daemon = True
             thread.start()
         
@@ -3261,7 +3267,7 @@ echo "Agent uninstallation completed successfully"
             'output': ''
         }
 
-def perform_agent_update(agent):
+def perform_agent_update(agent, server_url):
     """Perform agent update via SSH"""
     try:
         agent_id = agent['agent_id']
@@ -3295,7 +3301,6 @@ def perform_agent_update(agent):
         build_date = datetime.now().strftime('%Y-%m-%d')
         
         # Create agent update script
-        server_url = request.url_root.rstrip('/') if 'request' in globals() else 'http://localhost:5150'
         
         update_script = f"""
 #!/bin/bash

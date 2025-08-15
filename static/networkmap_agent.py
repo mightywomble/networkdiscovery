@@ -10,6 +10,7 @@ import json
 import logging
 import os
 import platform
+import signal
 import socket
 import subprocess
 import sys
@@ -24,11 +25,11 @@ import requests
 import hashlib
 
 # Agent version and build information
-__version__ = "1.2.0"
-__build_date__ = "2024-12-19"
+__version__ = "1.3.0"
+__build_date__ = "2025-08-15"
+
 VERSION = __version__
 BUILD_DATE = __build_date__
-
 CONFIG_FILE = "/etc/networkmap/agent.conf"
 # LOG_FILE = "/var/log/networkmap-agent.log"  # Not used when running under systemd
 PID_FILE = "/var/run/networkmap-agent.pid"
@@ -43,6 +44,7 @@ class NetworkMapAgent:
         self.scan_thread = None
         self.heartbeat_thread = None
         self.log_collection_thread = None
+        self.manual_scan_requested = threading.Event()
         
     def setup_basic_logging(self):
         """Setup basic logging before config is loaded"""
@@ -252,9 +254,9 @@ class NetworkMapAgent:
             data = {
                 'agent_id': self.agent_id,
                 'status': 'active',
+                'timestamp': datetime.now().isoformat(),
                 'agent_version': VERSION,
-                'build_date': BUILD_DATE,
-                'timestamp': datetime.now().isoformat()
+                'build_date': BUILD_DATE
             }
             
             url = f"{self.config['server_url']}/api/agent/heartbeat"
@@ -520,18 +522,55 @@ class NetworkMapAgent:
         except Exception as e:
             self.logger.error(f"Failed to send logs: {e}")
     
+    def signal_handler(self, signum, frame):
+        """Handle signals for immediate scan requests"""
+        if signum == signal.SIGUSR1:
+            self.logger.info("🚀 Received USR1 signal - triggering immediate network scan")
+            self.manual_scan_requested.set()
+        elif signum == signal.SIGTERM:
+            self.logger.info("Received TERM signal - stopping agent")
+            self.stop()
+        elif signum == signal.SIGINT:
+            self.logger.info("Received INT signal - stopping agent")
+            self.stop()
+    
+    def setup_signal_handlers(self):
+        """Setup signal handlers for immediate scan triggering"""
+        signal.signal(signal.SIGUSR1, self.signal_handler)
+        signal.signal(signal.SIGTERM, self.signal_handler)
+        signal.signal(signal.SIGINT, self.signal_handler)
+        self.logger.info("Signal handlers configured - send USR1 to trigger immediate scan")
+    
     def scan_worker(self):
-        """Background thread for periodic scanning"""
+        """Background thread for periodic scanning with immediate scan support"""
         while self.running:
             try:
-                if self.config.get('scan_enabled', True):
-                    self.logger.info("Starting network scan")
+                # Check if manual scan was requested
+                if self.manual_scan_requested.is_set():
+                    self.logger.info("🔥 MANUAL SCAN TRIGGERED - Starting immediate network scan")
+                    self.manual_scan_requested.clear()
+                    
+                    if self.config.get('scan_enabled', True):
+                        scan_results = self.run_network_scan()
+                        self.send_scan_results(scan_results)
+                        self.logger.info("✅ Manual scan completed and results sent to server")
+                    else:
+                        self.logger.warning("⚠️ Manual scan requested but scanning is disabled in configuration")
+                
+                # Regular periodic scan
+                elif self.config.get('scan_enabled', True):
+                    self.logger.info("Starting periodic network scan")
                     scan_results = self.run_network_scan()
                     self.send_scan_results(scan_results)
                 
-                # Sleep for scan interval
+                # Sleep for scan interval, but check for manual scans every second
                 scan_interval = self.config.get('scan_interval', 300)  # 5 minutes default
-                time.sleep(scan_interval)
+                for _ in range(scan_interval):
+                    if not self.running:
+                        break
+                    if self.manual_scan_requested.is_set():
+                        break  # Break out of sleep to handle manual scan immediately
+                    time.sleep(1)
                 
             except Exception as e:
                 self.logger.error(f"Scan worker error: {e}")
@@ -634,6 +673,9 @@ class NetworkMapAgent:
                     os.remove(PID_FILE)
             
             self.create_pid_file()
+            
+            # Setup signal handlers for immediate scans
+            self.setup_signal_handlers()
             
             # Register with server
             if not self.register_with_server():
