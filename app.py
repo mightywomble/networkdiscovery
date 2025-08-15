@@ -3444,7 +3444,7 @@ echo "Waiting for service to stabilize..."
 sleep 8
 
 # Check service status multiple times
-for i in {1..3}; do
+for i in {{1..3}}; do
     echo "Service check attempt $i/3..."
     if sudo systemctl is-active --quiet networkmap-agent; then
         SERVICE_STATUS="active"
