@@ -355,6 +355,18 @@
                         </div>
                     </div>
                     
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" id="enhanced-scan-enabled">
+                                <label class="form-check-label" for="enhanced-scan-enabled">
+                                    Enable Enhanced Network Scanning
+                                </label>
+                                <div class="form-text">Use comprehensive scanning with ping sweeps, connectivity tests, and performance analysis (recommended)</div>
+                            </div>
+                        </div>
+                    </div>
+                    
                     <div class="mb-3">
                         <label class="form-label">Log Paths</label>
                         <textarea class="form-control" id="log-paths" rows="3" placeholder="/var/log,/var/log/syslog,/var/log/auth.log"></textarea>
@@ -1467,6 +1479,7 @@ async function loadAgentConfiguration(agentId) {
             document.getElementById('heartbeat-interval').value = config.heartbeat_interval || 60;
             document.getElementById('scan-enabled').checked = config.scan_enabled !== false;
             document.getElementById('log-collection-enabled').checked = config.log_collection_enabled !== false;
+            document.getElementById('enhanced-scan-enabled').checked = config.enhanced_scan_enabled !== false;
             document.getElementById('log-paths').value = config.log_paths || '/var/log,/var/log/syslog,/var/log/auth.log';
             
             // Load test configuration
@@ -1528,6 +1541,7 @@ async function saveAgentConfig() {
             heartbeat_interval: heartbeatInterval,
             scan_enabled: document.getElementById('scan-enabled').checked,
             log_collection_enabled: document.getElementById('log-collection-enabled').checked,
+            enhanced_scan_enabled: document.getElementById('enhanced-scan-enabled').checked,
             log_paths: document.getElementById('log-paths').value.trim(),
             test_configuration: getTestConfigurationForSave()
         };

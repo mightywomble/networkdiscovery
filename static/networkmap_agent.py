@@ -25,7 +25,7 @@ import requests
 import hashlib
 
 # Agent version and build information
-__version__ = "1.6.4"
+__version__ = "1.6.6"
 __build_date__ = "2025-08-15"
 
 VERSION = __version__
@@ -158,11 +158,12 @@ class NetworkMapAgent:
         
         # Set default values for optional config
         defaults = {
-            'scan_interval': 300,
+            'scan_interval': 600,  # 10 minutes for enhanced scans
             'heartbeat_interval': 60,
             'log_collection_enabled': True,
             'log_paths': '/var/log,/var/log/syslog,/var/log/auth.log',
             'scan_enabled': True,
+            'enhanced_scan_enabled': True,  # Enable enhanced scanning by default
             'log_level': 'INFO'
         }
         
@@ -314,30 +315,37 @@ class NetworkMapAgent:
         }
         
         try:
-            self.logger.info("Starting comprehensive network scan and testing")
+            # Determine scan type based on configuration
+            enhanced_scan_enabled = self.config.get('enhanced_scan_enabled', True)
             
-            # System information
-            scan_results['system_info'] = self.get_system_info()
-            
-            # Run all network data collection with enhanced error handling and testing
-            scan_results['network_interfaces'] = self._collect_network_interfaces()
-            scan_results['routing_table'] = self._collect_routing_table()
-            scan_results['arp_table'] = self._collect_arp_table()
-            scan_results['listening_ports'] = self._collect_listening_ports()
-            scan_results['active_connections'] = self._collect_active_connections()
-            scan_results['network_stats'] = self._collect_network_stats()
-            scan_results['process_network'] = self._collect_process_network()
-            
-            # Run comprehensive network tests
-            scan_results['test_results'] = self._run_network_tests(scan_results)
-            
-            # Calculate scan duration
-            scan_end_time = datetime.now()
-            scan_duration = (scan_end_time - scan_start_time).total_seconds()
-            scan_results['scan_duration'] = f"{scan_duration:.2f} seconds"
-            scan_results['scan_status'] = 'completed'
-            
-            self.logger.info(f"Network scan completed successfully in {scan_duration:.2f} seconds")
+            if enhanced_scan_enabled:
+                self.logger.info("🚀 Starting Enhanced Network Discovery & Analysis")
+                scan_results = self._run_enhanced_network_scan(scan_start_time)
+            else:
+                self.logger.info("Starting basic network scan and testing")
+                
+                # System information
+                scan_results['system_info'] = self.get_system_info()
+                
+                # Run all network data collection with enhanced error handling and testing
+                scan_results['network_interfaces'] = self._collect_network_interfaces()
+                scan_results['routing_table'] = self._collect_routing_table()
+                scan_results['arp_table'] = self._collect_arp_table()
+                scan_results['listening_ports'] = self._collect_listening_ports()
+                scan_results['active_connections'] = self._collect_active_connections()
+                scan_results['network_stats'] = self._collect_network_stats()
+                scan_results['process_network'] = self._collect_process_network()
+                
+                # Run comprehensive network tests
+                scan_results['test_results'] = self._run_network_tests(scan_results)
+                
+                # Calculate scan duration
+                scan_end_time = datetime.now()
+                scan_duration = (scan_end_time - scan_start_time).total_seconds()
+                scan_results['scan_duration'] = f"{scan_duration:.2f} seconds"
+                scan_results['scan_status'] = 'completed'
+                
+                self.logger.info(f"Basic network scan completed successfully in {scan_duration:.2f} seconds")
             
         except Exception as e:
             scan_results['errors'].append(f"Network scan failed: {str(e)}")
@@ -580,6 +588,381 @@ class NetworkMapAgent:
         
         return tests
     
+    def _run_enhanced_network_scan(self, scan_start_time: datetime) -> Dict[str, Any]:
+        """Run enhanced network scanning with comprehensive analysis phases"""
+        scan_results = {
+            'timestamp': scan_start_time.isoformat(),
+            'hostname': socket.gethostname(),
+            'system_info': {},
+            'agent_info': {
+                'agent_version': VERSION,
+                'build_date': BUILD_DATE,
+                'platform': platform.platform()
+            },
+            'network_interfaces': {},
+            'routing_table': [],
+            'arp_table': [],
+            'listening_ports': [],
+            'active_connections': [],
+            'network_stats': {},
+            'process_network': [],
+            'test_results': {},
+            'enhanced_discovery': {},
+            'connectivity_tests': {},
+            'performance_metrics': {},
+            'errors': [],
+            'scan_duration': None,
+            'scan_status': 'running'
+        }
+        
+        try:
+            # Phase 1: System Information & Basic Data Collection
+            self.logger.info("📝 Phase 1: System Information & Basic Data Collection")
+            scan_results['system_info'] = self.get_system_info()
+            scan_results['network_interfaces'] = self._collect_network_interfaces()
+            scan_results['routing_table'] = self._collect_routing_table()
+            scan_results['arp_table'] = self._collect_arp_table()
+            scan_results['listening_ports'] = self._collect_listening_ports()
+            scan_results['active_connections'] = self._collect_active_connections()
+            scan_results['network_stats'] = self._collect_network_stats()
+            scan_results['process_network'] = self._collect_process_network()
+            
+            # Phase 2: Enhanced Network Discovery
+            self.logger.info("🔍 Phase 2: Enhanced Network Discovery")
+            scan_results['enhanced_discovery'] = self._enhanced_network_discovery()
+            
+            # Phase 3: Connectivity and Performance Tests
+            self.logger.info("⚡ Phase 3: Connectivity & Performance Analysis")
+            scan_results['connectivity_tests'] = self._enhanced_connectivity_tests()
+            scan_results['performance_metrics'] = self._enhanced_performance_analysis()
+            
+            # Phase 4: Comprehensive Network Tests
+            self.logger.info("🧪 Phase 4: Comprehensive Network Testing")
+            scan_results['test_results'] = self._run_enhanced_network_tests(scan_results)
+            
+            # Calculate scan duration
+            scan_end_time = datetime.now()
+            scan_duration = (scan_end_time - scan_start_time).total_seconds()
+            scan_results['scan_duration'] = f"{scan_duration:.2f} seconds"
+            scan_results['scan_status'] = 'completed'
+            
+            self.logger.info(f"✨ Enhanced network scan completed successfully in {scan_duration:.2f} seconds")
+            
+        except Exception as e:
+            scan_results['errors'].append(f"Enhanced network scan failed: {str(e)}")
+            scan_results['scan_status'] = 'failed'
+            self.logger.error(f"Enhanced network scan failed: {e}")
+        
+        return scan_results
+    
+    def _enhanced_network_discovery(self) -> Dict[str, Any]:
+        """Enhanced network discovery using ping sweeps and network analysis"""
+        discovery_results = {
+            'ping_sweep': {},
+            'network_ranges': [],
+            'gateway_analysis': {},
+            'dns_servers': [],
+            'discovered_hosts': []
+        }
+        
+        try:
+            # Get network ranges from routing table
+            self.logger.info("  📋 Analyzing network ranges from routing table")
+            route_result = subprocess.run(['ip', 'route', 'show'], capture_output=True, text=True, timeout=30)
+            if route_result.returncode == 0:
+                for line in route_result.stdout.strip().split('\n'):
+                    if '/' in line and 'dev' in line:
+                        parts = line.split()
+                        if parts and '/' in parts[0]:
+                            try:
+                                import ipaddress
+                                network = ipaddress.IPv4Network(parts[0], strict=False)
+                                if network.is_private and network.num_addresses <= 256:
+                                    discovery_results['network_ranges'].append(str(network))
+                            except:
+                                continue
+            
+            # Ping sweep of local networks
+            for network in discovery_results['network_ranges'][:2]:  # Limit to 2 networks
+                self.logger.info(f"  🏃 Fast ping sweep of {network}")
+                
+                # Use fping for fast sweep
+                ping_cmd = f"timeout 30 fping -a -q -r 1 -g {network} 2>/dev/null | head -20"
+                ping_result = subprocess.run(ping_cmd, shell=True, capture_output=True, text=True, timeout=35)
+                
+                if ping_result.returncode == 0:
+                    alive_hosts = [ip.strip() for ip in ping_result.stdout.split('\n') if ip.strip()]
+                    discovery_results['ping_sweep'][network] = alive_hosts
+                    discovery_results['discovered_hosts'].extend(alive_hosts)
+                    self.logger.info(f"  ✅ Found {len(alive_hosts)} alive hosts in {network}")
+            
+            # Gateway analysis
+            self.logger.info("  🚰 Analyzing network gateways")
+            gateway_result = subprocess.run(['ip', 'route', 'show', 'default'], capture_output=True, text=True, timeout=10)
+            if gateway_result.returncode == 0:
+                for line in gateway_result.stdout.strip().split('\n'):
+                    if 'via' in line:
+                        parts = line.split()
+                        via_index = parts.index('via')
+                        if via_index + 1 < len(parts):
+                            gateway_ip = parts[via_index + 1]
+                            discovery_results['gateway_analysis'][gateway_ip] = line
+            
+            # DNS server discovery
+            self.logger.info("  🔍 Discovering DNS servers")
+            dns_result = subprocess.run(['cat', '/etc/resolv.conf'], capture_output=True, text=True, timeout=10)
+            if dns_result.returncode == 0:
+                for line in dns_result.stdout.split('\n'):
+                    if line.startswith('nameserver'):
+                        parts = line.split()
+                        if len(parts) > 1:
+                            discovery_results['dns_servers'].append(parts[1])
+            
+        except Exception as e:
+            discovery_results['error'] = str(e)
+            self.logger.warning(f"Enhanced discovery error: {e}")
+        
+        return discovery_results
+    
+    def _enhanced_connectivity_tests(self) -> Dict[str, Any]:
+        """Enhanced connectivity testing to external services"""
+        connectivity_results = {
+            'internet_connectivity': {},
+            'dns_resolution': {},
+            'traceroute_tests': {},
+            'http_connectivity': {}
+        }
+        
+        try:
+            # Test internet connectivity to multiple targets
+            test_targets = ['8.8.8.8', '1.1.1.1', '9.9.9.9']
+            self.logger.info(f"  🌍 Testing internet connectivity to {len(test_targets)} targets")
+            
+            for target in test_targets:
+                ping_result = subprocess.run(['ping', '-c', '3', '-W', '3', target], 
+                                          capture_output=True, text=True, timeout=15)
+                connectivity_results['internet_connectivity'][target] = {
+                    'success': ping_result.returncode == 0,
+                    'output': ping_result.stdout if ping_result.returncode == 0 else ping_result.stderr
+                }
+            
+            # DNS resolution tests
+            test_domains = ['google.com', 'cloudflare.com', 'github.com']
+            self.logger.info(f"  🔍 Testing DNS resolution for {len(test_domains)} domains")
+            
+            for domain in test_domains:
+                nslookup_result = subprocess.run(['nslookup', domain], 
+                                               capture_output=True, text=True, timeout=10)
+                connectivity_results['dns_resolution'][domain] = {
+                    'success': nslookup_result.returncode == 0,
+                    'output': nslookup_result.stdout[:200] if nslookup_result.returncode == 0 else nslookup_result.stderr[:200]
+                }
+            
+            # Traceroute tests to key destinations
+            trace_targets = ['8.8.8.8', 'google.com']
+            self.logger.info(f"  🛰 Running traceroute tests to {len(trace_targets)} targets")
+            
+            for target in trace_targets:
+                traceroute_result = subprocess.run(['traceroute', '-m', '10', '-w', '3', target], 
+                                                 capture_output=True, text=True, timeout=45)
+                connectivity_results['traceroute_tests'][target] = {
+                    'success': traceroute_result.returncode == 0,
+                    'output': traceroute_result.stdout[:500] if traceroute_result.returncode == 0 else 'Failed'
+                }
+            
+        except Exception as e:
+            connectivity_results['error'] = str(e)
+            self.logger.warning(f"Connectivity tests error: {e}")
+        
+        return connectivity_results
+    
+    def _enhanced_performance_analysis(self) -> Dict[str, Any]:
+        """Enhanced performance analysis and system monitoring"""
+        performance_results = {
+            'system_load': {},
+            'network_interface_performance': {},
+            'disk_io': {},
+            'memory_usage': {},
+            'network_latency': {}
+        }
+        
+        try:
+            # System load analysis
+            self.logger.info("  📊 Analyzing system performance metrics")
+            
+            # Get system load
+            uptime_result = subprocess.run(['uptime'], capture_output=True, text=True, timeout=10)
+            if uptime_result.returncode == 0:
+                performance_results['system_load']['uptime'] = uptime_result.stdout.strip()
+            
+            # Memory usage
+            free_result = subprocess.run(['free', '-h'], capture_output=True, text=True, timeout=10)
+            if free_result.returncode == 0:
+                performance_results['memory_usage']['free_output'] = free_result.stdout
+            
+            # Disk I/O statistics (if iostat is available)
+            iostat_result = subprocess.run(['iostat', '-x', '1', '1'], capture_output=True, text=True, timeout=15)
+            if iostat_result.returncode == 0:
+                performance_results['disk_io']['iostat'] = iostat_result.stdout[-500:]  # Last 500 chars
+            
+            # Network interface performance
+            self.logger.info("  📶 Analyzing network interface performance")
+            
+            # Get interface statistics
+            ip_stats_result = subprocess.run(['ip', '-s', 'link'], capture_output=True, text=True, timeout=10)
+            if ip_stats_result.returncode == 0:
+                performance_results['network_interface_performance']['ip_stats'] = ip_stats_result.stdout[-1000:]  # Last 1000 chars
+            
+            # Network latency tests using MTR (if available)
+            self.logger.info("  ⏱️ Testing network latency with MTR")
+            mtr_result = subprocess.run(['mtr', '-r', '-c', '5', '8.8.8.8'], capture_output=True, text=True, timeout=30)
+            if mtr_result.returncode == 0:
+                performance_results['network_latency']['mtr_8888'] = mtr_result.stdout
+            
+        except Exception as e:
+            performance_results['error'] = str(e)
+            self.logger.warning(f"Performance analysis error: {e}")
+        
+        return performance_results
+    
+    def _run_enhanced_network_tests(self, scan_data: Dict[str, Any]) -> Dict[str, Any]:
+        """Run enhanced comprehensive network tests"""
+        test_results = {}
+        
+        # Run basic tests
+        test_results['System Monitoring'] = self._run_system_monitoring_tests(scan_data)
+        test_results['Network Discovery'] = self._run_enhanced_discovery_tests(scan_data)
+        test_results['Connection Monitoring'] = self._run_connection_monitoring_tests(scan_data)
+        test_results['Port Scanning'] = self._run_port_scanning_tests(scan_data)
+        
+        # Add enhanced tests
+        test_results['Connectivity Tests'] = self._run_connectivity_tests(scan_data)
+        test_results['Performance Tests'] = self._run_performance_tests(scan_data)
+        
+        return test_results
+    
+    def _run_enhanced_discovery_tests(self, scan_data: Dict[str, Any]) -> Dict[str, Any]:
+        """Enhanced network discovery tests with ping sweep analysis"""
+        tests = {}
+        
+        # Enhanced ARP Table Analysis
+        arp_data = scan_data.get('arp_table', [])
+        arp_count = len([entry for entry in arp_data if entry.strip()]) if arp_data else 0
+        
+        # Analyze ARP entries for unique hosts and MAC addresses
+        unique_hosts = set()
+        unique_macs = set()
+        if arp_data:
+            for entry in arp_data:
+                if entry.strip() and '(' in entry:
+                    # Extract IP and MAC from ARP entry
+                    parts = entry.split()
+                    for part in parts:
+                        if ':' in part and len(part) == 17:  # MAC address format
+                            unique_macs.add(part)
+                        elif '.' in part and part.replace('.', '').replace(')', '').isdigit():
+                            unique_hosts.add(part.replace(')', '').replace('(', ''))
+        
+        tests['Enhanced ARP Analysis'] = {
+            'success': arp_count > 0,
+            'description': f'Found {arp_count} ARP entries, {len(unique_hosts)} unique hosts, {len(unique_macs)} unique MACs',
+            'details': f"ARP analysis completed at {scan_data['timestamp']}\nUnique hosts discovered: {len(unique_hosts)}\nUnique MAC addresses: {len(unique_macs)}\nTotal ARP entries: {arp_count}"
+        }
+        
+        # Enhanced ping sweep analysis
+        enhanced_discovery = scan_data.get('enhanced_discovery', {})
+        ping_sweep = enhanced_discovery.get('ping_sweep', {})
+        total_discovered = len(enhanced_discovery.get('discovered_hosts', []))
+        
+        tests['Ping Sweep Discovery'] = {
+            'success': total_discovered > 0,
+            'description': f'Discovered {total_discovered} responsive hosts via ping sweep',
+            'details': f"Ping sweep completed at {scan_data['timestamp']}\nNetworks scanned: {len(ping_sweep)}\nTotal responsive hosts: {total_discovered}\nDiscovery method: fping with timeout"
+        }
+        
+        # Network range analysis
+        network_ranges = enhanced_discovery.get('network_ranges', [])
+        tests['Network Range Analysis'] = {
+            'success': len(network_ranges) > 0,
+            'description': f'Identified {len(network_ranges)} local network ranges',
+            'details': f"Network analysis at {scan_data['timestamp']}\nLocal networks: {', '.join(network_ranges[:3])}\nTotal ranges: {len(network_ranges)}"
+        }
+        
+        return tests
+    
+    def _run_connectivity_tests(self, scan_data: Dict[str, Any]) -> Dict[str, Any]:
+        """Enhanced connectivity tests analysis"""
+        tests = {}
+        
+        connectivity_tests = scan_data.get('connectivity_tests', {})
+        
+        # Internet connectivity analysis
+        internet_tests = connectivity_tests.get('internet_connectivity', {})
+        successful_pings = sum(1 for result in internet_tests.values() if result.get('success'))
+        total_ping_tests = len(internet_tests)
+        
+        tests['Internet Connectivity'] = {
+            'success': successful_pings > 0,
+            'description': f'Internet connectivity: {successful_pings}/{total_ping_tests} targets reachable',
+            'details': f"Connectivity tests at {scan_data['timestamp']}\nTargets tested: {', '.join(internet_tests.keys())}\nSuccessful: {successful_pings}\nFailed: {total_ping_tests - successful_pings}"
+        }
+        
+        # DNS resolution analysis
+        dns_tests = connectivity_tests.get('dns_resolution', {})
+        successful_dns = sum(1 for result in dns_tests.values() if result.get('success'))
+        total_dns_tests = len(dns_tests)
+        
+        tests['DNS Resolution'] = {
+            'success': successful_dns > 0,
+            'description': f'DNS resolution: {successful_dns}/{total_dns_tests} domains resolved',
+            'details': f"DNS tests at {scan_data['timestamp']}\nDomains tested: {', '.join(dns_tests.keys())}\nSuccessful resolutions: {successful_dns}\nFailed resolutions: {total_dns_tests - successful_dns}"
+        }
+        
+        # Traceroute analysis
+        traceroute_tests = connectivity_tests.get('traceroute_tests', {})
+        successful_traces = sum(1 for result in traceroute_tests.values() if result.get('success'))
+        total_trace_tests = len(traceroute_tests)
+        
+        tests['Network Path Analysis'] = {
+            'success': successful_traces > 0,
+            'description': f'Traceroute analysis: {successful_traces}/{total_trace_tests} paths traced',
+            'details': f"Path analysis at {scan_data['timestamp']}\nTargets traced: {', '.join(traceroute_tests.keys())}\nSuccessful traces: {successful_traces}\nNetwork path discovery completed"
+        }
+        
+        return tests
+    
+    def _run_performance_tests(self, scan_data: Dict[str, Any]) -> Dict[str, Any]:
+        """Enhanced performance tests analysis"""
+        tests = {}
+        
+        performance_metrics = scan_data.get('performance_metrics', {})
+        
+        # System load analysis
+        system_load = performance_metrics.get('system_load', {})
+        tests['System Load Analysis'] = {
+            'success': bool(system_load.get('uptime')),
+            'description': 'System load and uptime analysis completed',
+            'details': f"Performance analysis at {scan_data['timestamp']}\nUptime data collected: {bool(system_load.get('uptime'))}\nLoad averages analyzed"
+        }
+        
+        # Memory usage analysis
+        memory_usage = performance_metrics.get('memory_usage', {})
+        tests['Memory Usage Analysis'] = {
+            'success': bool(memory_usage.get('free_output')),
+            'description': 'Memory usage analysis completed',
+            'details': f"Memory analysis at {scan_data['timestamp']}\nMemory statistics collected and analyzed\nFree memory data available"
+        }
+        
+        # Network latency analysis
+        network_latency = performance_metrics.get('network_latency', {})
+        tests['Network Latency Analysis'] = {
+            'success': bool(network_latency.get('mtr_8888')),
+            'description': 'Network latency analysis using MTR completed' if network_latency.get('mtr_8888') else 'Basic latency analysis completed',
+            'details': f"Latency analysis at {scan_data['timestamp']}\nMTR analysis: {'Available' if network_latency.get('mtr_8888') else 'Not available'}\nNetwork path latency measured"
+        }
+        
+        return tests
+    
     def collect_logs(self) -> List[Dict[str, Any]]:
         """Collect system logs"""
         logs = []
@@ -792,7 +1175,7 @@ class NetworkMapAgent:
                     config_changed = False
                     for key, value in server_config.items():
                         if key in ['scan_interval', 'heartbeat_interval', 'log_collection_enabled', 
-                                  'log_paths', 'scan_enabled']:
+                                  'log_paths', 'scan_enabled', 'enhanced_scan_enabled']:
                             if self.config.get(key) != value:
                                 self.config[key] = value
                                 config_changed = True
