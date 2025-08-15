@@ -873,7 +873,6 @@ function renderHosts() {
                                 <input class="form-check-input" type="checkbox" 
                                        id="host-${host.id}" 
                                        ${isSelected ? 'checked' : ''}
-                                       ${agent ? 'disabled' : ''}
                                        onchange="toggleHostSelection(${host.id})">
                             </div>
                         </div>
@@ -951,17 +950,13 @@ function toggleHostSelection(hostId) {
 }
 
 function selectAllHosts() {
-    const availableHosts = hosts.filter(host => 
-        !agents.find(a => a.ip_address === host.ip_address || a.hostname === host.name)
-    );
-    
-    if (selectedHosts.size === availableHosts.length) {
+    if (selectedHosts.size === hosts.length) {
         // Unselect all
         selectedHosts.clear();
     } else {
-        // Select all available hosts
+        // Select all hosts
         selectedHosts.clear();
-        availableHosts.forEach(host => selectedHosts.add(host.id));
+        hosts.forEach(host => selectedHosts.add(host.id));
     }
     
     renderHosts();
@@ -971,13 +966,10 @@ function selectAllHosts() {
 
 function updateSelectAllButton() {
     const btn = document.getElementById('select-all-btn');
-    const availableHosts = hosts.filter(host => 
-        !agents.find(a => a.ip_address === host.ip_address || a.hostname === host.name)
-    );
     
     if (selectedHosts.size === 0) {
         btn.innerHTML = '<i class="fas fa-check-square"></i> Select All';
-    } else if (selectedHosts.size === availableHosts.length) {
+    } else if (selectedHosts.size === hosts.length) {
         btn.innerHTML = '<i class="fas fa-square"></i> Unselect All';
     } else {
         btn.innerHTML = '<i class="fas fa-minus-square"></i> Select All';
