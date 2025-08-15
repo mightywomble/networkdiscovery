@@ -2835,53 +2835,294 @@ function showDataSummary(data) {
 function showNetworkData(data) {
     const content = document.getElementById('agent-data-content');
     
-    if (!data.network_data || data.network_data.length === 0) {
+    // Check if we have any network data at all
+    const hasArpData = data.arp_table && data.arp_table.length > 0;
+    const hasPortData = data.listening_ports && data.listening_ports.length > 0;
+    const hasConnectionData = data.active_connections && data.active_connections.length > 0;
+    const hasInterfaceData = data.network_interfaces && data.network_interfaces.ip_addr;
+    const hasRoutingData = data.routing_table && data.routing_table.length > 0;
+    
+    if (!hasArpData && !hasPortData && !hasConnectionData && !hasInterfaceData && !hasRoutingData) {
         content.innerHTML = '<div class="alert alert-info"><i class="fas fa-info-circle"></i> No network scan data available</div>';
         return;
     }
     
-    let networkHtml = `
-        <div class="card">
-            <div class="card-header">
-                <h6 class="mb-0"><i class="fas fa-network-wired"></i> Discovered Hosts (${data.network_data.length})</h6>
-            </div>
-            <div class="card-body p-0">
-                <div class="table-responsive" style="max-height: 500px; overflow-y: auto;">
-                    <table class="table table-hover mb-0">
-                        <thead class="table-light sticky-top">
-                            <tr>
-                                <th>IP Address</th>
-                                <th>Hostname</th>
-                                <th>MAC Address</th>
-                                <th>Status</th>
-                                <th>Open Ports</th>
-                                <th>Last Seen</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-    `;
+    let networkHtml = '<div class="accordion" id="networkDataAccordion">';
     
-    data.network_data.forEach(host => {
-        const ports = host.open_ports ? (Array.isArray(host.open_ports) ? host.open_ports.join(', ') : host.open_ports) : 'None';
+    // Network Interfaces Section
+    if (hasInterfaceData) {
         networkHtml += `
-            <tr>
-                <td><code>${host.ip_address}</code></td>
-                <td>${host.hostname || '-'}</td>
-                <td><small>${host.mac_address || '-'}</small></td>
-                <td><span class="badge bg-${host.status === 'up' ? 'success' : 'secondary'}">${host.status || 'Unknown'}</span></td>
-                <td><small>${ports}</small></td>
-                <td><small>${host.last_seen ? new Date(host.last_seen).toLocaleString() : '-'}</small></td>
-            </tr>
-        `;
-    });
-    
-    networkHtml += `
-                        </tbody>
-                    </table>
+            <div class="accordion-item">
+                <h2 class="accordion-header" id="interfacesHeading">
+                    <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#interfacesCollapse">
+                        <i class="fas fa-ethernet me-2"></i> Network Interfaces
+                        <span class="badge bg-primary ms-2">Active</span>
+                    </button>
+                </h2>
+                <div id="interfacesCollapse" class="accordion-collapse collapse show" data-bs-parent="#networkDataAccordion">
+                    <div class="accordion-body">
+                        <div class="network-output" style="background: #f8f9fa; padding: 1rem; border-radius: 0.375rem; font-family: monospace; font-size: 0.875rem; max-height: 400px; overflow-y: auto; white-space: pre-wrap; line-height: 1.4;">
+${data.network_interfaces.ip_addr.replace(/\n/g, '\n')}
+                        </div>
+                    </div>
                 </div>
             </div>
-        </div>
-    `;
+        `;
+    }
+    
+    // ARP Table Section
+    if (hasArpData) {
+        networkHtml += `
+            <div class="accordion-item">
+                <h2 class="accordion-header" id="arpHeading">
+                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#arpCollapse">
+                        <i class="fas fa-sitemap me-2"></i> ARP Table
+                        <span class="badge bg-success ms-2">${data.arp_table.length} entries</span>
+                    </button>
+                </h2>
+                <div id="arpCollapse" class="accordion-collapse collapse" data-bs-parent="#networkDataAccordion">
+                    <div class="accordion-body">
+                        <div class="table-responsive">
+                            <table class="table table-sm table-striped">
+                                <thead>
+                                    <tr>
+                                        <th>IP Address</th>
+                                        <th>MAC Address</th>
+                                        <th>Interface</th>
+                                        <th>Type</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+        `;
+        
+        data.arp_table.forEach(entry => {
+            // Parse ARP entry: "? (192.168.5.115) at e8:6a:64:af:99:e9 [ether] on enp1s0"
+            const matches = entry.match(/\((.*?)\)\s+at\s+([^\s]+)\s+\[([^\]]+)\]\s+on\s+(\S+)/);
+            if (matches) {
+                const [, ip, mac, type, iface] = matches;
+                const isGateway = entry.includes('_gateway');
+                networkHtml += `
+                    <tr>
+                        <td><code>${ip}</code> ${isGateway ? '<span class="badge bg-warning text-dark ms-1">Gateway</span>' : ''}</td>
+                        <td><code>${mac}</code></td>
+                        <td><span class="badge bg-secondary">${iface}</span></td>
+                        <td><span class="badge bg-info">${type}</span></td>
+                    </tr>
+                `;
+            }
+        });
+        
+        networkHtml += `
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+    
+    // Listening Ports Section
+    if (hasPortData) {
+        networkHtml += `
+            <div class="accordion-item">
+                <h2 class="accordion-header" id="portsHeading">
+                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#portsCollapse">
+                        <i class="fas fa-door-open me-2"></i> Listening Ports
+                        <span class="badge bg-warning ms-2">${data.listening_ports.length - 1} ports</span>
+                    </button>
+                </h2>
+                <div id="portsCollapse" class="accordion-collapse collapse" data-bs-parent="#networkDataAccordion">
+                    <div class="accordion-body">
+                        <div class="table-responsive">
+                            <table class="table table-sm table-striped">
+                                <thead>
+                                    <tr>
+                                        <th>Protocol</th>
+                                        <th>Local Address</th>
+                                        <th>Port</th>
+                                        <th>State</th>
+                                        <th>Process</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+        `;
+        
+        data.listening_ports.slice(1).forEach(port => {
+            // Parse listening port: "LISTEN 0      128          0.0.0.0:5150       0.0.0.0:*    users:((\"python3\",pid=1748646,fd=3))"
+            const parts = port.trim().split(/\s+/);
+            if (parts.length >= 4) {
+                const state = parts[0];
+                const localAddr = parts[3];
+                const [addr, portNum] = localAddr.split(':');
+                const processMatch = port.match(/users:\(\("([^"]+)",/);
+                const process = processMatch ? processMatch[1] : 'Unknown';
+                
+                // Determine protocol based on common ports
+                let protocol = 'TCP';
+                let portType = 'Other';
+                const pNum = parseInt(portNum);
+                
+                if (pNum === 22) portType = 'SSH';
+                else if (pNum === 80) portType = 'HTTP';
+                else if (pNum === 443) portType = 'HTTPS';
+                else if (pNum === 3306) portType = 'MySQL';
+                else if (pNum === 53) portType = 'DNS';
+                else if (pNum === 139 || pNum === 445) portType = 'SMB';
+                else if (pNum === 5150) portType = 'NetworkMap';
+                
+                networkHtml += `
+                    <tr>
+                        <td><span class="badge bg-primary">${protocol}</span></td>
+                        <td><code>${addr}</code></td>
+                        <td><span class="badge bg-secondary">${portNum}</span> <small class="text-muted">${portType}</small></td>
+                        <td><span class="badge bg-success">${state}</span></td>
+                        <td><code>${process}</code></td>
+                    </tr>
+                `;
+            }
+        });
+        
+        networkHtml += `
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+    
+    // Active Connections Section
+    if (hasConnectionData) {
+        const tcpConnections = data.active_connections.filter(conn => conn.includes('tcp') && (conn.includes('ESTAB') || conn.includes('TIME-WAIT')));
+        const udpConnections = data.active_connections.filter(conn => conn.includes('udp'));
+        
+        if (tcpConnections.length > 0) {
+            networkHtml += `
+                <div class="accordion-item">
+                    <h2 class="accordion-header" id="connectionsHeading">
+                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#connectionsCollapse">
+                            <i class="fas fa-exchange-alt me-2"></i> Active TCP Connections
+                            <span class="badge bg-info ms-2">${tcpConnections.length} connections</span>
+                        </button>
+                    </h2>
+                    <div id="connectionsCollapse" class="accordion-collapse collapse" data-bs-parent="#networkDataAccordion">
+                        <div class="accordion-body">
+                            <div class="table-responsive">
+                                <table class="table table-sm table-striped">
+                                    <thead>
+                                        <tr>
+                                            <th>State</th>
+                                            <th>Local Address</th>
+                                            <th>Remote Address</th>
+                                            <th>Process</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+            `;
+            
+            tcpConnections.slice(0, 20).forEach(conn => {
+                const parts = conn.trim().split(/\s+/);
+                if (parts.length >= 5) {
+                    const state = parts[1];
+                    const localAddr = parts[4];
+                    const remoteAddr = parts[5];
+                    const processMatch = conn.match(/users:\(\("([^"]+)",/);
+                    const process = processMatch ? processMatch[1] : '-';
+                    
+                    const stateColor = state === 'ESTAB' ? 'success' : state === 'TIME-WAIT' ? 'warning' : 'secondary';
+                    
+                    networkHtml += `
+                        <tr>
+                            <td><span class="badge bg-${stateColor}">${state}</span></td>
+                            <td><code style="font-size: 0.75rem;">${localAddr}</code></td>
+                            <td><code style="font-size: 0.75rem;">${remoteAddr}</code></td>
+                            <td><small>${process}</small></td>
+                        </tr>
+                    `;
+                }
+            });
+            
+            if (tcpConnections.length > 20) {
+                networkHtml += `
+                    <tr>
+                        <td colspan="4" class="text-center text-muted">
+                            <em>... and ${tcpConnections.length - 20} more connections</em>
+                        </td>
+                    </tr>
+                `;
+            }
+            
+            networkHtml += `
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+    }
+    
+    // Routing Table Section
+    if (hasRoutingData) {
+        networkHtml += `
+            <div class="accordion-item">
+                <h2 class="accordion-header" id="routingHeading">
+                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#routingCollapse">
+                        <i class="fas fa-route me-2"></i> Routing Table
+                        <span class="badge bg-secondary ms-2">${data.routing_table.length} routes</span>
+                    </button>
+                </h2>
+                <div id="routingCollapse" class="accordion-collapse collapse" data-bs-parent="#networkDataAccordion">
+                    <div class="accordion-body">
+                        <div class="table-responsive">
+                            <table class="table table-sm table-striped">
+                                <thead>
+                                    <tr>
+                                        <th>Destination</th>
+                                        <th>Gateway</th>
+                                        <th>Interface</th>
+                                        <th>Type</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+        `;
+        
+        data.routing_table.forEach(route => {
+            // Parse route: "default via 192.168.4.1 dev enp1s0 proto dhcp src 192.168.5.150 metric 100"
+            const parts = route.trim().split(/\s+/);
+            const destination = parts[0];
+            const gateway = route.includes('via') ? parts[parts.indexOf('via') + 1] : 'Direct';
+            const interfaceMatch = route.match(/dev\s+(\S+)/);
+            const iface = interfaceMatch ? interfaceMatch[1] : '-';
+            const protoMatch = route.match(/proto\s+(\S+)/);
+            const proto = protoMatch ? protoMatch[1] : 'static';
+            
+            const isDefault = destination === 'default';
+            
+            networkHtml += `
+                <tr>
+                    <td><code>${destination}</code> ${isDefault ? '<span class="badge bg-primary ms-1">Default</span>' : ''}</td>
+                    <td><code>${gateway}</code></td>
+                    <td><span class="badge bg-secondary">${iface}</span></td>
+                    <td><span class="badge bg-info">${proto}</span></td>
+                </tr>
+            `;
+        });
+        
+        networkHtml += `
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+    
+    networkHtml += '</div>'; // Close accordion
     
     content.innerHTML = networkHtml;
 }
