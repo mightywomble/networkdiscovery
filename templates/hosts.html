@@ -1,218 +1,344 @@
-{% extends "base.html" %}
+{% extends "base_patternfly.html" %}
 
-{% block title %}Host Management - Network Map{% endblock %}
+{% block title %}Host Management - NetworkMap{% endblock %}
+
+{% block breadcrumb %}
+<li class="pf-c-breadcrumb__item">
+    <a href="{{ url_for('index') }}" class="pf-c-breadcrumb__link">Home</a>
+</li>
+<li class="pf-c-breadcrumb__item pf-m-current" aria-current="page">
+    <span class="pf-c-breadcrumb__item-divider">
+        <i class="fas fa-angle-right" aria-hidden="true"></i>
+    </span>
+    Host Management
+</li>
+{% endblock %}
 
 {% block content %}
-<div class="row mb-4">
-    <div class="col-12">
-        <h1><i class="fas fa-server me-2"></i>Host Management</h1>
-        <p class="text-muted">Add and configure hosts for network monitoring</p>
+<!-- Page Header -->
+<section class="pf-c-page__main-section pf-m-light nm-page-header">
+    <div class="pf-c-content">
+        <h1>
+            <i class="fas fa-server pf-u-mr-sm"></i>
+            Host Management
+        </h1>
+        <p>Add and configure hosts for comprehensive network monitoring and analysis</p>
     </div>
-</div>
+</section>
 
-<div class="row">
-    <!-- Add Host Form -->
-    <div class="col-lg-4">
-        <div class="card">
-            <div class="card-header">
-                <h5 class="mb-0"><i class="fas fa-plus me-2"></i>Add New Host</h5>
-            </div>
-            <div class="card-body">
-                <form method="POST" action="{{ url_for('add_host') }}">
-                    <div class="mb-3">
-                        <label for="name" class="form-label">Host Name *</label>
-                        <input type="text" class="form-control" id="name" name="name" required 
-                               placeholder="e.g., Web Server 1">
-                        <div class="form-text">A friendly name for this host</div>
+<section class="pf-c-page__main-section">
+    <div class="pf-l-grid pf-m-all-12-col-on-sm pf-m-all-12-col-on-md pf-m-4-col-on-lg pf-m-4-col-on-xl">
+        <!-- Add Host Form -->
+        <div class="pf-l-grid__item">
+            <div class="pf-c-card nm-host-form-card">
+                <div class="pf-c-card__header">
+                    <div class="pf-c-card__header-main">
+                        <h2 class="pf-c-card__title">
+                            <i class="fas fa-plus pf-u-mr-sm"></i>
+                            Add New Host
+                        </h2>
                     </div>
-                    
-                    <div class="mb-3">
-                        <label for="ip_address" class="form-label">IP Address *</label>
-                        <input type="text" class="form-control" id="ip_address" name="ip_address" required
-                               placeholder="192.168.1.100" pattern="^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$">
-                        <div class="form-text">IPv4 address of the host</div>
-                    </div>
-                    
-                    <div class="mb-3">
-                        <label for="username" class="form-label">SSH Username</label>
-                        <input type="text" class="form-control" id="username" name="username" 
-                               value="root" placeholder="root">
-                        <div class="form-text">Username for SSH connections</div>
-                    </div>
-                    
-                    <div class="mb-3">
-                        <label for="ssh_port" class="form-label">SSH Port</label>
-                        <input type="number" class="form-control" id="ssh_port" name="ssh_port" 
-                               value="22" min="1" max="65535">
-                        <div class="form-text">SSH port (default: 22)</div>
-                    </div>
-                    
-                    <div class="mb-3">
-                        <label for="description" class="form-label">Description</label>
-                        <textarea class="form-control" id="description" name="description" rows="2"
-                                  placeholder="Optional description of this host"></textarea>
-                    </div>
-                    
-                    <div class="d-grid">
-                        <button type="submit" class="btn btn-primary">
-                            <i class="fas fa-plus me-1"></i>Add Host
-                        </button>
-                    </div>
-                </form>
-                
-                <hr class="my-4">
-                
-                <div class="alert alert-info">
-                    <i class="fas fa-info-circle me-2"></i>
-                    <strong>Prerequisites:</strong>
-                    <ul class="mb-0 mt-2">
-                        <li>SSH access must be configured</li>
-                        <li>Passwordless authentication (keys) required</li>
-                        <li>Host must be reachable from this server</li>
-                    </ul>
                 </div>
-            </div>
-        </div>
-    </div>
-    
-    <!-- Hosts List -->
-    <div class="col-lg-8">
-        <div class="card">
-            <div class="card-header d-flex justify-content-between align-items-center">
-                <h5 class="mb-0"><i class="fas fa-list me-2"></i>Configured Hosts ({{ hosts|length }})</h5>
-                <div class="btn-group btn-group-sm">
-                    {% if hosts %}
-                    <button class="btn btn-outline-primary" onclick="testAllHosts()">
-                        <i class="fas fa-heartbeat me-1"></i>Test All
-                    </button>
-                    <button class="btn btn-outline-success" onclick="backupHosts()">
-                        <i class="fas fa-download me-1"></i>Backup
-                    </button>
-                    {% endif %}
-                    <button class="btn btn-outline-warning" onclick="showImportModal()">
-                        <i class="fas fa-upload me-1"></i>Import
-                    </button>
+                <div class="pf-c-card__body">
+                    <form method="POST" action="{{ url_for('add_host') }}" class="pf-c-form">
+                        <div class="pf-c-form__group">
+                            <div class="pf-c-form__group-label">
+                                <label class="pf-c-form__label" for="name">
+                                    <span class="pf-c-form__label-text">Host Name</span>
+                                    <span class="pf-c-form__label-required" aria-hidden="true">*</span>
+                                </label>
+                            </div>
+                            <div class="pf-c-form__group-control">
+                                <input class="pf-c-form-control" type="text" id="name" name="name" 
+                                       placeholder="e.g., Web Server 1" required>
+                                <div class="pf-c-form__helper-text">
+                                    <div class="pf-c-helper-text">
+                                        <div class="pf-c-helper-text__item pf-m-dynamic">
+                                            <span class="pf-c-helper-text__item-text">A friendly name for this host</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="pf-c-form__group">
+                            <div class="pf-c-form__group-label">
+                                <label class="pf-c-form__label" for="ip_address">
+                                    <span class="pf-c-form__label-text">IP Address</span>
+                                    <span class="pf-c-form__label-required" aria-hidden="true">*</span>
+                                </label>
+                            </div>
+                            <div class="pf-c-form__group-control">
+                                <input class="pf-c-form-control" type="text" id="ip_address" name="ip_address" 
+                                       placeholder="192.168.1.100" pattern="^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$" required>
+                                <div class="pf-c-form__helper-text">
+                                    <div class="pf-c-helper-text">
+                                        <div class="pf-c-helper-text__item pf-m-dynamic">
+                                            <span class="pf-c-helper-text__item-text">IPv4 address of the host</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="pf-c-form__group">
+                            <div class="pf-c-form__group-label">
+                                <label class="pf-c-form__label" for="username">
+                                    <span class="pf-c-form__label-text">SSH Username</span>
+                                </label>
+                            </div>
+                            <div class="pf-c-form__group-control">
+                                <input class="pf-c-form-control" type="text" id="username" name="username" 
+                                       value="root" placeholder="root">
+                                <div class="pf-c-form__helper-text">
+                                    <div class="pf-c-helper-text">
+                                        <div class="pf-c-helper-text__item pf-m-dynamic">
+                                            <span class="pf-c-helper-text__item-text">Username for SSH connections</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="pf-c-form__group">
+                            <div class="pf-c-form__group-label">
+                                <label class="pf-c-form__label" for="ssh_port">
+                                    <span class="pf-c-form__label-text">SSH Port</span>
+                                </label>
+                            </div>
+                            <div class="pf-c-form__group-control">
+                                <input class="pf-c-form-control" type="number" id="ssh_port" name="ssh_port" 
+                                       value="22" min="1" max="65535">
+                                <div class="pf-c-form__helper-text">
+                                    <div class="pf-c-helper-text">
+                                        <div class="pf-c-helper-text__item pf-m-dynamic">
+                                            <span class="pf-c-helper-text__item-text">SSH port (default: 22)</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="pf-c-form__group">
+                            <div class="pf-c-form__group-label">
+                                <label class="pf-c-form__label" for="description">
+                                    <span class="pf-c-form__label-text">Description</span>
+                                </label>
+                            </div>
+                            <div class="pf-c-form__group-control">
+                                <textarea class="pf-c-form-control" id="description" name="description" rows="3"
+                                          placeholder="Optional description of this host"></textarea>
+                            </div>
+                        </div>
+                        
+                        <div class="pf-c-form__group pf-m-action">
+                            <div class="pf-c-form__actions">
+                                <button class="pf-c-button pf-m-primary" type="submit">
+                                    <i class="fas fa-plus pf-u-mr-sm"></i>
+                                    Add Host
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                    
+                    <div class="pf-c-divider pf-u-my-md"></div>
+                    
+                    <div class="pf-c-alert pf-m-info pf-m-inline" aria-label="Info alert">
+                        <div class="pf-c-alert__icon">
+                            <i class="fas fa-info-circle" aria-hidden="true"></i>
+                        </div>
+                        <div class="pf-c-alert__title">Prerequisites</div>
+                        <div class="pf-c-alert__description">
+                            <ul class="pf-c-list pf-m-plain pf-u-mb-0">
+                                <li>SSH access must be configured</li>
+                                <li>Passwordless authentication (keys) required</li>
+                                <li>Host must be reachable from this server</li>
+                            </ul>
+                        </div>
+                    </div>
                 </div>
-            </div>
-            <div class="card-body">
-                {% if hosts %}
-                    <div class="table-responsive">
-                        <table class="table table-hover">
-                            <thead>
-                                <tr>
-                                    <th>Host Details</th>
-                                    <th>Connection</th>
-                                    <th>Status</th>
-                                    <th>Last Activity</th>
-                                    <th>Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for host in hosts %}
-                                <tr id="host-{{ host.id }}">
-                                    <td>
-                                        <div>
-                                            <strong>{{ host.name }}</strong>
-                                            <br>
-                                            <code class="small">{{ host.ip_address }}</code>
-                                        </div>
-                                        {% if host.description %}
-                                            <div class="small text-muted mt-1">{{ host.description }}</div>
-                                        {% endif %}
-                                    </td>
-                                    <td>
-                                        <div class="small">
-                                            <i class="fas fa-user"></i> {{ host.username }}<br>
-                                            <i class="fas fa-network-port"></i> :{{ host.ssh_port }}
-                                        </div>
-                                    </td>
-                                    <td>
-                                        <span class="status-{{ host.status or 'unknown' }}" id="status-{{ host.id }}">
-                                            {% if host.status == 'online' %}
-                                                <i class="fas fa-check-circle"></i> Online
-                                            {% elif host.status == 'offline' %}
-                                                <i class="fas fa-times-circle"></i> Offline
-                                            {% elif host.status == 'ping_only' %}
-                                                <i class="fas fa-exclamation-circle"></i> Ping Only
-                                            {% else %}
-                                                <i class="fas fa-question-circle"></i> Unknown
-                                            {% endif %}
-                                        </span>
-                                    </td>
-                                    <td>
-                                        <div class="small">
-                                            {% if host.last_seen %}
-                                                {{ host.last_seen.strftime('%m/%d/%Y %H:%M') }}
-                                            {% else %}
-                                                <span class="text-muted">Never</span>
-                                            {% endif %}
-                                        </div>
-                                        <div class="small text-muted">
-                                            Added: {% if host.created_at %}{{ host.created_at[:10] if host.created_at|string|length > 10 else host.created_at }}{% else %}Unknown{% endif %}
-                                        </div>
-                                    </td>
-                                    <td>
-                                        <div class="btn-group btn-group-sm">
-                                            <button class="btn btn-outline-info" onclick="testHost({{ host.id }})" 
-                                                    title="Test Connection" id="test-btn-{{ host.id }}">
-                                                <i class="fas fa-heartbeat"></i>
-                                            </button>
-                                            <button class="btn btn-outline-primary" onclick="showHostDetails({{ host.id }})" 
-                                                    title="View Details">
-                                                <i class="fas fa-info-circle"></i>
-                                            </button>
-                                            <button class="btn btn-outline-danger" onclick="confirmRemoveHost({{ host.id }}, '{{ host.name }}')" 
-                                                    title="Remove Host">
-                                                <i class="fas fa-trash"></i>
-                                            </button>
-                                        </div>
-                                    </td>
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
-                    </div>
-                {% else %}
-                    <div class="text-center py-5">
-                        <i class="fas fa-server fa-4x text-muted mb-3"></i>
-                        <h4>No Hosts Configured</h4>
-                        <p class="text-muted">Add your first host to start monitoring your network infrastructure.</p>
-                        <p class="small text-muted">Hosts can be servers, routers, switches, or any device with SSH access.</p>
-                    </div>
-                {% endif %}
             </div>
         </div>
         
-        {% if hosts %}
-        <!-- Host Statistics -->
-        <div class="card mt-3">
-            <div class="card-header">
-                <h6 class="mb-0"><i class="fas fa-chart-bar me-2"></i>Host Statistics</h6>
+        <!-- Hosts List -->
+        <div class="pf-l-grid__item">
+            <div class="pf-c-card nm-hosts-list-card">
+                <div class="pf-c-card__header">
+                    <div class="pf-c-card__header-main">
+                        <h2 class="pf-c-card__title">
+                            <i class="fas fa-list pf-u-mr-sm"></i>
+                            Configured Hosts ({{ hosts|length }})
+                        </h2>
+                    </div>
+                    <div class="pf-c-card__actions">
+                        <div class="pf-c-button-group" role="group">
+                            {% if hosts %}
+                            <button class="pf-c-button pf-m-secondary pf-m-small" onclick="testAllHosts()">
+                                <i class="fas fa-heartbeat pf-u-mr-sm"></i>Test All
+                            </button>
+                            <button class="pf-c-button pf-m-secondary pf-m-small" onclick="backupHosts()">
+                                <i class="fas fa-download pf-u-mr-sm"></i>Backup
+                            </button>
+                            {% endif %}
+                            <button class="pf-c-button pf-m-secondary pf-m-small" onclick="showImportModal()">
+                                <i class="fas fa-upload pf-u-mr-sm"></i>Import
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div class="pf-c-card__body">
+                    {% if hosts %}
+                        <!-- Host Cards Grid -->
+                        <div class="pf-l-gallery pf-m-gutter" id="hosts-grid">
+                            {% for host in hosts %}
+                            <div class="pf-c-card nm-host-card" id="host-card-{{ host.id }}" data-host-id="{{ host.id }}">
+                                <div class="pf-c-card__header">
+                                    <div class="pf-c-card__header-main">
+                                        <div class="pf-u-display-flex pf-u-align-items-center">
+                                            <div class="nm-host-icon pf-u-mr-sm">
+                                                <i class="fas fa-server pf-u-primary-color-100"></i>
+                                            </div>
+                                            <div>
+                                                <h3 class="pf-c-card__title pf-u-font-size-lg pf-u-mb-0">{{ host.name }}</h3>
+                                                <div class="pf-u-font-size-sm pf-u-color-200">
+                                                    <code class="pf-c-code pf-m-inline">{{ host.ip_address }}</code>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="pf-c-card__actions">
+                                        <span class="pf-c-label nm-status-label status-{{ host.status or 'unknown' }}" id="status-label-{{ host.id }}">
+                                            <span class="pf-c-label__content" id="status-{{ host.id }}">
+                                                {% if host.status == 'online' %}
+                                                    <i class="fas fa-check-circle pf-u-mr-xs"></i>Online
+                                                {% elif host.status == 'offline' %}
+                                                    <i class="fas fa-times-circle pf-u-mr-xs"></i>Offline
+                                                {% elif host.status == 'ping_only' %}
+                                                    <i class="fas fa-exclamation-circle pf-u-mr-xs"></i>Ping Only
+                                                {% else %}
+                                                    <i class="fas fa-question-circle pf-u-mr-xs"></i>Unknown
+                                                {% endif %}
+                                            </span>
+                                        </span>
+                                    </div>
+                                </div>
+                                <div class="pf-c-card__body">
+                                    {% if host.description %}
+                                    <div class="pf-u-mb-sm">
+                                        <div class="pf-u-font-size-sm pf-u-color-200">{{ host.description }}</div>
+                                    </div>
+                                    {% endif %}
+                                    
+                                    <div class="pf-l-grid pf-m-all-6-col-on-md pf-m-gutter">
+                                        <div class="pf-l-grid__item">
+                                            <div class="pf-u-font-size-sm pf-u-mb-xs">
+                                                <i class="fas fa-user pf-u-mr-xs pf-u-color-200"></i>
+                                                <strong>SSH:</strong> {{ host.username }}:{{ host.ssh_port }}
+                                            </div>
+                                            <div class="pf-u-font-size-sm pf-u-mb-xs">
+                                                <i class="fas fa-clock pf-u-mr-xs pf-u-color-200"></i>
+                                                <strong>Last seen:</strong> 
+                                                {% if host.last_seen %}
+                                                    {{ host.last_seen.strftime('%m/%d %H:%M') }}
+                                                {% else %}
+                                                    <span class="pf-u-color-200">Never</span>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                        <div class="pf-l-grid__item">
+                                            <div class="pf-u-font-size-sm pf-u-mb-xs">
+                                                <i class="fas fa-calendar pf-u-mr-xs pf-u-color-200"></i>
+                                                <strong>Added:</strong> 
+                                                {% if host.created_at %}
+                                                    {{ host.created_at[:10] if host.created_at|string|length > 10 else host.created_at }}
+                                                {% else %}
+                                                    Unknown
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="pf-c-card__footer">
+                                    <div class="pf-c-button-group" role="group">
+                                        <button class="pf-c-button pf-m-secondary pf-m-small" onclick="testHost({{ host.id }})" 
+                                                title="Test Connection" id="test-btn-{{ host.id }}">
+                                            <i class="fas fa-heartbeat pf-u-mr-xs"></i>Test
+                                        </button>
+                                        <button class="pf-c-button pf-m-secondary pf-m-small" onclick="showHostDetails({{ host.id }})" 
+                                                title="View Details">
+                                            <i class="fas fa-info-circle pf-u-mr-xs"></i>Details
+                                        </button>
+                                        <button class="pf-c-button pf-m-danger pf-m-small" onclick="confirmRemoveHost({{ host.id }}, '{{ host.name }}')" 
+                                                title="Remove Host">
+                                            <i class="fas fa-trash pf-u-mr-xs"></i>Remove
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <div class="pf-c-empty-state pf-m-lg">
+                            <div class="pf-c-empty-state__content">
+                                <i class="fas fa-server pf-c-empty-state__icon" aria-hidden="true"></i>
+                                <h2 class="pf-c-title pf-m-lg">No hosts configured</h2>
+                                <div class="pf-c-empty-state__body">
+                                    Add your first host to start monitoring your network infrastructure. Hosts can be servers, routers, switches, or any device with SSH access.
+                                </div>
+                                <button class="pf-c-button pf-m-primary" onclick="document.getElementById('name').focus()">
+                                    <i class="fas fa-plus pf-u-mr-sm"></i>
+                                    Add Your First Host
+                                </button>
+                            </div>
+                        </div>
+                    {% endif %}
+                </div>
             </div>
-            <div class="card-body">
-                <div class="row text-center">
-                    <div class="col-3">
-                        <div class="h4 mb-0 text-primary">{{ hosts|length }}</div>
-                        <div class="small text-muted">Total</div>
+            
+            {% if hosts %}
+            <!-- Host Statistics -->
+            <div class="pf-c-card pf-u-mt-md nm-stats-card">
+                <div class="pf-c-card__header">
+                    <div class="pf-c-card__header-main">
+                        <h2 class="pf-c-card__title">
+                            <i class="fas fa-chart-bar pf-u-mr-sm"></i>
+                            Host Statistics
+                        </h2>
                     </div>
-                    <div class="col-3">
-                        <div class="h4 mb-0 text-success">{{ hosts|selectattr("status", "equalto", "online")|list|length }}</div>
-                        <div class="small text-muted">Online</div>
-                    </div>
-                    <div class="col-3">
-                        <div class="h4 mb-0 text-warning">{{ hosts|selectattr("status", "equalto", "ping_only")|list|length }}</div>
-                        <div class="small text-muted">Ping Only</div>
-                    </div>
-                    <div class="col-3">
-                        <div class="h4 mb-0 text-danger">{{ hosts|selectattr("status", "equalto", "offline")|list|length }}</div>
-                        <div class="small text-muted">Offline</div>
+                </div>
+                <div class="pf-c-card__body">
+                    <div class="pf-l-gallery pf-m-gutter">
+                        <div class="pf-c-card nm-stat-card">
+                            <div class="pf-c-card__body pf-u-text-align-center">
+                                <div class="nm-stat-value" style="color: var(--pf-global--primary-color--100)">{{ hosts|length }}</div>
+                                <div class="nm-stat-label">Total Hosts</div>
+                            </div>
+                        </div>
+                        <div class="pf-c-card nm-stat-card">
+                            <div class="pf-c-card__body pf-u-text-align-center">
+                                <div class="nm-stat-value" style="color: var(--pf-global--success-color--100)">{{ hosts|selectattr("status", "equalto", "online")|list|length }}</div>
+                                <div class="nm-stat-label">Online</div>
+                            </div>
+                        </div>
+                        <div class="pf-c-card nm-stat-card">
+                            <div class="pf-c-card__body pf-u-text-align-center">
+                                <div class="nm-stat-value" style="color: var(--pf-global--warning-color--100)">{{ hosts|selectattr("status", "equalto", "ping_only")|list|length }}</div>
+                                <div class="nm-stat-label">Ping Only</div>
+                            </div>
+                        </div>
+                        <div class="pf-c-card nm-stat-card">
+                            <div class="pf-c-card__body pf-u-text-align-center">
+                                <div class="nm-stat-value" style="color: var(--pf-global--danger-color--100)">{{ hosts|selectattr("status", "equalto", "offline")|list|length }}</div>
+                                <div class="nm-stat-label">Offline</div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
+            {% endif %}
         </div>
-        {% endif %}
     </div>
-</div>
+</section>
 
 <!-- Remove Host Confirmation Modal -->
 <div class="modal fade" id="removeHostModal" tabindex="-1">
@@ -390,6 +516,202 @@
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block styles %}
+<style>
+/* Host Management Card Aesthetics */
+.nm-host-form-card {
+    border-left: 4px solid var(--pf-global--primary-color--100);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    transition: all 0.2s ease;
+}
+
+.nm-host-form-card:hover {
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    transform: translateY(-2px);
+}
+
+.nm-hosts-list-card {
+    border-left: 4px solid var(--pf-global--info-color--100);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    transition: all 0.2s ease;
+}
+
+.nm-hosts-list-card:hover {
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    transform: translateY(-2px);
+}
+
+.nm-stats-card {
+    border-left: 4px solid var(--pf-global--warning-color--100);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    transition: all 0.2s ease;
+}
+
+.nm-stats-card:hover {
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    transform: translateY(-2px);
+}
+
+/* Individual Host Cards */
+.nm-host-card {
+    border: 1px solid var(--pf-global--BorderColor--100);
+    border-left: 4px solid var(--pf-global--primary-color--100);
+    box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+    transition: all 0.2s ease;
+    min-height: 280px;
+    position: relative;
+}
+
+.nm-host-card:hover {
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    transform: translateY(-2px);
+    border-left-color: var(--pf-global--primary-color--200);
+}
+
+.nm-host-card .nm-host-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: var(--pf-global--BackgroundColor--200);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.2rem;
+}
+
+/* Status Labels */
+.nm-status-label.status-online {
+    --pf-c-label--BackgroundColor: var(--pf-global--success-color--100);
+    --pf-c-label__content--Color: var(--pf-global--Color--light-100);
+}
+
+.nm-status-label.status-offline {
+    --pf-c-label--BackgroundColor: var(--pf-global--danger-color--100);
+    --pf-c-label__content--Color: var(--pf-global--Color--light-100);
+}
+
+.nm-status-label.status-ping_only {
+    --pf-c-label--BackgroundColor: var(--pf-global--warning-color--100);
+    --pf-c-label__content--Color: var(--pf-global--Color--dark-100);
+}
+
+.nm-status-label.status-unknown {
+    --pf-c-label--BackgroundColor: var(--pf-global--Color--200);
+    --pf-c-label__content--Color: var(--pf-global--Color--dark-100);
+}
+
+/* Statistics Cards */
+.nm-stat-card {
+    border: 1px solid var(--pf-global--BorderColor--100);
+    box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+    transition: all 0.2s ease;
+    min-height: 120px;
+}
+
+.nm-stat-card:hover {
+    box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+    transform: translateY(-1px);
+}
+
+/* Form Enhancements */
+.pf-c-form-control:focus {
+    border-color: var(--pf-global--primary-color--100);
+    box-shadow: 0 0 0 0.125rem rgba(6, 102, 204, 0.25);
+}
+
+/* Button Hover Effects */
+.pf-c-button.pf-m-primary:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(6, 102, 204, 0.3);
+}
+
+.pf-c-button.pf-m-secondary:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+}
+
+.pf-c-button.pf-m-danger:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(201, 25, 11, 0.3);
+}
+
+/* Gallery Grid Enhancements */
+.pf-l-gallery {
+    --pf-l-gallery--GridTemplateColumns--min: 300px;
+}
+
+/* Host Card Footer Styling */
+.nm-host-card .pf-c-card__footer {
+    background-color: var(--pf-global--BackgroundColor--200);
+    border-top: 1px solid var(--pf-global--BorderColor--100);
+    padding: var(--pf-global--spacer--sm) var(--pf-global--spacer--md);
+}
+
+/* Empty State Enhancements */
+.pf-c-empty-state__icon {
+    color: var(--pf-global--Color--200);
+    font-size: 4rem;
+    margin-bottom: var(--pf-global--spacer--lg);
+}
+
+/* Alert Enhancements */
+.pf-c-alert.pf-m-inline {
+    box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+    border-radius: var(--pf-global--BorderRadius--sm);
+}
+
+/* Responsive Adjustments */
+@media (max-width: 768px) {
+    .nm-host-card {
+        min-height: auto;
+    }
+    
+    .pf-l-gallery {
+        --pf-l-gallery--GridTemplateColumns--min: 280px;
+    }
+    
+    .nm-host-form-card,
+    .nm-hosts-list-card,
+    .nm-stats-card {
+        margin-bottom: var(--pf-global--spacer--md);
+    }
+}
+
+/* Card Header Icon Styling */
+.pf-c-card__title i {
+    color: var(--pf-global--primary-color--100);
+}
+
+/* Form Group Spacing */
+.pf-c-form__group {
+    margin-bottom: var(--pf-global--spacer--md);
+}
+
+/* Button Group Spacing */
+.pf-c-button-group .pf-c-button:not(:last-child) {
+    margin-right: var(--pf-global--spacer--xs);
+}
+
+/* Progress Animation for Loading States */
+@keyframes nm-pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+}
+
+.nm-loading {
+    animation: nm-pulse 1.5s ease-in-out infinite;
+}
+
+/* Code Block Styling */
+.pf-c-code.pf-m-inline {
+    background-color: var(--pf-global--BackgroundColor--300);
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-size: 0.875rem;
+}
+</style>
 {% endblock %}
 
 {% block scripts %}
