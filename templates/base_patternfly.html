@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}NetworkMap{% endblock %}</title>
+    <title>{% block title %}Home Lab{% endblock %}</title>
     
     <!-- PatternFly CSS -->
     <link rel="stylesheet" href="https://unpkg.com/@patternfly/patternfly@4.224.5/patternfly.min.css">
@@ -19,7 +19,7 @@
     <script src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
     
     <style>
-        /* Custom styles for NetworkMap with PatternFly */
+        /* Custom styles for Home Lab with PatternFly */
         :root {
             --nm-sidebar-width: 250px;
             --nm-primary: #06c;
@@ -311,7 +311,7 @@
             <div class="nm-sidebar-header">
                 <a href="{{ url_for('index') }}" class="nm-sidebar-brand">
                     <i class="fas fa-network-wired"></i>
-                    NetworkMap
+                    Home Lab
                 </a>
             </div>
             
