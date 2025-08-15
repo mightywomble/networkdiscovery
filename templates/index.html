@@ -372,20 +372,20 @@
                                 </div>
                             </div>
                             <div class="pf-c-card__body">
-                                <div id="overallScanProgressContainer">
-                                    <div class="pf-c-progress pf-u-mb-sm" style="--pf-c-progress--Height: 25px; --pf-c-progress__measure--FontSize: var(--pf-global--FontSize--sm);">
-                                        <div class="pf-c-progress__description"></div>
-                                        <div class="pf-c-progress__status">
-                                            <span class="pf-c-progress__measure" id="scanProgressText">0%</span>
-                                        </div>
-                                        <div class="pf-c-progress__bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
-                                            <div class="pf-c-progress__indicator" id="overallScanProgressBar" style="width: 0%; background-color: var(--pf-global--primary-color--100);">
-                                                <span class="pf-screen-reader">0% complete</span>
+                                    <div id="overallScanProgressContainer">
+                                        <div class="pf-c-progress pf-u-mb-sm" style="--pf-c-progress--Height: 25px; --pf-c-progress__measure--FontSize: var(--pf-global--FontSize--sm);">
+                                            <div class="pf-c-progress__description"></div>
+                                            <div class="pf-c-progress__status">
+                                                <span class="pf-c-progress__measure" id="scanProgressText" style="display: none;">0%</span>
+                                            </div>
+                                            <div class="pf-c-progress__bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+                                                <div class="pf-c-progress__indicator" id="overallScanProgressBar" style="width: 0%; background-color: var(--pf-global--primary-color--100);">
+                                                    <span class="pf-screen-reader">0% complete</span>
+                                                </div>
                                             </div>
                                         </div>
+                                        <div id="currentScanPhase" class="pf-u-font-size-sm pf-u-color-200">Ready to start comprehensive network scan...</div>
                                     </div>
-                                    <div id="currentScanPhase" class="pf-u-font-size-sm pf-u-color-200">Ready to start comprehensive network scan...</div>
-                                </div>
                             </div>
                         </div>
                         
@@ -819,10 +819,11 @@ function showEnhancedScanModal() {
 function resetScanModal() {
     // Reset progress bar
     const progressBar = document.getElementById('overallScanProgressBar');
-    if (progressBar) {
+    const progressText = document.getElementById('scanProgressText');
+    if (progressBar && progressText) {
         progressBar.style.width = '0%';
-        progressBar.textContent = '0%';
-        progressBar.className = 'progress-bar progress-bar-striped progress-bar-animated';
+        progressBar.className = 'pf-c-progress__indicator';
+        progressText.style.display = 'none'; // Hide percentage text initially
     }
     
     // Reset phase display
@@ -835,9 +836,11 @@ function resetScanModal() {
     for (let i = 1; i <= 6; i++) {
         const icon = document.getElementById(`phase${i}-icon`);
         const status = document.getElementById(`phase${i}-status`);
-        if (icon && status) {
-            icon.className = icon.className.replace(/text-\w+/, 'text-muted');
+        const card = document.getElementById(`phase${i}-card`);
+        if (icon && status && card) {
+            icon.className = icon.className.replace(/pf-u-\w+-color-\d+/g, '').replace(/fa-spin/g, '') + ' pf-u-color-200';
             status.textContent = 'Pending';
+            card.style.borderLeft = '3px solid var(--pf-global--Color--200)';
         }
     }
     
@@ -860,7 +863,15 @@ function displayScanProgress(data) {
     const progressText = document.getElementById('scanProgressText');
     if (progressBar && progressText) {
         progressBar.style.width = `${overall_progress}%`;
-        progressText.textContent = `${overall_progress}%`;
+        
+        // Only show percentage text when progress > 0
+        if (overall_progress > 0) {
+            progressText.textContent = `${overall_progress}%`;
+            progressText.style.display = 'inline';
+        } else {
+            progressText.style.display = 'none';
+        }
+        
         progressBar.setAttribute('aria-valuenow', overall_progress);
         
         // Update progress bar color based on phase - using PatternFly CSS custom properties
@@ -1074,13 +1085,14 @@ function updateHostScanStatusCards(hosts) {
                         </span>
                     </div>
                     
-                    <div class="pf-c-progress pf-u-mb-sm" style="--pf-c-progress--Height: 8px;">
-                        <div class="pf-c-progress__bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${progress || 0}">
-                            <div class="pf-c-progress__indicator ${status === 'scanning' ? 'pf-m-progress-bar-animated' : ''}" 
-                                 style="width: ${progress || 0}%; background-color: var(--pf-global--${statusClass === 'primary' ? 'primary' : statusClass === 'success' ? 'success' : statusClass === 'danger' ? 'danger' : 'info'}--color--100);">
+                            <div class="pf-c-progress pf-u-mb-sm" style="--pf-c-progress--Height: 8px;">
+                                <div class="pf-c-progress__bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${progress || 0}">
+                                    <div class="pf-c-progress__indicator ${status === 'scanning' ? 'pf-m-progress-bar-animated' : ''}" 
+                                         style="width: ${progress || 0}%; background-color: var(--pf-global--${statusClass === 'primary' ? 'primary' : statusClass === 'success' ? 'success' : statusClass === 'danger' ? 'danger' : 'info'}--color--100);">
+                                        <span class="pf-screen-reader">${progress || 0}% complete</span>
+                                    </div>
+                                </div>
                             </div>
-                        </div>
-                    </div>
                     
                     <div class="pf-u-font-size-sm pf-u-color-200 pf-u-mb-xs">${current_action || current_phase || 'Waiting...'}</div>
                     <div class="pf-u-font-size-sm">Phases: ${completedCount}/${totalPhases}</div>
@@ -1159,31 +1171,40 @@ function showFinalScanResults(data) {
     const successRate = totalHosts > 0 ? Math.round((successfulHosts / totalHosts) * 100) : 0;
     
     let resultHtml = `
-        <div class="alert alert-${current_phase === 'error' ? 'danger' : successRate === 100 ? 'success' : successRate > 70 ? 'warning' : 'danger'}">
-            <h5><i class="fas fa-${current_phase === 'error' ? 'times-circle' : successRate === 100 ? 'check-circle' : successRate > 70 ? 'exclamation-triangle' : 'times-circle'} me-2"></i>
+        <div class="pf-c-alert pf-m-${current_phase === 'error' ? 'danger' : successRate === 100 ? 'success' : successRate > 70 ? 'warning' : 'danger'}" aria-label="Scan completion alert">
+            <div class="pf-c-alert__icon">
+                <i class="fas fa-${current_phase === 'error' ? 'times-circle' : successRate === 100 ? 'check-circle' : successRate > 70 ? 'exclamation-triangle' : 'times-circle'}" aria-hidden="true"></i>
+            </div>
+            <div class="pf-c-alert__title">
                 Enhanced Network Scan ${current_phase === 'error' ? 'Failed' : successRate === 100 ? 'Completed Successfully' : successRate > 70 ? 'Mostly Successful' : 'Completed with Errors'}
-            </h5>
-            <p><strong>Success Rate:</strong> ${successRate}% (${successfulHosts}/${totalHosts} hosts)</p>
-            ${errorHosts > 0 ? `<p class="text-danger"><strong>Failed Hosts:</strong> ${errorHosts}</p>` : ''}
+            </div>
+            <div class="pf-c-alert__description">
+                <p><strong>Success Rate:</strong> ${successRate}% (${successfulHosts}/${totalHosts} hosts)</p>
+                ${errorHosts > 0 ? `<p><strong>Failed Hosts:</strong> ${errorHosts}</p>` : ''}
+            </div>
         </div>
         
-        <div class="row">
-            <div class="col-md-4">
-                <div class="card">
-                    <div class="card-header">
-                        <h6 class="mb-0"><i class="fas fa-server me-2"></i>Host Results</h6>
+        <div class="pf-l-grid pf-m-all-12-col-on-sm pf-m-all-6-col-on-md pf-m-all-4-col-on-lg">
+            <div class="pf-l-grid__item">
+                <div class="pf-c-card">
+                    <div class="pf-c-card__header">
+                        <div class="pf-c-card__header-main">
+                            <h2 class="pf-c-card__title"><i class="fas fa-server pf-u-mr-sm"></i>Host Results</h2>
+                        </div>
                     </div>
-                    <div class="card-body">
-                        ${generateInteractiveHostResults(hosts)}
+                    <div class="pf-c-card__body">
+                        ${generateInteractiveHostResultsAsCards(hosts)}
                     </div>
                 </div>
             </div>
-            <div class="col-md-8">
-                <div class="card">
-                    <div class="card-header">
-                        <h6 class="mb-0" id="scanSummaryTitle"><i class="fas fa-chart-bar me-2"></i>Scan Summary</h6>
+            <div class="pf-l-grid__item">
+                <div class="pf-c-card">
+                    <div class="pf-c-card__header">
+                        <div class="pf-c-card__header-main">
+                            <h2 class="pf-c-card__title" id="scanSummaryTitle"><i class="fas fa-chart-bar pf-u-mr-sm"></i>Scan Summary</h2>
+                        </div>
                     </div>
-                    <div class="card-body" id="scanSummaryContent">
+                    <div class="pf-c-card__body" id="scanSummaryContent">
                         ${generateScanSummary(scan_summary)}
                     </div>
                 </div>
@@ -1280,7 +1301,7 @@ function generateHostResults(hosts) {
 
 function generateInteractiveHostResults(hosts) {
     if (!hosts || Object.keys(hosts).length === 0) {
-        return '<p class="text-muted">No host results available.</p>';
+        return '<p class="pf-u-color-200">No host results available.</p>';
     }
     
     let html = '';
@@ -1291,25 +1312,70 @@ function generateInteractiveHostResults(hosts) {
         const statusIcon = isSuccess ? 'check' : 'times';
         
         html += `
-            <div class="d-flex justify-content-between align-items-center mb-2 host-result-item ${isSuccess ? 'clickable' : ''}" 
+            <div class="pf-u-display-flex pf-u-justify-content-space-between pf-u-align-items-center pf-u-mb-sm host-result-item ${isSuccess ? 'clickable' : ''}" 
                  ${isSuccess ? `onclick="showHostScanDetails('${hostname}')" style="cursor: pointer;"` : ''}
-                 ${isSuccess ? `onmouseover="this.style.backgroundColor='#f8f9fa'" onmouseout="this.style.backgroundColor='transparent'"` : ''}>
+                 ${isSuccess ? `onmouseover="this.style.backgroundColor='var(--pf-global--BackgroundColor--200)'" onmouseout="this.style.backgroundColor='transparent'"` : ''}>
                 <div>
                     <strong>
-                        ${isSuccess ? `<i class="fas fa-eye me-1" style="opacity: 0.5;"></i>` : ''}
+                        ${isSuccess ? `<i class="fas fa-eye pf-u-mr-xs" style="opacity: 0.5;"></i>` : ''}
                         ${hostname}
                     </strong>
-                    ${completed_phases ? `<br><small class="text-muted">${completed_phases.length}/6 phases ${isSuccess ? '• Click to view details' : ''}</small>` : ''}
+                    ${completed_phases ? `<br><small class="pf-u-color-200">${completed_phases.length}/6 phases ${isSuccess ? '• Click to view details' : ''}</small>` : ''}
                 </div>
-                <span class="badge bg-${statusClass}">
-                    <i class="fas fa-${statusIcon}"></i>
+                <span class="pf-c-label pf-m-${statusClass}">
+                    <span class="pf-c-label__content">
+                        <i class="fas fa-${statusIcon}"></i>
+                    </span>
                 </span>
             </div>
-            ${error ? `<div class="small text-danger mb-2">Error: ${error}</div>` : ''}
+            ${error ? `<div class="pf-u-font-size-sm pf-u-danger-color-100 pf-u-mb-sm">Error: ${error}</div>` : ''}
         `;
     });
     
-    html += '<div class="small text-muted mt-3"><i class="fas fa-info-circle me-1"></i>Click on a successful host to view detailed scan results</div>';
+    html += '<div class="pf-u-font-size-sm pf-u-color-200 pf-u-mt-md"><i class="fas fa-info-circle pf-u-mr-xs"></i>Click on a successful host to view detailed scan results</div>';
+    
+    return html;
+}
+
+function generateInteractiveHostResultsAsCards(hosts) {
+    if (!hosts || Object.keys(hosts).length === 0) {
+        return '<p class="pf-u-color-200">No host results available.</p>';
+    }
+    
+    let html = '<div class="pf-l-gallery pf-m-gutter">';
+    
+    Object.entries(hosts).forEach(([hostname, hostData]) => {
+        const { status, completed_phases, error } = hostData;
+        const isSuccess = status === 'complete';
+        const statusClass = isSuccess ? 'success' : 'danger';
+        const statusIcon = isSuccess ? 'check' : 'times';
+        
+        html += `
+            <div class="pf-c-card nm-host-result-card ${isSuccess ? 'clickable' : ''}" 
+                 ${isSuccess ? `onclick="showHostScanDetails('${hostname}')" style="cursor: pointer;"` : ''}
+                 ${isSuccess ? `onmouseover="this.style.borderColor='var(--pf-global--primary-color--100)'" onmouseout="this.style.borderColor='var(--pf-global--BorderColor--100)'"` : ''}>
+                <div class="pf-c-card__body pf-u-p-md">
+                    <div class="pf-u-display-flex pf-u-justify-content-space-between pf-u-align-items-center pf-u-mb-sm">
+                        <div class="pf-u-display-flex pf-u-align-items-center">
+                            ${isSuccess ? `<i class="fas fa-eye pf-u-mr-sm" style="opacity: 0.5;"></i>` : ''}
+                            <span class="pf-u-font-weight-bold">${hostname}</span>
+                        </div>
+                        <span class="pf-c-label pf-m-${statusClass}">
+                            <span class="pf-c-label__content">
+                                <i class="fas fa-${statusIcon}"></i>
+                            </span>
+                        </span>
+                    </div>
+                    ${completed_phases ? `<div class="pf-u-font-size-sm pf-u-color-200 pf-u-mb-xs">${completed_phases.length}/6 phases complete</div>` : ''}
+                    ${isSuccess ? `<div class="pf-u-font-size-sm pf-u-primary-color-100">Click to view details</div>` : ''}
+                    ${error ? `<div class="pf-u-font-size-sm pf-u-danger-color-100">Error: ${error}</div>` : ''}
+                </div>
+            </div>
+        `;
+    });
+    
+    html += '</div>';
+    html += '<div class="pf-u-font-size-sm pf-u-color-200 pf-u-mt-md pf-u-text-align-center"><i class="fas fa-info-circle pf-u-mr-xs"></i>Click on a successful host card to view detailed scan results</div>';
     
     return html;
 }
