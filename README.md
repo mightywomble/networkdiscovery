@@ -2,7 +2,7 @@
 
 <div align="center">
 
-![NetworkMap Logo](https://img.shields.io/badge/NetworkMap-v1.4.0-blue?style=for-the-badge&logo=network-wired)
+![NetworkMap Logo](https://img.shields.io/badge/NetworkMap-v1.6.4-blue?style=for-the-badge&logo=network-wired)
 [![Python](https://img.shields.io/badge/python-3.8+-blue.svg?style=for-the-badge&logo=python)](https://python.org)
 [![Flask](https://img.shields.io/badge/flask-2.3.3-green.svg?style=for-the-badge&logo=flask)](https://flask.palletsprojects.com/)
 [![License](https://img.shields.io/badge/license-MIT-green.svg?style=for-the-badge)](LICENSE)
@@ -40,11 +40,13 @@
 - **Mobile Responsive**: Works on desktop, tablet, and mobile devices
 
 ### 🤖 **Distributed Agent System**
-- **Lightweight Agents**: Minimal resource footprint monitoring agents
+- **Lightweight Agents**: Minimal resource footprint monitoring agents with automatic versioning
 - **Auto-deployment**: One-click SSH-based agent deployment to multiple hosts
 - **Real-time Communication**: Heartbeat monitoring and instant status updates
 - **Configurable Scanning**: Customizable scan intervals and test suites
 - **System Monitoring**: CPU, memory, network interfaces, and process monitoring
+- **Version Management**: Automated agent versioning with update tracking
+- **Enhanced Data Structure**: Comprehensive agent information with build dates and platform details
 
 ### 🔍 **Network Discovery & Analysis**
 - **Multi-method Discovery**: ARP scanning, ping sweeps, port scanning
@@ -61,10 +63,13 @@
 
 ### 🛠 **Management Tools**
 - **Host Management**: Add, edit, remove, and organize network hosts
-- **Agent Lifecycle**: Deploy, update, configure, and remove agents
+- **Agent Lifecycle**: Deploy, update, configure, and remove agents with version tracking
 - **Bulk Operations**: Mass deployment, updates, and configuration changes
 - **Configuration Management**: Centralized agent configuration and policies
-- **Log Management**: Centralized logging and log analysis
+- **Log Management**: Centralized logging and log analysis with enhanced formatting
+- **Agent Data Modal**: Comprehensive agent data viewer with Summary, Network Scans, and Test Results tabs
+- **Version Summary**: Agent version tracking and update management dashboard
+- **Cleanup Tools**: Database cleanup utilities for managing agent records
 
 ### 📈 **Advanced Features**
 - **Enhanced Network Scanner**: Advanced discovery using multiple network tools
@@ -72,6 +77,10 @@
 - **Database Analytics**: SQLite-based data storage with analytics
 - **API Integration**: RESTful API for integration with other systems
 - **Export/Import**: Host configuration backup and restore
+- **Auto-Versioning System**: Git hook-based automatic agent version management
+- **Progress Monitoring**: Real-time progress tracking for agent operations
+- **Test Results Formatting**: Enhanced display of multiline test results with proper formatting
+- **Fallback Compatibility**: Support for both new and legacy agent data structures
 
 ---
 
@@ -233,6 +242,185 @@ Agents are automatically deployed via the web interface, but you can also deploy
 # On target host:
 curl -o networkmap_agent.py http://your-server:5150/static/networkmap_agent.py
 sudo python3 networkmap_agent.py --install --server-url http://your-server:5150
+```
+
+---
+
+## 🏷️ Agent Versioning System
+
+### Overview
+NetworkMap features a sophisticated automatic agent versioning system that ensures consistent version tracking and seamless updates across your distributed monitoring infrastructure.
+
+### Features
+- **Automatic Version Increment**: Versions are automatically incremented during development commits
+- **Git Hook Integration**: Pre-commit and post-commit hooks manage versioning automatically  
+- **Build Date Tracking**: Each version includes precise build timestamp information
+- **Enhanced Agent Data**: Agents send comprehensive version information including platform details
+- **Update Management**: Web-based agent update tracking and deployment
+- **Fallback Compatibility**: Support for both legacy and new agent data structures
+
+### Versioning Components
+
+#### 1. Core Version Files
+```bash
+# Main agent files with version information
+networkmap_agent.py          # Development version
+static/networkmap_agent.py   # Production/deployment version
+VERSION_INFO.txt            # Comprehensive version metadata
+```
+
+#### 2. Automatic Versioning Scripts
+```bash
+scripts/auto_version.py      # Core versioning logic
+scripts/pre-commit           # Git pre-commit hook
+scripts/post-commit          # Git post-commit hook  
+update_agent_version.sh      # Manual version update utility
+```
+
+### Version Structure
+
+#### Agent Version Format
+```python
+# Example agent version information
+__version__ = "1.6.4"
+__build_date__ = "2025-08-15"
+VERSION = __version__
+
+# Enhanced agent data structure
+agent_info = {
+    "agent_version": "1.6.4",
+    "build_date": "2025-08-15", 
+    "platform": "Linux-5.4.0-generic-x86_64"
+}
+```
+
+#### VERSION_INFO.txt Content
+```
+NetworkMap Agent Version Information
+=====================================
+
+Agent Version: 1.6.4
+Build Date: 2025-08-15
+Build Time: 17:54:29
+Git Commit: AUTO_VERSIONED
+
+Release Notes:
+- Enhanced agent data structure with comprehensive version info
+- Improved UI compatibility with fallback data handling
+- Real-time progress monitoring for agent operations
+
+File Locations:
+- Main Agent: networkmap_agent.py
+- Static Agent: static/networkmap_agent.py
+- Version Info: VERSION_INFO.txt
+
+Last Updated: 2025-08-15T17:54:29.624727
+```
+
+### Usage
+
+#### Manual Version Update
+```bash
+# Update agent version manually
+./update_agent_version.sh
+
+# The script will:
+# 1. Check current version in all agent files
+# 2. Increment version number automatically
+# 3. Update build timestamp
+# 4. Stage files for commit
+# 5. Display next steps for git operations
+```
+
+#### Automatic Version Management
+```bash
+# Versions are automatically managed during git operations
+git add networkmap_agent.py static/networkmap_agent.py
+git commit -m "Update agent features"
+# → Auto-versioning triggers and increments version
+# → All agent files updated with new version
+# → Changes automatically staged for commit
+```
+
+### Web Interface Integration
+
+#### Agent Data Modal
+The web interface provides comprehensive agent information:
+- **Summary Tab**: Displays agent version with fallback compatibility
+- **Version Summary**: Dashboard showing all agent versions across infrastructure
+- **Update Management**: Bulk update capabilities for outdated agents
+
+#### Version Display Logic
+```javascript
+// Enhanced version display with fallback support
+const agentVersion = (data.agent_info && data.agent_info.agent_version) ||
+                    (data.system_info && data.system_info.agent_version) ||
+                    'Unknown';
+```
+
+#### Update Operations
+```bash
+# Update specific agents via web interface
+# 1. Go to Agents → Version Summary
+# 2. Select agents to update
+# 3. Click "Update Selected" or "Update All Outdated"
+# 4. Monitor real-time update progress
+```
+
+### Migration and Compatibility
+
+#### Data Structure Evolution
+```json
+// Legacy agent data (still supported)
+{
+  "system_info": {
+    "agent_version": "1.5.0"
+  }
+}
+
+// Enhanced agent data (new structure)
+{
+  "agent_info": {
+    "agent_version": "1.6.4",
+    "build_date": "2025-08-15",
+    "platform": "Linux-x86_64"
+  },
+  "system_info": {
+    // Other system information
+  }
+}
+```
+
+#### Update Process
+1. **Deploy New Server**: Updated server supports both data formats
+2. **Update Agents**: Use web interface to update agents to latest version
+3. **Verify Updates**: Check Version Summary for successful updates
+4. **Monitor Compatibility**: System automatically handles mixed environments
+
+### Troubleshooting
+
+#### Common Issues
+```bash
+# Version update script fails
+./update_agent_version.sh
+# Check: Python3 availability, file permissions, git status
+
+# Agent version shows "Unknown"
+# Check: Agent data structure, server compatibility, agent update status
+
+# Git hooks not working
+# Check: Hook permissions, Python path, script locations
+chmod +x scripts/pre-commit scripts/post-commit
+```
+
+#### Manual Recovery
+```bash
+# Manually fix version inconsistencies
+python3 scripts/auto_version.py
+
+# Reset version tracking
+git add VERSION_INFO.txt networkmap_agent.py static/networkmap_agent.py
+git commit -m "Fix version tracking"
 ```
 
 ---
@@ -570,6 +758,15 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - [ ] **Advanced Security**: Role-based access control and audit logging
 
 ### Version History
+- **v1.6.4**: Automatic agent versioning system, enhanced data structures, UI improvements
+  - Git hook-based auto-versioning with build date tracking
+  - Enhanced agent data modal with Summary, Network Scans, and Test Results tabs
+  - Improved test results formatting with multiline support and proper styling
+  - Agent version fallback compatibility for legacy and new data structures
+  - Real-time progress monitoring for agent operations
+  - Version Summary dashboard with bulk update capabilities
+  - Database cleanup tools for agent management
+- **v1.5.0**: Agent data structure improvements, enhanced network analysis
 - **v1.4.0**: Enhanced agent data display, improved log formatting
 - **v1.3.0**: Agent management system, real-time monitoring
 - **v1.2.0**: Network topology visualization
