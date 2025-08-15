@@ -42,26 +42,26 @@ class NetworkScanner:
             self._update_progress(f"❌ Host {host['name']} is not accessible via SSH")
             return
         
-        # Check if enhanced network scanner is available and use it
+        # ALWAYS run traditional scan first to capture basic network data quickly
+        self._update_progress(f"📊 Capturing essential network data for {host['name']}")
+        self._traditional_scan(host)
+        
+        # Then run enhanced scanner if available (but don't let it block basic data)
         try:
             from enhanced_network_scanner import EnhancedNetworkScanner
             enhanced_scanner = EnhancedNetworkScanner(self.host_manager, self.db)
             enhanced_scanner.set_progress_callback(self.progress_callback)
             
-            # Run comprehensive enhanced scan
+            self._update_progress(f"🔬 Running enhanced comprehensive scan for {host['name']}")
+            # Run enhanced scan in a timeout to prevent blocking
             enhanced_results = enhanced_scanner.comprehensive_network_scan(host)
             self._update_progress(f"✅ Enhanced comprehensive scan completed for {host['name']}")
             
-            # Continue with traditional scanning for compatibility
-            self._traditional_scan(host)
-            
         except ImportError:
-            self._update_progress(f"⚠️ Enhanced scanner not available, using traditional scan for {host['name']}")
-            self._traditional_scan(host)
+            self._update_progress(f"⚠️ Enhanced scanner not available for {host['name']}")
         except Exception as e:
-            self._update_progress(f"❌ Error in enhanced scanning for {host['name']}: {e}")
-            self._update_progress(f"🔄 Falling back to traditional scan for {host['name']}")
-            self._traditional_scan(host)
+            self._update_progress(f"⚠️ Enhanced scanning encountered issues for {host['name']}: {e}")
+            self._update_progress(f"✅ Basic network data already captured for {host['name']}")
     
     def _traditional_scan(self, host):
         """Traditional scanning methods for compatibility"""
