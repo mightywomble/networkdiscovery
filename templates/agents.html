@@ -3135,46 +3135,108 @@ function showTestResults(data) {
         return;
     }
     
-    let testsHtml = '';
+    let testsHtml = '<div class="accordion" id="testResultsAccordion">';
+    let accordionIndex = 0;
     
     for (const [category, tests] of Object.entries(data.test_results)) {
-        testsHtml += `
-            <div class="card mb-3">
-                <div class="card-header">
-                    <h6 class="mb-0"><i class="fas fa-flask"></i> ${category}</h6>
-                </div>
-                <div class="card-body">
-        `;
+        // Calculate category statistics
+        let totalTests = 0;
+        let passedTests = 0;
+        let testDetails = [];
         
         if (typeof tests === 'object' && tests !== null) {
             for (const [testName, result] of Object.entries(tests)) {
+                totalTests++;
                 const success = result.success !== false;
+                if (success) passedTests++;
+                
+                testDetails.push({
+                    name: testName,
+                    success: success,
+                    description: result.description || '',
+                    details: result.details || ''
+                });
+            }
+        }
+        
+        const categorySuccess = passedTests === totalTests;
+        const categoryIcon = getCategoryIcon(category);
+        const isFirstCategory = accordionIndex === 0;
+        
+        testsHtml += `
+            <div class="accordion-item">
+                <h2 class="accordion-header" id="test${accordionIndex}Heading">
+                    <button class="accordion-button ${isFirstCategory ? '' : 'collapsed'}" type="button" data-bs-toggle="collapse" data-bs-target="#test${accordionIndex}Collapse">
+                        <i class="${categoryIcon} me-2"></i> ${category}
+                        <span class="badge bg-${categorySuccess ? 'success' : (passedTests > 0 ? 'warning' : 'danger')} ms-2">
+                            ${passedTests}/${totalTests} passed
+                        </span>
+                    </button>
+                </h2>
+                <div id="test${accordionIndex}Collapse" class="accordion-collapse collapse ${isFirstCategory ? 'show' : ''}" data-bs-parent="#testResultsAccordion">
+                    <div class="accordion-body">
+        `;
+        
+        if (testDetails.length > 0) {
+            // Add individual test results
+            testDetails.forEach(test => {
                 testsHtml += `
-                    <div class="d-flex justify-content-between align-items-center mb-2 p-2 border rounded">
-                        <div>
-                            <strong>${testName}</strong>
-                            ${result.description ? `<br><small class="text-muted">${result.description}</small>` : ''}
-                        </div>
-                        <div>
-                            <span class="badge bg-${success ? 'success' : 'danger'}">
-                                <i class="fas fa-${success ? 'check' : 'times'}"></i> ${success ? 'Pass' : 'Fail'}
+                    <div class="card mb-3 border-${test.success ? 'success' : 'danger'}">
+                        <div class="card-header bg-${test.success ? 'light' : 'light'} d-flex justify-content-between align-items-center">
+                            <div>
+                                <strong>${test.name}</strong>
+                                ${test.description ? `<br><small class="text-muted">${test.description}</small>` : ''}
+                            </div>
+                            <span class="badge bg-${test.success ? 'success' : 'danger'}">
+                                <i class="fas fa-${test.success ? 'check' : 'times'}"></i> ${test.success ? 'Pass' : 'Fail'}
                             </span>
                         </div>
+                        ${test.details ? `
+                            <div class="card-body">
+                                <div class="test-details" style="background: #f8f9fa; padding: 0.75rem; border-radius: 0.375rem; font-family: monospace; font-size: 0.875rem; white-space: pre-wrap;">
+                                    ${test.details}
+                                </div>
+                            </div>
+                        ` : ''}
                     </div>
-                    ${result.details ? `<div class="ms-3 mb-2"><small class="text-muted">${result.details}</small></div>` : ''}
                 `;
-            }
+            });
         } else {
-            testsHtml += `<div class="text-muted">No detailed results available</div>`;
+            testsHtml += '<div class="alert alert-info">No detailed test results available for this category</div>';
         }
         
         testsHtml += `
+                    </div>
                 </div>
             </div>
         `;
+        
+        accordionIndex++;
     }
     
+    testsHtml += '</div>'; // Close accordion
+    
     content.innerHTML = testsHtml;
+}
+
+// Helper function to get appropriate icons for test categories
+function getCategoryIcon(category) {
+    const iconMap = {
+        'Network Discovery': 'fas fa-sitemap',
+        'System Monitoring': 'fas fa-desktop',
+        'Connection Monitoring': 'fas fa-exchange-alt',
+        'Port Scanning': 'fas fa-door-open',
+        'Network Interfaces': 'fas fa-ethernet',
+        'ARP Table Analysis': 'fas fa-table',
+        'Security Tests': 'fas fa-shield-alt',
+        'Performance Tests': 'fas fa-tachometer-alt',
+        'Connectivity Tests': 'fas fa-wifi',
+        'Service Discovery': 'fas fa-search',
+        'Host Discovery': 'fas fa-server',
+        'Topology Mapping': 'fas fa-project-diagram'
+    };
+    
+    return iconMap[category] || 'fas fa-flask';
 }
 
 function showRawData(data) {
