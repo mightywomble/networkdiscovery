@@ -898,19 +898,34 @@ function renderHosts() {
                             <span class="agent-status-badge badge bg-${agentStatusClass}">
                                 <i class="${agentStatusIcon}"></i> ${agentStatus}
                             </span>
+                            ${agent ? `<br><small class="text-muted mt-1">Last: ${agent.last_heartbeat ? new Date(agent.last_heartbeat).toLocaleString() : 'Never'}</small>` : ''}
                         </div>
-                        <div class="col-md-2 text-end">
+                        <div class="col-md-1">
+                            <small class="text-muted">Last Comm:</small><br>
+                            <strong class="text-info">${agent ? (agent.last_heartbeat ? new Date(agent.last_heartbeat).toLocaleTimeString() : 'Never') : '-'}</strong>
+                        </div>
+                        <div class="col-md-1 text-end">
                             ${agent ? `
-                                <div class="btn-group btn-group-sm">
-                                    <button class="btn btn-outline-primary" onclick="showAgentControl('${host.name}', '${host.ip_address}')" title="Control Agent">
-                                        <i class="fas fa-cog"></i>
-                                    </button>
-                                    <button class="btn btn-outline-info" onclick="viewHostAgentLogs('${agent.agent_id}')" title="View Logs">
-                                        <i class="fas fa-file-alt"></i>
-                                    </button>
-                                    <button class="btn btn-outline-danger" onclick="uninstallAgent('${host.name}', '${host.ip_address}')" title="Uninstall">
-                                        <i class="fas fa-trash"></i>
-                                    </button>
+                                <div class="btn-group-vertical btn-group-sm">
+                                    <div class="btn-group btn-group-sm mb-1">
+                                        <button class="btn btn-outline-primary" onclick="showAgentControl('${host.name}', '${host.ip_address}')" title="Control Agent">
+                                            <i class="fas fa-cog"></i>
+                                        </button>
+                                        <button class="btn btn-outline-success" onclick="runAgentNow('${host.name}', '${host.ip_address}')" title="Run Agent Now">
+                                            <i class="fas fa-play"></i>
+                                        </button>
+                                    </div>
+                                    <div class="btn-group btn-group-sm">
+                                        <button class="btn btn-outline-info" onclick="viewHostAgentLogs('${agent.agent_id}')" title="View Logs">
+                                            <i class="fas fa-file-alt"></i>
+                                        </button>
+                                        <button class="btn btn-outline-secondary" onclick="viewLastAgentData('${agent.agent_id}')" title="View Last Data">
+                                            <i class="fas fa-database"></i>
+                                        </button>
+                                        <button class="btn btn-outline-danger" onclick="uninstallAgent('${host.name}', '${host.ip_address}')" title="Uninstall">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
                                 </div>
                             ` : `
                                 <button class="btn btn-sm btn-success" onclick="deploySingleAgent(${host.id})" title="Deploy Agent">
@@ -2389,6 +2404,326 @@ function showAgentVersionDetails(agentId) {
     ];
     
     alert(details.join('\n'));
+}
+
+// New functionality: Run Agent Now
+async function runAgentNow(hostname, ipAddress) {
+    const confirmMessage = `Run agent scan now on ${hostname}?`;
+    if (!confirm(confirmMessage)) {
+        return;
+    }
+    
+    try {
+        const response = await fetch('/api/agent/run_now', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                hostname: hostname,
+                ip_address: ipAddress
+            })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            alert(`Agent scan initiated successfully on ${hostname}!\n\nResponse: ${data.message || 'Scan started'}`);
+            
+            // Refresh data to update status
+            setTimeout(refreshData, 2000);
+        } else {
+            alert(`Failed to run agent on ${hostname}: ${data.error}`);
+        }
+    } catch (error) {
+        alert(`Error running agent on ${hostname}: ${error.message}`);
+    }
+}
+
+// New functionality: View Last Agent Data
+async function viewLastAgentData(agentId) {
+    try {
+        const response = await fetch(`/api/agent/last_data/${agentId}`);
+        const data = await response.json();
+        
+        if (data.success) {
+            // Create a modal to display the data
+            showAgentDataModal(data.agent_data, agentId);
+        } else {
+            alert(`Failed to load agent data: ${data.error}`);
+        }
+    } catch (error) {
+        alert(`Error loading agent data: ${error.message}`);
+    }
+}
+
+function showAgentDataModal(agentData, agentId) {
+    const agent = agents.find(a => a.agent_id === agentId);
+    const agentName = agent ? `${agent.hostname} (${agent.ip_address})` : `Agent ${agentId}`;
+    
+    // Create modal HTML if it doesn't exist
+    let modal = document.getElementById('agentDataModal');
+    if (!modal) {
+        const modalHtml = `
+            <div class="modal fade" id="agentDataModal" tabindex="-1">
+                <div class="modal-dialog modal-xl">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title"><i class="fas fa-database"></i> Agent Data - <span id="agent-data-title"></span></h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                        </div>
+                        <div class="modal-body">
+                            <div class="mb-3">
+                                <div class="btn-group" role="group">
+                                    <button type="button" class="btn btn-outline-primary active" onclick="showDataTab('summary')" id="tab-summary">Summary</button>
+                                    <button type="button" class="btn btn-outline-primary" onclick="showDataTab('network')" id="tab-network">Network Scans</button>
+                                    <button type="button" class="btn btn-outline-primary" onclick="showDataTab('tests')" id="tab-tests">Test Results</button>
+                                    <button type="button" class="btn btn-outline-primary" onclick="showDataTab('raw')" id="tab-raw">Raw Data</button>
+                                </div>
+                            </div>
+                            <div id="agent-data-content"></div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+        document.body.insertAdjacentHTML('beforeend', modalHtml);
+        modal = document.getElementById('agentDataModal');
+    }
+    
+    // Set title and store data
+    document.getElementById('agent-data-title').textContent = agentName;
+    window.currentAgentData = agentData;
+    
+    // Show summary tab by default
+    showDataTab('summary');
+    
+    // Show modal
+    const bootstrapModal = new bootstrap.Modal(modal);
+    bootstrapModal.show();
+}
+
+function showDataTab(tabName) {
+    // Update active tab
+    document.querySelectorAll('[id^="tab-"]').forEach(tab => {
+        tab.classList.remove('active');
+    });
+    document.getElementById(`tab-${tabName}`).classList.add('active');
+    
+    const content = document.getElementById('agent-data-content');
+    const data = window.currentAgentData;
+    
+    if (!data) {
+        content.innerHTML = '<div class="alert alert-warning">No data available</div>';
+        return;
+    }
+    
+    switch (tabName) {
+        case 'summary':
+            showDataSummary(data);
+            break;
+        case 'network':
+            showNetworkData(data);
+            break;
+        case 'tests':
+            showTestResults(data);
+            break;
+        case 'raw':
+            showRawData(data);
+            break;
+    }
+}
+
+function showDataSummary(data) {
+    const content = document.getElementById('agent-data-content');
+    
+    let summaryHtml = `
+        <div class="row">
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header"><h6 class="mb-0"><i class="fas fa-info-circle"></i> Basic Information</h6></div>
+                    <div class="card-body">
+                        <dl class="row">
+                            <dt class="col-sm-5">Last Scan:</dt>
+                            <dd class="col-sm-7">${data.last_scan ? new Date(data.last_scan).toLocaleString() : 'Never'}</dd>
+                            <dt class="col-sm-5">Scan Duration:</dt>
+                            <dd class="col-sm-7">${data.scan_duration || 'Unknown'}</dd>
+                            <dt class="col-sm-5">Status:</dt>
+                            <dd class="col-sm-7"><span class="badge bg-${data.scan_status === 'completed' ? 'success' : 'warning'}">${data.scan_status || 'Unknown'}</span></dd>
+                        </dl>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header"><h6 class="mb-0"><i class="fas fa-chart-bar"></i> Statistics</h6></div>
+                    <div class="card-body">
+                        <dl class="row">
+                            <dt class="col-sm-6">Hosts Discovered:</dt>
+                            <dd class="col-sm-6">${data.network_data ? data.network_data.length : 0}</dd>
+                            <dt class="col-sm-6">Tests Performed:</dt>
+                            <dd class="col-sm-6">${data.test_results ? Object.keys(data.test_results).length : 0}</dd>
+                            <dt class="col-sm-6">Data Size:</dt>
+                            <dd class="col-sm-6">${formatDataSize(JSON.stringify(data).length)}</dd>
+                        </dl>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    // Add error information if present
+    if (data.errors && data.errors.length > 0) {
+        summaryHtml += `
+            <div class="row mt-3">
+                <div class="col-12">
+                    <div class="card border-warning">
+                        <div class="card-header bg-warning text-dark"><h6 class="mb-0"><i class="fas fa-exclamation-triangle"></i> Errors (${data.errors.length})</h6></div>
+                        <div class="card-body">
+                            <ul class="list-unstyled mb-0">
+                                ${data.errors.slice(0, 5).map(error => `<li><small class="text-danger">• ${error}</small></li>`).join('')}
+                                ${data.errors.length > 5 ? `<li><small class="text-muted">... and ${data.errors.length - 5} more</small></li>` : ''}
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+    
+    content.innerHTML = summaryHtml;
+}
+
+function showNetworkData(data) {
+    const content = document.getElementById('agent-data-content');
+    
+    if (!data.network_data || data.network_data.length === 0) {
+        content.innerHTML = '<div class="alert alert-info"><i class="fas fa-info-circle"></i> No network scan data available</div>';
+        return;
+    }
+    
+    let networkHtml = `
+        <div class="card">
+            <div class="card-header">
+                <h6 class="mb-0"><i class="fas fa-network-wired"></i> Discovered Hosts (${data.network_data.length})</h6>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive" style="max-height: 500px; overflow-y: auto;">
+                    <table class="table table-hover mb-0">
+                        <thead class="table-light sticky-top">
+                            <tr>
+                                <th>IP Address</th>
+                                <th>Hostname</th>
+                                <th>MAC Address</th>
+                                <th>Status</th>
+                                <th>Open Ports</th>
+                                <th>Last Seen</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+    `;
+    
+    data.network_data.forEach(host => {
+        const ports = host.open_ports ? (Array.isArray(host.open_ports) ? host.open_ports.join(', ') : host.open_ports) : 'None';
+        networkHtml += `
+            <tr>
+                <td><code>${host.ip_address}</code></td>
+                <td>${host.hostname || '-'}</td>
+                <td><small>${host.mac_address || '-'}</small></td>
+                <td><span class="badge bg-${host.status === 'up' ? 'success' : 'secondary'}">${host.status || 'Unknown'}</span></td>
+                <td><small>${ports}</small></td>
+                <td><small>${host.last_seen ? new Date(host.last_seen).toLocaleString() : '-'}</small></td>
+            </tr>
+        `;
+    });
+    
+    networkHtml += `
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    content.innerHTML = networkHtml;
+}
+
+function showTestResults(data) {
+    const content = document.getElementById('agent-data-content');
+    
+    if (!data.test_results || Object.keys(data.test_results).length === 0) {
+        content.innerHTML = '<div class="alert alert-info"><i class="fas fa-info-circle"></i> No test results available</div>';
+        return;
+    }
+    
+    let testsHtml = '';
+    
+    for (const [category, tests] of Object.entries(data.test_results)) {
+        testsHtml += `
+            <div class="card mb-3">
+                <div class="card-header">
+                    <h6 class="mb-0"><i class="fas fa-flask"></i> ${category}</h6>
+                </div>
+                <div class="card-body">
+        `;
+        
+        if (typeof tests === 'object' && tests !== null) {
+            for (const [testName, result] of Object.entries(tests)) {
+                const success = result.success !== false;
+                testsHtml += `
+                    <div class="d-flex justify-content-between align-items-center mb-2 p-2 border rounded">
+                        <div>
+                            <strong>${testName}</strong>
+                            ${result.description ? `<br><small class="text-muted">${result.description}</small>` : ''}
+                        </div>
+                        <div>
+                            <span class="badge bg-${success ? 'success' : 'danger'}">
+                                <i class="fas fa-${success ? 'check' : 'times'}"></i> ${success ? 'Pass' : 'Fail'}
+                            </span>
+                        </div>
+                    </div>
+                    ${result.details ? `<div class="ms-3 mb-2"><small class="text-muted">${result.details}</small></div>` : ''}
+                `;
+            }
+        } else {
+            testsHtml += `<div class="text-muted">No detailed results available</div>`;
+        }
+        
+        testsHtml += `
+                </div>
+            </div>
+        `;
+    }
+    
+    content.innerHTML = testsHtml;
+}
+
+function showRawData(data) {
+    const content = document.getElementById('agent-data-content');
+    
+    const rawHtml = `
+        <div class="card">
+            <div class="card-header">
+                <h6 class="mb-0"><i class="fas fa-code"></i> Raw JSON Data</h6>
+            </div>
+            <div class="card-body p-0">
+                <pre class="bg-dark text-light p-3 m-0" style="max-height: 500px; overflow-y: auto; font-size: 0.8rem;"><code>${JSON.stringify(data, null, 2)}</code></pre>
+            </div>
+        </div>
+    `;
+    
+    content.innerHTML = rawHtml;
+}
+
+function formatDataSize(bytes) {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
 }
 
 </script>
