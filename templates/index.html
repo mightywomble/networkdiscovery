@@ -1,221 +1,310 @@
-{% extends "base.html" %}
+{% extends "base_patternfly.html" %}
 
-{% block title %}Dashboard - Network Map{% endblock %}
+{% block title %}Dashboard - NetworkMap{% endblock %}
+
+{% block breadcrumb %}
+<li class="pf-c-breadcrumb__item">
+    <a href="{{ url_for('index') }}" class="pf-c-breadcrumb__link">Home</a>
+</li>
+<li class="pf-c-breadcrumb__item pf-m-current" aria-current="page">
+    <span class="pf-c-breadcrumb__item-divider">
+        <i class="fas fa-angle-right" aria-hidden="true"></i>
+    </span>
+    Dashboard
+</li>
+{% endblock %}
 
 {% block content %}
-<div class="row mb-4">
-    <div class="col-12">
-        <h1><i class="fas fa-tachometer-alt me-2"></i>Network Dashboard</h1>
-        <p class="text-muted">Monitor your network infrastructure in real-time</p>
+<!-- Page Header -->
+<section class="pf-c-page__main-section pf-m-light nm-page-header">
+    <div class="pf-c-content">
+        <h1>
+            <i class="fas fa-tachometer-alt pf-u-mr-sm"></i>
+            Network Dashboard
+        </h1>
+        <p>Monitor your network infrastructure in real-time</p>
     </div>
-</div>
+</section>
 
 <!-- Statistics Cards -->
-<div class="row mb-4">
-    <div class="col-md-3">
-        <div class="card card-stats">
-            <div class="card-body">
-                <div class="d-flex justify-content-between">
-                    <div>
-                        <div class="stats-number">{{ stats.total_hosts }}</div>
-                        <div class="stats-label">Total Hosts</div>
-                    </div>
-                    <div class="align-self-center">
-                        <i class="fas fa-server fa-2x text-primary"></i>
-                    </div>
+<section class="pf-c-page__main-section">
+    <div class="pf-l-gallery pf-m-gutter">
+        <!-- Total Hosts Card -->
+        <div class="pf-c-card nm-stat-card">
+            <div class="pf-c-card__header">
+                <div class="pf-c-card__header-main">
+                    <i class="fas fa-server pf-u-mr-sm"></i>
+                    Total Hosts
                 </div>
+            </div>
+            <div class="pf-c-card__body">
+                <div class="nm-stat-value">{{ stats.total_hosts }}</div>
+                <div class="nm-stat-label">Discovered Hosts</div>
+            </div>
+        </div>
+        
+        <!-- Online Hosts Card -->
+        <div class="pf-c-card nm-stat-card">
+            <div class="pf-c-card__header">
+                <div class="pf-c-card__header-main">
+                    <i class="fas fa-check-circle pf-u-mr-sm"></i>
+                    Online Hosts
+                </div>
+            </div>
+            <div class="pf-c-card__body">
+                <div class="nm-stat-value" style="color: var(--pf-global--success-color--100)">{{ stats.online_hosts }}</div>
+                <div class="nm-stat-label">Currently Active</div>
+            </div>
+        </div>
+        
+        <!-- Total Connections Card -->
+        <div class="pf-c-card nm-stat-card">
+            <div class="pf-c-card__header">
+                <div class="pf-c-card__header-main">
+                    <i class="fas fa-network-wired pf-u-mr-sm"></i>
+                    Total Connections
+                </div>
+            </div>
+            <div class="pf-c-card__body">
+                <div class="nm-stat-value" style="color: var(--pf-global--info-color--100)">{{ stats.total_connections }}</div>
+                <div class="nm-stat-label">Network Connections</div>
+            </div>
+        </div>
+        
+        <!-- Recent Activity Card -->
+        <div class="pf-c-card nm-stat-card">
+            <div class="pf-c-card__header">
+                <div class="pf-c-card__header-main">
+                    <i class="fas fa-clock pf-u-mr-sm"></i>
+                    Recent Activity
+                </div>
+            </div>
+            <div class="pf-c-card__body">
+                <div class="nm-stat-value" style="color: var(--pf-global--warning-color--100)">{{ stats.recent_connections }}</div>
+                <div class="nm-stat-label">Recent Connections</div>
             </div>
         </div>
     </div>
-    
-    <div class="col-md-3">
-        <div class="card card-stats">
-            <div class="card-body">
-                <div class="d-flex justify-content-between">
-                    <div>
-                        <div class="stats-number text-success">{{ stats.online_hosts }}</div>
-                        <div class="stats-label">Online Hosts</div>
-                    </div>
-                    <div class="align-self-center">
-                        <i class="fas fa-check-circle fa-2x text-success"></i>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-    
-    <div class="col-md-3">
-        <div class="card card-stats">
-            <div class="card-body">
-                <div class="d-flex justify-content-between">
-                    <div>
-                        <div class="stats-number">{{ stats.total_connections }}</div>
-                        <div class="stats-label">Total Connections</div>
-                    </div>
-                    <div class="align-self-center">
-                        <i class="fas fa-network-wired fa-2x text-info"></i>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-    
-    <div class="col-md-3">
-        <div class="card card-stats">
-            <div class="card-body">
-                <div class="d-flex justify-content-between">
-                    <div>
-                        <div class="stats-number text-warning">{{ stats.recent_connections }}</div>
-                        <div class="stats-label">Recent Activity</div>
-                    </div>
-                    <div class="align-self-center">
-                        <i class="fas fa-clock fa-2x text-warning"></i>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
+</section>
 
-<div class="row">
-    <!-- Hosts Overview -->
-    <div class="col-lg-8">
-        <div class="card">
-            <div class="card-header d-flex justify-content-between align-items-center">
-                <h5 class="mb-0"><i class="fas fa-server me-2"></i>Hosts Overview</h5>
-                <a href="{{ url_for('hosts') }}" class="btn btn-sm btn-outline-primary">
-                    <i class="fas fa-cog me-1"></i>Manage Hosts
-                </a>
-            </div>
-            <div class="card-body">
-                {% if hosts %}
-                    <div class="table-responsive">
-                        <table class="table table-sm">
+<!-- Main Content Grid -->
+<section class="pf-c-page__main-section">
+    <div class="pf-l-grid pf-m-all-12-col-on-sm pf-m-all-12-col-on-md pf-m-8-col-on-lg pf-m-8-col-on-xl">
+        <!-- Hosts Overview -->
+        <div class="pf-l-grid__item">
+            <div class="pf-c-card">
+                <div class="pf-c-card__header">
+                    <div class="pf-c-card__header-main">
+                        <h2 class="pf-c-card__title">
+                            <i class="fas fa-server pf-u-mr-sm"></i>
+                            Hosts Overview
+                        </h2>
+                    </div>
+                    <div class="pf-c-card__actions">
+                        <a href="{{ url_for('hosts') }}" class="pf-c-button pf-m-secondary pf-m-small">
+                            <i class="fas fa-cog pf-u-mr-sm"></i>
+                            Manage Hosts
+                        </a>
+                    </div>
+                </div>
+                <div class="pf-c-card__body">
+                    {% if hosts %}
+                        <table class="pf-c-table pf-m-compact" role="grid">
                             <thead>
-                                <tr>
-                                    <th>Name</th>
-                                    <th>IP Address</th>
-                                    <th>Status</th>
-                                    <th>Last Seen</th>
-                                    <th>Actions</th>
+                                <tr role="row">
+                                    <th role="columnheader" scope="col">Name</th>
+                                    <th role="columnheader" scope="col">IP Address</th>
+                                    <th role="columnheader" scope="col">Status</th>
+                                    <th role="columnheader" scope="col">Last Seen</th>
+                                    <th role="columnheader" scope="col">Actions</th>
                                 </tr>
                             </thead>
-                            <tbody>
+                            <tbody role="rowgroup">
                                 {% for host in hosts %}
-                                <tr>
-                                    <td>
-                                        <strong>{{ host.name }}</strong>
-                                        {% if host.description %}
-                                            <br><small class="text-muted">{{ host.description }}</small>
-                                        {% endif %}
-                                    </td>
-                                    <td><code>{{ host.ip_address }}</code></td>
-                                    <td>
-                                        <span class="status-{{ host.status or 'unknown' }}">
-                                            {% if host.status == 'online' %}
-                                                <i class="fas fa-check-circle"></i> Online
-                                            {% elif host.status == 'offline' %}
-                                                <i class="fas fa-times-circle"></i> Offline
-                                            {% elif host.status == 'ping_only' %}
-                                                <i class="fas fa-exclamation-circle"></i> Ping Only
-                                            {% else %}
-                                                <i class="fas fa-question-circle"></i> Unknown
+                                <tr role="row">
+                                    <td role="gridcell" data-label="Name">
+                                        <div class="pf-c-table__text">
+                                            <strong>{{ host.name }}</strong>
+                                            {% if host.description %}
+                                                <br><small class="pf-u-color-200">{{ host.description }}</small>
                                             {% endif %}
-                                        </span>
+                                        </div>
                                     </td>
-                                    <td>
-                                        {% if host.last_seen %}
-                                            <small>{{ host.last_seen.strftime('%m/%d/%Y %H:%M') }}</small>
+                                    <td role="gridcell" data-label="IP Address">
+                                        <code class="pf-c-code pf-m-inline">{{ host.ip_address }}</code>
+                                    </td>
+                                    <td role="gridcell" data-label="Status">
+                                        {% if host.status == 'online' %}
+                                            <span class="nm-status-indicator online">
+                                                <i class="fas fa-check-circle"></i> Online
+                                            </span>
+                                        {% elif host.status == 'offline' %}
+                                            <span class="nm-status-indicator offline">
+                                                <i class="fas fa-times-circle"></i> Offline
+                                            </span>
+                                        {% elif host.status == 'ping_only' %}
+                                            <span class="nm-status-indicator warning">
+                                                <i class="fas fa-exclamation-circle"></i> Ping Only
+                                            </span>
                                         {% else %}
-                                            <small class="text-muted">Never</small>
+                                            <span class="nm-status-indicator">
+                                                <i class="fas fa-question-circle"></i> Unknown
+                                            </span>
                                         {% endif %}
                                     </td>
-                                    <td>
-                                        <button class="btn btn-sm btn-outline-info" onclick="showHostDetails({{ host.id }})">
-                                            <i class="fas fa-info-circle"></i>
+                                    <td role="gridcell" data-label="Last Seen">
+                                        {% if host.last_seen %}
+                                            <time>{{ host.last_seen.strftime('%m/%d/%Y %H:%M') }}</time>
+                                        {% else %}
+                                            <span class="pf-u-color-200">Never</span>
+                                        {% endif %}
+                                    </td>
+                                    <td role="gridcell" data-label="Actions">
+                                        <button class="pf-c-button pf-m-plain" onclick="showHostDetails({{ host.id }})" aria-label="View host details">
+                                            <i class="fas fa-info-circle" aria-hidden="true"></i>
                                         </button>
                                     </td>
                                 </tr>
                                 {% endfor %}
                             </tbody>
                         </table>
-                    </div>
-                {% else %}
-                    <div class="text-center py-4">
-                        <i class="fas fa-server fa-3x text-muted mb-3"></i>
-                        <h5>No hosts configured</h5>
-                        <p class="text-muted">Add your first host to start monitoring your network.</p>
-                        <a href="{{ url_for('hosts') }}" class="btn btn-primary">
-                            <i class="fas fa-plus me-1"></i>Add Host
-                        </a>
-                    </div>
-                {% endif %}
+                    {% else %}
+                        <div class="pf-c-empty-state pf-m-lg">
+                            <div class="pf-c-empty-state__content">
+                                <i class="fas fa-server pf-c-empty-state__icon" aria-hidden="true"></i>
+                                <h2 class="pf-c-title pf-m-lg">No hosts configured</h2>
+                                <div class="pf-c-empty-state__body">
+                                    Add your first host to start monitoring your network infrastructure.
+                                </div>
+                                <a href="{{ url_for('hosts') }}" class="pf-c-button pf-m-primary">
+                                    <i class="fas fa-plus pf-u-mr-sm"></i>
+                                    Add Host
+                                </a>
+                            </div>
+                        </div>
+                    {% endif %}
+                </div>
             </div>
         </div>
     </div>
     
-    <!-- Quick Actions -->
-    <div class="col-lg-4">
-        <div class="card">
-            <div class="card-header">
-                <h5 class="mb-0"><i class="fas fa-bolt me-2"></i>Quick Actions</h5>
-            </div>
-            <div class="card-body">
-                <div class="d-grid gap-2">
-                    <button class="btn btn-primary" onclick="startScan()">
-                        <i class="fas fa-search me-2"></i>Start Network Scan
-                    </button>
-                    <button class="btn btn-warning" onclick="installUbuntuTools()" id="install-tools-btn">
-                        <img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxNiIgaGVpZ2h0PSIxNiIgZmlsbD0iY3VycmVudENvbG9yIiBjbGFzcz0iYmkgYmktdWJ1bnR1IiB2aWV3Qm94PSIwIDAgMTYgMTYiPgogIDxwYXRoIGQ9Im0xMi4xNjYgOC45NGMtLjUyNSAxLjA5Ni0xLjY1NSAxLjg0My0yLjk1MiAxLjk5M2EyLjcgMi43IDAgMCAwIDAtLjM5M2MwLS43MS0uMTY4LTEuMTctLjY1OS0xLjU1OWwtLjg5NC0uODk0YTQuNyA0LjcgMCAwIDEtLjQ5Mi0uNTE5IDMuNDQgMy40NCAwIDAgMSAuNDkyLS41MTlsLjg5NC0uODk0Yy40OTEtLjM4OS42NTktLjg0OS42NTktMS41NTkgMC0uMTI4IDAtLjI3IDAtLjM5MyAxLjI5Ny4xNSAyLjQyNy44OTcgMi45NTIgMS45OTNsLS40OTIuNTE5YTUuMjggNS4yOCAwIDAgMCAwIDEuMDRsLjQ5Mi41MTlaIi8+CiAgPHBhdGggZD0ibTIuNzEgOS43MDNhNS4yNSA1LjI1IDAgMCAwIDUuNTkxIDEuNDU0Yy40OTMtLjg5NS40OTMtMS4zNDQgMC0xLjc1M2wtLjcwOC0uNzk0YTQuNyA0LjcgMCAwIDEtLjU3Ni0uNDI5IDMuNzQgMy43NCAwIDAgMS0uNDIzLS42NGwxLjExNy0xLjExN2E0LjcgNC43IDAgMCAxIC40MjMtLjY0IDMuNzQgMy43NCAwIDAgMSAuNTc2LS40MjlsLjcwOC0uNzk0Yy40OTMtLjQwOS40OTMtLjg1OCAwLTEuNzUzYTUuMjUgNS4yNSAwIDAgMC01LjU5MSAxLjQ1NGw2Ljk5NiA2Ljk5NloiLz4KPC9zdmc+" class="me-2" style="width: 16px; height: 16px;"/>Install Ubuntu Tools
-                    </button>
-                    <a href="{{ url_for('network_map') }}" class="btn btn-info">
-                        <i class="fas fa-project-diagram me-2"></i>View Network Map
-                    </a>
-                    <a href="{{ url_for('hosts') }}" class="btn btn-success">
-                        <i class="fas fa-plus me-2"></i>Add New Host
-                    </a>
-                </div>
-                
-                <hr>
-                
-                <h6><i class="fas fa-chart-line me-2"></i>Network Stats</h6>
-                <div class="small">
-                    <div class="d-flex justify-content-between mb-1">
-                        <span>Uptime Ratio:</span>
-                        <span class="text-success">
-                            {{ "%.1f"|format((stats.online_hosts / stats.total_hosts * 100) if stats.total_hosts > 0 else 0) }}%
-                        </span>
-                    </div>
-                    <div class="d-flex justify-content-between mb-1">
-                        <span>Avg. Connections:</span>
-                        <span>
-                            {{ "%.1f"|format(stats.total_connections / stats.total_hosts if stats.total_hosts > 0 else 0) }}
-                        </span>
+    <!-- Quick Actions Sidebar -->
+    <div class="pf-l-grid pf-m-all-12-col-on-sm pf-m-all-12-col-on-md pf-m-4-col-on-lg pf-m-4-col-on-xl">
+        <div class="pf-l-grid__item">
+            <!-- Quick Actions Card -->
+            <div class="pf-c-card">
+                <div class="pf-c-card__header">
+                    <div class="pf-c-card__header-main">
+                        <h2 class="pf-c-card__title">
+                            <i class="fas fa-bolt pf-u-mr-sm"></i>
+                            Quick Actions
+                        </h2>
                     </div>
                 </div>
-            </div>
-        </div>
-        
-        <!-- Scan Status -->
-        <div class="card mt-3">
-            <div class="card-header">
-                <h5 class="mb-0"><i class="fas fa-radar me-2"></i>Scan Status</h5>
-            </div>
-            <div class="card-body">
-                <div id="scan-info">
-                    <div class="d-flex justify-content-between mb-2">
-                        <span>Status:</span>
-                        <span id="scan-status-detail">Ready</span>
+                <div class="pf-c-card__body">
+                    <div class="pf-l-stack pf-m-gutter">
+                        <div class="pf-l-stack__item">
+                            <button class="pf-c-button pf-m-primary pf-m-block" onclick="startScan()">
+                                <i class="fas fa-search pf-u-mr-sm"></i>
+                                Start Network Scan
+                            </button>
+                        </div>
+                        <div class="pf-l-stack__item">
+                            <button class="pf-c-button pf-m-warning pf-m-block" onclick="installUbuntuTools()" id="install-tools-btn">
+                                <i class="fas fa-download pf-u-mr-sm"></i>
+                                Install Ubuntu Tools
+                            </button>
+                        </div>
+                        <div class="pf-l-stack__item">
+                            <a href="{{ url_for('network_map') }}" class="pf-c-button pf-m-secondary pf-m-block">
+                                <i class="fas fa-project-diagram pf-u-mr-sm"></i>
+                                View Network Map
+                            </a>
+                        </div>
+                        <div class="pf-l-stack__item">
+                            <a href="{{ url_for('hosts') }}" class="pf-c-button pf-m-link pf-m-block">
+                                <i class="fas fa-plus pf-u-mr-sm"></i>
+                                Add New Host
+                            </a>
+                        </div>
                     </div>
-                    <div class="progress mb-2" style="height: 8px;">
-                        <div class="progress-bar" id="scan-progress-bar" style="width: 0%"></div>
+                    
+                    <hr class="pf-c-divider">
+                    
+                    <!-- Network Stats -->
+                    <div class="pf-c-content pf-u-mt-md">
+                        <h3 class="pf-u-font-size-md pf-u-mb-sm">
+                            <i class="fas fa-chart-line pf-u-mr-sm"></i>
+                            Network Stats
+                        </h3>
+                        <dl class="pf-c-description-list pf-m-horizontal pf-m-2-col-on-lg">
+                            <div class="pf-c-description-list__group">
+                                <dt class="pf-c-description-list__term">
+                                    <span class="pf-c-description-list__text">Uptime Ratio:</span>
+                                </dt>
+                                <dd class="pf-c-description-list__description">
+                                    <div class="pf-c-description-list__text">
+                                        <span class="pf-u-success-color-100">
+                                            {{ "%.1f"|format((stats.online_hosts / stats.total_hosts * 100) if stats.total_hosts > 0 else 0) }}%
+                                        </span>
+                                    </div>
+                                </dd>
+                            </div>
+                            <div class="pf-c-description-list__group">
+                                <dt class="pf-c-description-list__term">
+                                    <span class="pf-c-description-list__text">Avg. Connections:</span>
+                                </dt>
+                                <dd class="pf-c-description-list__description">
+                                    <div class="pf-c-description-list__text">
+                                        {{ "%.1f"|format(stats.total_connections / stats.total_hosts if stats.total_hosts > 0 else 0) }}
+                                    </div>
+                                </dd>
+                            </div>
+                        </dl>
                     </div>
-                    <div class="small text-muted" id="scan-details"></div>
+                </div>
+            </div>
+            
+            <!-- Scan Status Card -->
+            <div class="pf-c-card pf-u-mt-md">
+                <div class="pf-c-card__header">
+                    <div class="pf-c-card__header-main">
+                        <h2 class="pf-c-card__title">
+                            <i class="fas fa-radar pf-u-mr-sm"></i>
+                            Scan Status
+                        </h2>
+                    </div>
+                </div>
+                <div class="pf-c-card__body">
+                    <div id="scan-info">
+                        <dl class="pf-c-description-list pf-u-mb-sm">
+                            <div class="pf-c-description-list__group">
+                                <dt class="pf-c-description-list__term">
+                                    <span class="pf-c-description-list__text">Status:</span>
+                                </dt>
+                                <dd class="pf-c-description-list__description">
+                                    <div class="pf-c-description-list__text" id="scan-status-detail">Ready</div>
+                                </dd>
+                            </div>
+                        </dl>
+                        <div class="pf-c-progress pf-u-mb-sm" id="scan-progress" style="--pf-c-progress--GridGap: var(--pf-global--spacer--xs)">
+                            <div class="pf-c-progress__description"></div>
+                            <div class="pf-c-progress__status">
+                                <span class="pf-c-progress__measure"></span>
+                            </div>
+                            <div class="pf-c-progress__bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+                                <div class="pf-c-progress__indicator" id="scan-progress-bar" style="width: 0%">
+                                    <span class="pf-screen-reader">0% complete</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="pf-u-color-200 pf-u-font-size-sm" id="scan-details"></div>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
-</div>
+</section>
 
 <!-- Enhanced Network Scan Modal -->
 <div class="modal fade" id="enhancedScanModal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
@@ -1452,17 +1541,45 @@ function exportScanResults() {
     });
 }
 
-// Hook into the parent updateScanUI function
+// Utility function to format bytes
+function formatBytes(bytes) {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+}
+
+// Hook into the parent updateScanUI function if it exists
 document.addEventListener('DOMContentLoaded', function() {
-    // Override the parent updateScanUI to also update dashboard elements
-    const originalUpdateScanUI = window.updateScanUI;
-    window.updateScanUI = function(data) {
-        // Call original function
-        originalUpdateScanUI(data);
-        // Also update dashboard-specific elements
-        updateDashboardScanStatus(data);
-    };
+    // Check if we're extending base functionality
+    if (window.updateScanUI) {
+        const originalUpdateScanUI = window.updateScanUI;
+        window.updateScanUI = function(data) {
+            // Call original function
+            originalUpdateScanUI(data);
+            // Also update dashboard-specific elements
+            updateDashboardScanStatus(data);
+        };
+    }
+    
+    // Initialize PatternFly progress component styling
+    updatePatternFlyProgress();
 });
+
+// Update PatternFly progress component styling
+function updatePatternFlyProgress() {
+    const progressBar = document.getElementById('scan-progress-bar');
+    if (progressBar) {
+        const progressContainer = progressBar.closest('.pf-c-progress');
+        if (progressContainer) {
+            // Set initial state
+            progressContainer.setAttribute('aria-label', 'Scan progress');
+            progressBar.style.width = '0%';
+            progressBar.setAttribute('aria-valuenow', '0');
+        }
+    }
+}
 
 // Enhanced Ubuntu Tools Installation with Real-time Progress
 let installationProgressTimer = null;
