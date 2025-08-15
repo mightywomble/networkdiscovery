@@ -77,7 +77,7 @@
                 <i class="fas fa-rocket"></i> Deploy Selected
             </button>
         </div>
-        <div class="btn-group" role="group">
+        <div class="btn-group me-2" role="group">
             <button type="button" class="btn btn-outline-secondary" onclick="selectAllHosts()" id="select-all-btn">
                 <i class="fas fa-check-square"></i> Select All
             </button>
@@ -86,6 +86,17 @@
             </button>
             <button type="button" class="btn btn-outline-warning" onclick="showAgentCleanupTools()">
                 <i class="fas fa-broom"></i> Cleanup Tools
+            </button>
+        </div>
+        <div class="btn-group" role="group">
+            <button type="button" class="btn btn-info" onclick="showVersionSummary()">
+                <i class="fas fa-code-branch"></i> Version Summary
+            </button>
+            <button type="button" class="btn btn-warning" onclick="updateSelectedAgents()">
+                <i class="fas fa-arrow-up"></i> Update Selected
+            </button>
+            <button type="button" class="btn btn-danger" onclick="updateAllAgents()">
+                <i class="fas fa-sync-alt"></i> Update All
             </button>
         </div>
     </div>
@@ -521,6 +532,142 @@
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Version Summary Modal -->
+<div class="modal fade" id="versionSummaryModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="fas fa-code-branch"></i> Agent Version Summary</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <!-- Version Statistics -->
+                <div class="row mb-4">
+                    <div class="col-md-3">
+                        <div class="card border-0 bg-light text-center">
+                            <div class="card-body p-3">
+                                <h5 class="text-primary mb-1" id="version-stats-total">-</h5>
+                                <small class="text-muted">Total Agents</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card border-0 bg-light text-center">
+                            <div class="card-body p-3">
+                                <h5 class="text-success mb-1" id="version-stats-latest">-</h5>
+                                <small class="text-muted">Latest Version</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card border-0 bg-light text-center">
+                            <div class="card-body p-3">
+                                <h5 class="text-warning mb-1" id="version-stats-outdated">-</h5>
+                                <small class="text-muted">Need Updates</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card border-0 bg-light text-center">
+                            <div class="card-body p-3">
+                                <h5 class="text-info mb-1" id="version-stats-unique">-</h5>
+                                <small class="text-muted">Unique Versions</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Current Agent Script Version -->
+                <div class="alert alert-info mb-4">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <strong><i class="fas fa-server"></i> Server Script Version:</strong>
+                            <span id="server-agent-version">Loading...</span>
+                        </div>
+                        <div>
+                            <strong><i class="fas fa-calendar-alt"></i> Build Date:</strong>
+                            <span id="server-build-date">Loading...</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Agent Version List -->
+                <div class="card">
+                    <div class="card-header">
+                        <h6 class="mb-0"><i class="fas fa-list"></i> Agent Versions by Host</h6>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
+                            <table class="table table-hover mb-0">
+                                <thead class="table-light sticky-top">
+                                    <tr>
+                                        <th style="width: 30px;">
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" id="version-select-all" onchange="toggleAllVersionSelections()">
+                                            </div>
+                                        </th>
+                                        <th>Host</th>
+                                        <th>Agent Version</th>
+                                        <th>Build Date</th>
+                                        <th>Status</th>
+                                        <th>Last Update</th>
+                                        <th class="text-center">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="version-table-body">
+                                    <!-- Version data will be loaded here -->
+                                    <tr>
+                                        <td colspan="7" class="text-center text-muted py-4">
+                                            <i class="fas fa-spinner fa-spin"></i> Loading version information...
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-warning" onclick="updateSelectedFromVersionModal()" id="update-selected-version-btn">
+                    <i class="fas fa-arrow-up"></i> Update Selected
+                </button>
+                <button type="button" class="btn btn-warning" onclick="updateOutdatedAgents()" id="update-outdated-btn">
+                    <i class="fas fa-sync-alt"></i> Update All Outdated
+                </button>
+                <button type="button" class="btn btn-primary" onclick="refreshVersionData()" id="refresh-version-btn">
+                    <i class="fas fa-sync-alt"></i> Refresh
+                </button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Agent Update Progress Modal -->
+<div class="modal fade" id="updateProgressModal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="fas fa-arrow-up"></i> Agent Update Progress</h5>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <div class="progress">
+                        <div class="progress-bar" role="progressbar" id="update-progress" style="width: 0%"></div>
+                    </div>
+                    <small class="text-muted" id="update-status">Starting updates...</small>
+                </div>
+                <div class="update-logs" style="max-height: 300px; overflow-y: auto; background: #f8f9fa; padding: 1rem; border-radius: 0.375rem; font-family: monospace; font-size: 0.875rem;" id="update-logs">
+                    <!-- Update logs will appear here -->
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" id="close-update-btn" disabled>Close</button>
             </div>
         </div>
     </div>
@@ -1827,6 +1974,409 @@ async function loadDefaultTestConfiguration() {
 function getTestConfigurationForSave() {
     // Return the current test configuration for inclusion in the save payload
     return currentTestConfiguration;
+}
+
+// Version Summary and Update Functions
+let versionData = {};
+let selectedAgentVersions = new Set();
+
+function showVersionSummary() {
+    const modal = new bootstrap.Modal(document.getElementById('versionSummaryModal'));
+    modal.show();
+    
+    // Load version data when modal opens
+    loadVersionData();
+}
+
+async function loadVersionData() {
+    try {
+        const response = await fetch('/api/agent/versions');
+        const data = await response.json();
+        
+        if (data.success) {
+            versionData = data;
+            updateVersionSummary();
+        } else {
+            throw new Error(data.error || 'Failed to load version data');
+        }
+    } catch (error) {
+        console.error('Error loading version data:', error);
+        document.getElementById('version-table-body').innerHTML = `
+            <tr>
+                <td colspan="7" class="text-center text-danger py-4">
+                    <i class="fas fa-exclamation-triangle"></i> Error loading version data: ${error.message}
+                </td>
+            </tr>
+        `;
+    }
+}
+
+function updateVersionSummary() {
+    // Update statistics
+    const totalAgents = versionData.agents ? versionData.agents.length : 0;
+    const latestVersion = versionData.server_version || 'Unknown';
+    const outdatedCount = versionData.agents ? versionData.agents.filter(agent => 
+        agent.agent_version && agent.agent_version !== versionData.server_version
+    ).length : 0;
+    const uniqueVersions = versionData.agents ? 
+        new Set(versionData.agents.map(agent => agent.agent_version || 'Unknown')).size : 0;
+    
+    document.getElementById('version-stats-total').textContent = totalAgents;
+    document.getElementById('version-stats-latest').textContent = latestVersion;
+    document.getElementById('version-stats-outdated').textContent = outdatedCount;
+    document.getElementById('version-stats-unique').textContent = uniqueVersions;
+    
+    // Update server version info
+    document.getElementById('server-agent-version').textContent = versionData.server_version || 'Unknown';
+    document.getElementById('server-build-date').textContent = versionData.server_build_date || 'Unknown';
+    
+    // Update table
+    renderVersionTable();
+}
+
+function renderVersionTable() {
+    const tbody = document.getElementById('version-table-body');
+    
+    if (!versionData.agents || versionData.agents.length === 0) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="7" class="text-center text-muted py-4">
+                    <i class="fas fa-info-circle"></i> No agents found
+                </td>
+            </tr>
+        `;
+        return;
+    }
+    
+    const rows = versionData.agents.map(agent => {
+        const isSelected = selectedAgentVersions.has(agent.agent_id);
+        const agentVersion = agent.agent_version || 'Unknown';
+        const buildDate = agent.build_date || 'Unknown';
+        const isOutdated = agentVersion !== versionData.server_version;
+        const lastHeartbeat = agent.last_heartbeat ? 
+            new Date(agent.last_heartbeat).toLocaleString() : 'Never';
+        
+        let statusBadge = '';
+        let statusClass = 'secondary';
+        let statusText = 'Unknown';
+        
+        if (isOutdated) {
+            statusClass = 'warning';
+            statusText = 'Outdated';
+        } else if (agentVersion === versionData.server_version) {
+            statusClass = 'success';
+            statusText = 'Up to date';
+        }
+        
+        statusBadge = `<span class="badge bg-${statusClass}">${statusText}</span>`;
+        
+        return `
+            <tr>
+                <td>
+                    <div class="form-check">
+                        <input class="form-check-input version-checkbox" type="checkbox" 
+                               id="version-${agent.agent_id}" 
+                               data-agent-id="${agent.agent_id}"
+                               ${isSelected ? 'checked' : ''}
+                               onchange="toggleVersionSelection('${agent.agent_id}')">
+                    </div>
+                </td>
+                <td>
+                    <strong>${agent.hostname}</strong><br>
+                    <small class="text-muted">${agent.ip_address}</small>
+                </td>
+                <td>
+                    <code>${agentVersion}</code>
+                </td>
+                <td>
+                    <small>${buildDate}</small>
+                </td>
+                <td>${statusBadge}</td>
+                <td>
+                    <small>${lastHeartbeat}</small>
+                </td>
+                <td class="text-center">
+                    <div class="btn-group btn-group-sm">
+                        <button class="btn btn-outline-warning ${isOutdated ? '' : 'disabled'}" 
+                                onclick="updateSingleAgent('${agent.hostname}', '${agent.ip_address}')" 
+                                title="Update Agent" ${isOutdated ? '' : 'disabled'}>
+                            <i class="fas fa-arrow-up"></i>
+                        </button>
+                        <button class="btn btn-outline-info" 
+                                onclick="showAgentVersionDetails('${agent.agent_id}')" 
+                                title="View Details">
+                            <i class="fas fa-info-circle"></i>
+                        </button>
+                    </div>
+                </td>
+            </tr>
+        `;
+    }).join('');
+    
+    tbody.innerHTML = rows;
+}
+
+function toggleVersionSelection(agentId) {
+    if (selectedAgentVersions.has(agentId)) {
+        selectedAgentVersions.delete(agentId);
+    } else {
+        selectedAgentVersions.add(agentId);
+    }
+    
+    updateVersionSelectAllButton();
+}
+
+function toggleAllVersionSelections() {
+    const selectAllCheckbox = document.getElementById('version-select-all');
+    const agentCheckboxes = document.querySelectorAll('.version-checkbox');
+    
+    if (selectAllCheckbox.checked) {
+        // Select all
+        agentCheckboxes.forEach(checkbox => {
+            checkbox.checked = true;
+            selectedAgentVersions.add(checkbox.dataset.agentId);
+        });
+    } else {
+        // Unselect all
+        agentCheckboxes.forEach(checkbox => {
+            checkbox.checked = false;
+        });
+        selectedAgentVersions.clear();
+    }
+}
+
+function updateVersionSelectAllButton() {
+    const selectAllCheckbox = document.getElementById('version-select-all');
+    const agentCheckboxes = document.querySelectorAll('.version-checkbox');
+    const checkedBoxes = document.querySelectorAll('.version-checkbox:checked');
+    
+    if (checkedBoxes.length === 0) {
+        selectAllCheckbox.indeterminate = false;
+        selectAllCheckbox.checked = false;
+    } else if (checkedBoxes.length === agentCheckboxes.length) {
+        selectAllCheckbox.indeterminate = false;
+        selectAllCheckbox.checked = true;
+    } else {
+        selectAllCheckbox.indeterminate = true;
+    }
+}
+
+async function refreshVersionData() {
+    const btn = document.getElementById('refresh-version-btn');
+    const originalText = btn.innerHTML;
+    
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Refreshing...';
+    btn.disabled = true;
+    
+    try {
+        await loadVersionData();
+    } finally {
+        btn.innerHTML = originalText;
+        btn.disabled = false;
+    }
+}
+
+async function updateSelectedAgents() {
+    if (selectedHosts.size === 0) {
+        alert('Please select hosts with deployed agents to update');
+        return;
+    }
+    
+    // Filter selected hosts to only include those with agents
+    const hostsWithAgents = Array.from(selectedHosts).map(hostId => {
+        const host = hosts.find(h => h.id === hostId);
+        const agent = agents.find(a => a.ip_address === host.ip_address || a.hostname === host.name);
+        return agent ? { host, agent } : null;
+    }).filter(item => item !== null);
+    
+    if (hostsWithAgents.length === 0) {
+        alert('No agents found for selected hosts');
+        return;
+    }
+    
+    await performAgentUpdates(hostsWithAgents.map(item => item.host));
+}
+
+async function updateAllAgents() {
+    const hostsWithAgents = hosts.filter(host => 
+        agents.find(a => a.ip_address === host.ip_address || a.hostname === host.name)
+    );
+    
+    if (hostsWithAgents.length === 0) {
+        alert('No agents found to update');
+        return;
+    }
+    
+    const confirmMessage = `Are you sure you want to update all ${hostsWithAgents.length} agent(s)?`;
+    if (!confirm(confirmMessage)) {
+        return;
+    }
+    
+    await performAgentUpdates(hostsWithAgents);
+}
+
+async function updateSelectedFromVersionModal() {
+    if (selectedAgentVersions.size === 0) {
+        alert('Please select agents to update from the table');
+        return;
+    }
+    
+    const selectedHosts = Array.from(selectedAgentVersions).map(agentId => {
+        const agent = versionData.agents.find(a => a.agent_id === agentId);
+        return hosts.find(h => h.ip_address === agent.ip_address || h.name === agent.hostname);
+    }).filter(host => host !== undefined);
+    
+    if (selectedHosts.length === 0) {
+        alert('No matching hosts found for selected agents');
+        return;
+    }
+    
+    // Close version modal
+    const versionModal = bootstrap.Modal.getInstance(document.getElementById('versionSummaryModal'));
+    versionModal.hide();
+    
+    await performAgentUpdates(selectedHosts);
+}
+
+async function updateOutdatedAgents() {
+    if (!versionData.agents) {
+        alert('Version data not loaded');
+        return;
+    }
+    
+    const outdatedAgents = versionData.agents.filter(agent => 
+        agent.agent_version && agent.agent_version !== versionData.server_version
+    );
+    
+    if (outdatedAgents.length === 0) {
+        alert('All agents are up to date!');
+        return;
+    }
+    
+    const confirmMessage = `Are you sure you want to update ${outdatedAgents.length} outdated agent(s)?`;
+    if (!confirm(confirmMessage)) {
+        return;
+    }
+    
+    const outdatedHosts = outdatedAgents.map(agent => 
+        hosts.find(h => h.ip_address === agent.ip_address || h.name === agent.hostname)
+    ).filter(host => host !== undefined);
+    
+    // Close version modal
+    const versionModal = bootstrap.Modal.getInstance(document.getElementById('versionSummaryModal'));
+    versionModal.hide();
+    
+    await performAgentUpdates(outdatedHosts);
+}
+
+async function updateSingleAgent(hostname, ipAddress) {
+    const host = hosts.find(h => h.name === hostname || h.ip_address === ipAddress);
+    if (!host) {
+        alert('Host not found');
+        return;
+    }
+    
+    await performAgentUpdates([host]);
+}
+
+async function performAgentUpdates(hostsToUpdate) {
+    if (!hostsToUpdate || hostsToUpdate.length === 0) {
+        return;
+    }
+    
+    const modal = new bootstrap.Modal(document.getElementById('updateProgressModal'));
+    modal.show();
+    
+    const progressBar = document.getElementById('update-progress');
+    const statusElement = document.getElementById('update-status');
+    const logsElement = document.getElementById('update-logs');
+    const closeBtn = document.getElementById('close-update-btn');
+    
+    progressBar.style.width = '0%';
+    statusElement.textContent = 'Starting updates...';
+    logsElement.textContent = '';
+    closeBtn.disabled = true;
+    
+    let successCount = 0;
+    let errorCount = 0;
+    
+    try {
+        for (let i = 0; i < hostsToUpdate.length; i++) {
+            const host = hostsToUpdate[i];
+            const progress = ((i + 1) / hostsToUpdate.length) * 100;
+            
+            progressBar.style.width = progress + '%';
+            statusElement.textContent = `Updating ${host.name} (${i + 1}/${hostsToUpdate.length})`;
+            
+            const timestamp = new Date().toLocaleTimeString();
+            logsElement.textContent += `\n[${timestamp}] Starting update for ${host.name} (${host.ip_address})\n`;
+            logsElement.scrollTop = logsElement.scrollHeight;
+            
+            try {
+                const response = await fetch('/api/update_agent', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        hostname: host.name,
+                        ip_address: host.ip_address
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    logsElement.textContent += `[${new Date().toLocaleTimeString()}] ✓ Successfully updated ${host.name}\n`;
+                    successCount++;
+                } else {
+                    logsElement.textContent += `[${new Date().toLocaleTimeString()}] ✗ Failed to update ${host.name}: ${data.error}\n`;
+                    errorCount++;
+                }
+            } catch (error) {
+                logsElement.textContent += `[${new Date().toLocaleTimeString()}] ✗ Error updating ${host.name}: ${error.message}\n`;
+                errorCount++;
+            }
+            
+            logsElement.scrollTop = logsElement.scrollHeight;
+        }
+        
+        statusElement.textContent = `Updates completed: ${successCount} successful, ${errorCount} failed`;
+        
+        // Refresh data to show updated versions
+        setTimeout(() => {
+            refreshData();
+            if (document.getElementById('versionSummaryModal').classList.contains('show')) {
+                loadVersionData();
+            }
+        }, 2000);
+        
+    } catch (error) {
+        statusElement.textContent = 'Update process failed: ' + error.message;
+    } finally {
+        closeBtn.disabled = false;
+    }
+}
+
+function showAgentVersionDetails(agentId) {
+    const agent = versionData.agents.find(a => a.agent_id === agentId);
+    if (!agent) {
+        alert('Agent not found');
+        return;
+    }
+    
+    const details = [
+        `Agent ID: ${agent.agent_id}`,
+        `Hostname: ${agent.hostname}`,
+        `IP Address: ${agent.ip_address}`,
+        `Agent Version: ${agent.agent_version || 'Unknown'}`,
+        `Build Date: ${agent.build_date || 'Unknown'}`,
+        `Platform: ${agent.platform || 'Unknown'}`,
+        `Last Heartbeat: ${agent.last_heartbeat ? new Date(agent.last_heartbeat).toLocaleString() : 'Never'}`,
+        `Status: ${agent.heartbeat_status || 'Unknown'}`
+    ];
+    
+    alert(details.join('\n'));
 }
 
 </script>

@@ -23,7 +23,12 @@ from typing import Dict, List, Any, Optional
 import requests
 import hashlib
 
-VERSION = "1.0.0"
+# Agent version and build information
+__version__ = "1.2.0"
+__build_date__ = "2024-12-19"
+VERSION = __version__
+BUILD_DATE = __build_date__
+
 CONFIG_FILE = "/etc/networkmap/agent.conf"
 # LOG_FILE = "/var/log/networkmap-agent.log"  # Not used when running under systemd
 PID_FILE = "/var/run/networkmap-agent.pid"
@@ -247,6 +252,8 @@ class NetworkMapAgent:
             data = {
                 'agent_id': self.agent_id,
                 'status': 'active',
+                'agent_version': VERSION,
+                'build_date': BUILD_DATE,
                 'timestamp': datetime.now().isoformat()
             }
             

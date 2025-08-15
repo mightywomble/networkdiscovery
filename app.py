@@ -2098,6 +2098,8 @@ def agent_heartbeat():
         agent_id = data.get('agent_id')
         status = data.get('status', 'active')
         error_message = data.get('error_message')
+        agent_version = data.get('agent_version')
+        build_date = data.get('build_date')
         
         if not agent_id:
             return jsonify({
@@ -2105,8 +2107,8 @@ def agent_heartbeat():
                 'error': 'agent_id is required'
             }), 400
         
-        # Update agent heartbeat
-        db.update_agent_heartbeat(agent_id, status, error_message)
+        # Update agent heartbeat with version information
+        db.update_agent_heartbeat(agent_id, status, error_message, agent_version, build_date)
         
         return jsonify({
             'success': True,
