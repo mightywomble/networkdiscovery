@@ -252,6 +252,12 @@ enhanced_scan_progress = {
     'current_host': None
 }
 
+# Global state for manual agent runs progress
+agent_run_progress = {
+    'running': {},  # Dict of agent_id -> run_info
+    'logs': deque(maxlen=500)  # Recent logs across all runs
+}
+
 @app.route('/install_ubuntu_tools', methods=['POST'])
 def install_ubuntu_tools():
     """Start installation of network tools with real-time progress tracking"""
@@ -3543,7 +3549,7 @@ def test_host_connectivity(host_id):
 
 @app.route('/api/agent/run_now', methods=['POST'])
 def run_agent_now():
-    """Trigger an immediate agent scan"""
+    """Trigger an immediate agent scan with progress tracking"""
     try:
         data = request.get_json()
         if not data:
@@ -3581,48 +3587,29 @@ def run_agent_now():
                 'error': f'No agent found for host {hostname} ({ip_address})'
             }), 404
         
-        # Send run command to agent via SSH
-        try:
-            # Command to trigger agent scan immediately by sending USR1 signal
-            run_cmd = '''
-            # Find agent process and send USR1 signal to trigger immediate scan
-            AGENT_PID=$(pgrep -f "networkmap.*agent" | head -1)
-            if [ -n "$AGENT_PID" ]; then
-                echo "Sending USR1 signal to agent process $AGENT_PID to trigger immediate scan"
-                kill -USR1 $AGENT_PID
-                sleep 2
-                echo "Signal sent successfully - agent should start scanning immediately"
-            else
-                echo "Agent process not found - attempting to start scan via service"
-                # Alternative: restart agent service to trigger scan
-                sudo systemctl restart networkmap-agent
-                echo "Agent service restarted - scan will begin shortly"
-            fi
-            '''
-            
-            result, error = host_manager.execute_command(host, run_cmd, timeout=30)
-            
-            if result and result.get('success'):
-                return jsonify({
-                    'success': True,
-                    'message': f'Agent scan triggered successfully on {hostname}',
-                    'output': result.get('stdout', ''),
-                    'agent_id': agent.get('agent_id'),
-                    'timestamp': datetime.now().isoformat()
-                })
-            else:
-                error_msg = error if error else (result.get('stderr', 'Command failed') if result else 'Command failed')
-                return jsonify({
-                    'success': False,
-                    'error': f'Failed to trigger agent scan: {error_msg}',
-                    'output': result.get('stdout', '') if result else ''
-                }), 500
-                
-        except Exception as e:
+        agent_id = agent.get('agent_id')
+        
+        # Check if this agent is already running
+        global agent_run_progress
+        if agent_id in agent_run_progress['running']:
             return jsonify({
                 'success': False,
-                'error': f'Error executing run command: {str(e)}'
-            }), 500
+                'error': f'Agent scan already in progress for {hostname}'
+            }), 400
+        
+        # Start the agent run in background thread with progress tracking
+        thread = threading.Thread(target=run_agent_with_progress, args=(agent, host))
+        thread.daemon = True
+        thread.start()
+        
+        return jsonify({
+            'success': True,
+            'message': f'Agent scan started on {hostname}',
+            'agent_id': agent_id,
+            'hostname': hostname,
+            'ip_address': ip_address,
+            'timestamp': datetime.now().isoformat()
+        })
         
     except Exception as e:
         print(f"Error triggering agent run: {e}")
@@ -3739,6 +3726,263 @@ def get_agent_last_data(agent_id):
             'success': False,
             'error': str(e)
         }), 500
+
+# Agent run progress tracking endpoints
+@app.route('/api/agent/run_progress/<agent_id>', methods=['GET'])
+def get_agent_run_progress(agent_id):
+    """Get the progress of a running agent scan"""
+    try:
+        global agent_run_progress
+        
+        if agent_id not in agent_run_progress['running']:
+            return jsonify({
+                'success': False,
+                'error': f'No active run found for agent {agent_id}',
+                'running': False
+            }), 404
+        
+        run_info = agent_run_progress['running'][agent_id]
+        
+        # Get recent logs for this specific agent
+        agent_logs = [log for log in agent_run_progress['logs'] 
+                     if log.get('agent_id') == agent_id][-20:]  # Last 20 logs
+        
+        return jsonify({
+            'success': True,
+            'agent_id': agent_id,
+            'running': True,
+            'run_info': run_info,
+            'logs': agent_logs,
+            'timestamp': datetime.now().isoformat()
+        })
+        
+    except Exception as e:
+        print(f"Error getting agent run progress: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@app.route('/api/agent/all_run_progress', methods=['GET'])
+def get_all_agent_run_progress():
+    """Get the progress of all running agent scans"""
+    try:
+        global agent_run_progress
+        
+        # Get recent logs (last 50 entries)
+        recent_logs = list(agent_run_progress['logs'])[-50:]
+        
+        # Count running agents
+        running_count = len(agent_run_progress['running'])
+        
+        return jsonify({
+            'success': True,
+            'running_agents': agent_run_progress['running'],
+            'running_count': running_count,
+            'recent_logs': recent_logs,
+            'timestamp': datetime.now().isoformat()
+        })
+        
+    except Exception as e:
+        print(f"Error getting all agent run progress: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+def run_agent_with_progress(agent, host):
+    """Run agent scan with progress tracking"""
+    global agent_run_progress
+    
+    agent_id = agent.get('agent_id')
+    hostname = agent.get('hostname', host.get('name', 'unknown'))
+    ip_address = agent.get('ip_address', host.get('ip_address', 'unknown'))
+    
+    # Initialize run info
+    run_info = {
+        'agent_id': agent_id,
+        'hostname': hostname,
+        'ip_address': ip_address,
+        'start_time': datetime.now().isoformat(),
+        'current_phase': 'initializing',
+        'progress': 0,
+        'status': 'running',
+        'current_action': 'Starting agent scan...',
+        'error': None,
+        'phases_completed': []
+    }
+    
+    # Add to running agents
+    agent_run_progress['running'][agent_id] = run_info
+    
+    def log_agent_progress(message, level='info', phase=None, progress=None, action=None):
+        """Log progress for this specific agent run"""
+        log_entry = {
+            'timestamp': datetime.now().isoformat(),
+            'agent_id': agent_id,
+            'hostname': hostname,
+            'message': message,
+            'level': level,
+            'phase': phase
+        }
+        
+        agent_run_progress['logs'].append(log_entry)
+        
+        # Update run info
+        if phase:
+            run_info['current_phase'] = phase
+        if progress is not None:
+            run_info['progress'] = progress
+        if action:
+            run_info['current_action'] = action
+        
+        print(f"[AGENT RUN {agent_id}] {hostname}: {message}")
+    
+    try:
+        log_agent_progress("🚀 Starting immediate agent scan", 'info', 'initializing', 0, 'Connecting to agent...')
+        
+        # Phase 1: Test connectivity
+        log_agent_progress("Testing SSH connectivity", 'info', 'connecting', 10, 'Testing SSH connection...')
+        
+        test_result, test_error = host_manager.execute_command(host, 'echo "SSH test successful"', timeout=10)
+        
+        if not test_result or not test_result.get('success'):
+            error_msg = f'SSH connection failed: {test_error or "Connection timeout"}'
+            log_agent_progress(error_msg, 'error', 'error', run_info['progress'], 'SSH connection failed')
+            run_info['status'] = 'error'
+            run_info['error'] = error_msg
+            return
+        
+        log_agent_progress("✅ SSH connectivity confirmed", 'info', 'connecting', 20, 'SSH connection successful')
+        run_info['phases_completed'].append('connecting')
+        
+        # Phase 2: Check agent status
+        log_agent_progress("Checking agent service status", 'info', 'checking', 30, 'Verifying agent service...')
+        
+        status_cmd = 'sudo systemctl is-active networkmap-agent'
+        status_result, _ = host_manager.execute_command(host, status_cmd, timeout=15)
+        
+        if status_result and status_result.get('success'):
+            agent_status = status_result.get('stdout', '').strip()
+            log_agent_progress(f"Agent service status: {agent_status}", 'info', 'checking', 40, f'Agent status: {agent_status}')
+        else:
+            log_agent_progress("⚠️ Could not determine agent status", 'warning', 'checking', 40, 'Agent status unknown')
+        
+        run_info['phases_completed'].append('checking')
+        
+        # Phase 3: Trigger immediate scan
+        log_agent_progress("Triggering immediate scan", 'info', 'triggering', 50, 'Sending scan trigger signal...')
+        
+        # Try multiple methods to trigger immediate scan
+        trigger_methods = [
+            {
+                'name': 'USR1 signal',
+                'cmd': '''
+                AGENT_PID=$(pgrep -f "networkmap.*agent" | head -1)
+                if [ -n "$AGENT_PID" ]; then
+                    echo "Sending USR1 signal to agent process $AGENT_PID"
+                    kill -USR1 $AGENT_PID && echo "Signal sent successfully" || echo "Signal failed"
+                else
+                    echo "Agent process not found"
+                    exit 1
+                fi
+                '''
+            },
+            {
+                'name': 'service restart',
+                'cmd': 'sudo systemctl restart networkmap-agent && echo "Service restarted successfully"'
+            },
+            {
+                'name': 'config update',
+                'cmd': '''
+                echo "$(date): Manual scan trigger" | sudo tee -a /var/log/networkmap-agent/manual_trigger.log
+                sudo systemctl reload networkmap-agent 2>/dev/null || sudo systemctl restart networkmap-agent
+                echo "Config reload completed"
+                '''
+            }
+        ]
+        
+        trigger_success = False
+        for i, method in enumerate(trigger_methods):
+            progress = 50 + (i * 10)
+            log_agent_progress(f"Trying {method['name']}...", 'info', 'triggering', progress, f'Attempting {method["name"]}...')
+            
+            result, error = host_manager.execute_command(host, method['cmd'], timeout=30)
+            
+            if result and result.get('success'):
+                output = result.get('stdout', '').strip()
+                log_agent_progress(f"✅ {method['name']} successful: {output}", 'info', 'triggering', progress + 5, f'{method["name"]} completed')
+                trigger_success = True
+                break
+            else:
+                error_msg = result.get('stderr', error) if result else str(error)
+                log_agent_progress(f"❌ {method['name']} failed: {error_msg[:100]}", 'warning', 'triggering', progress + 5, f'{method["name"]} failed')
+        
+        if not trigger_success:
+            error_msg = "All trigger methods failed"
+            log_agent_progress(error_msg, 'error', 'error', 80, 'All trigger attempts failed')
+            run_info['status'] = 'error'
+            run_info['error'] = error_msg
+            return
+        
+        run_info['phases_completed'].append('triggering')
+        
+        # Phase 4: Monitor scan execution (brief)
+        log_agent_progress("Monitoring scan execution", 'info', 'monitoring', 85, 'Monitoring agent activity...')
+        
+        # Give the agent a moment to start scanning
+        time.sleep(3)
+        
+        # Check if agent is actively scanning
+        monitor_cmd = '''
+        echo "=== Agent Process Info ==="
+        pgrep -f "networkmap.*agent" | head -1 | xargs ps -p | tail -n +2 || echo "Agent process not found"
+        echo "=== Recent Agent Logs ==="
+        sudo journalctl -u networkmap-agent --since "1 minute ago" --no-pager -q | tail -5 || echo "No recent logs"
+        echo "=== Network Activity ==="
+        ss -tulpn | grep -E ":(53|443|80|22)" | wc -l | xargs echo "Active network connections:"
+        '''
+        
+        monitor_result, _ = host_manager.execute_command(host, monitor_cmd, timeout=20)
+        
+        if monitor_result and monitor_result.get('success'):
+            monitor_output = monitor_result.get('stdout', '').strip()
+            log_agent_progress(f"📊 Agent monitoring info: {monitor_output[:200]}...", 'info', 'monitoring', 90, 'Scan monitoring complete')
+        else:
+            log_agent_progress("⚠️ Could not monitor agent activity", 'warning', 'monitoring', 90, 'Monitoring incomplete')
+        
+        run_info['phases_completed'].append('monitoring')
+        
+        # Phase 5: Complete
+        log_agent_progress("✅ Agent scan trigger completed successfully", 'info', 'complete', 100, 'Scan trigger completed')
+        run_info['status'] = 'completed'
+        run_info['end_time'] = datetime.now().isoformat()
+        
+        # Calculate duration
+        start_time = datetime.fromisoformat(run_info['start_time'])
+        end_time = datetime.fromisoformat(run_info['end_time'])
+        duration = (end_time - start_time).total_seconds()
+        run_info['duration_seconds'] = round(duration, 2)
+        
+        log_agent_progress(f"Scan trigger completed in {duration:.1f} seconds", 'info', 'complete', 100, f'Completed in {duration:.1f}s')
+        
+    except Exception as e:
+        error_msg = f"Exception during agent run: {str(e)}"
+        log_agent_progress(error_msg, 'error', 'error', run_info.get('progress', 0), 'Exception occurred')
+        run_info['status'] = 'error'
+        run_info['error'] = error_msg
+        print(f"Exception in run_agent_with_progress: {e}")
+    
+    finally:
+        # Keep the run info for a brief period for the frontend to read the final status
+        def cleanup_run_info():
+            time.sleep(30)  # Keep for 30 seconds
+            if agent_id in agent_run_progress['running']:
+                del agent_run_progress['running'][agent_id]
+        
+        cleanup_thread = threading.Thread(target=cleanup_run_info)
+        cleanup_thread.daemon = True
+        cleanup_thread.start()
 
 if __name__ == '__main__':
     print("Initializing NetworkMap Flask Application...")
