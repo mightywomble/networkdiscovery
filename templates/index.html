@@ -573,6 +573,53 @@
 </div>
 {% endblock %}
 
+{% block extra_styles %}
+<style>
+/* Custom progress bar animations */
+.nm-progress-animated {
+    background-image: linear-gradient(
+        45deg,
+        rgba(255,255,255,0.15) 25%,
+        transparent 25%,
+        transparent 50%,
+        rgba(255,255,255,0.15) 50%,
+        rgba(255,255,255,0.15) 75%,
+        transparent 75%,
+        transparent
+    );
+    background-size: 1rem 1rem;
+    animation: nm-progress-bar-stripes 1s linear infinite;
+    transition: width 0.3s ease;
+}
+
+@keyframes nm-progress-bar-stripes {
+    0% {
+        background-position: 1rem 0;
+    }
+    100% {
+        background-position: 0 0;
+    }
+}
+
+/* Smooth transition for all custom progress bars */
+.nm-custom-progress-bar {
+    transition: width 0.3s ease-in-out;
+    border-radius: 4px;
+}
+
+/* Host scan card hover effect */
+.nm-host-scan-card:hover {
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    transform: translateY(-1px);
+    transition: all 0.2s ease;
+}
+
+.nm-host-scan-card {
+    transition: all 0.2s ease;
+}
+</style>
+{% endblock %}
+
 {% block scripts %}
 <script>
 function showHostDetails(hostId) {
@@ -1085,12 +1132,13 @@ function updateHostScanStatusCards(hosts) {
                         </span>
                     </div>
                     
-                    <div class="pf-c-progress pf-u-mb-sm" style="--pf-c-progress--Height: 8px;">
-                        <div class="pf-c-progress__bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${progress || 0}">
-                            <div class="pf-c-progress__indicator ${status === 'scanning' ? 'pf-m-progress-bar-animated' : ''}" 
-                                 style="width: ${progress || 0}%; background-color: var(--pf-global--${statusClass === 'primary' ? 'primary' : statusClass === 'success' ? 'success' : statusClass === 'danger' ? 'danger' : 'secondary'}--color--100);">
-                                <span class="pf-screen-reader">${progress || 0}% complete</span>
-                            </div>
+                    <!-- Custom progress bar implementation -->
+                    <div class="nm-custom-progress-container" style="height: 8px; width: 100%; background-color: #EDEDED; border-radius: 4px; margin-bottom: 0.5rem; overflow: hidden;">
+                        <div role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${progress || 0}"
+                             class="nm-custom-progress-bar ${status === 'scanning' ? 'nm-progress-animated' : ''}"
+                             style="height: 100%; width: ${progress || 0}%; 
+                                    background-color: ${statusClass === 'primary' ? '#0066CC' : statusClass === 'success' ? '#3E8635' : statusClass === 'danger' ? '#C9190B' : '#6A6E73'};"
+                             title="${progress || 0}% complete">
                         </div>
                     </div>
                     
