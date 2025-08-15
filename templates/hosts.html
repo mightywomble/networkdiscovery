@@ -446,178 +446,307 @@
 </div>
 
 <!-- Remove Host Confirmation Modal -->
-<div class="modal fade" id="removeHostModal" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Remove Host</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-                <div class="alert alert-warning">
-                    <i class="fas fa-exclamation-triangle me-2"></i>
-                    <strong>Warning:</strong> This will permanently remove the host and all associated data including:
+<div class="pf-c-backdrop" id="removeHostModal" hidden>
+    <div class="pf-l-bullseye">
+        <div class="pf-c-modal-box pf-m-sm" role="dialog" aria-modal="true" aria-labelledby="remove-host-title">
+            <button class="pf-c-button pf-m-plain" type="button" aria-label="Close" onclick="closeRemoveHostModal()">
+                <i class="fas fa-times" aria-hidden="true"></i>
+            </button>
+            <header class="pf-c-modal-box__header">
+                <h1 class="pf-c-modal-box__title" id="remove-host-title">
+                    <i class="fas fa-trash pf-u-mr-sm pf-u-danger-color-100"></i>
+                    Remove Host
+                </h1>
+            </header>
+            <div class="pf-c-modal-box__body">
+                <div class="pf-c-alert pf-m-warning pf-m-inline" aria-label="Warning alert">
+                    <div class="pf-c-alert__icon">
+                        <i class="fas fa-exclamation-triangle" aria-hidden="true"></i>
+                    </div>
+                    <div class="pf-c-alert__title">Warning:</div>
+                    <div class="pf-c-alert__description">
+                        This will permanently remove the host and all associated data including:
+                    </div>
                 </div>
-                <ul>
+                <ul class="pf-c-list pf-u-mt-md">
                     <li>Network scan history</li>
                     <li>Traffic statistics</li>
                     <li>Connection data</li>
                     <li>System information</li>
                 </ul>
-                <p>Are you sure you want to remove <strong id="removeHostName"></strong>?</p>
+                <p class="pf-u-mt-md">Are you sure you want to remove <strong id="removeHostName"></strong>?</p>
             </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+            <footer class="pf-c-modal-box__footer">
+                <button class="pf-c-button pf-m-link" type="button" onclick="closeRemoveHostModal()">Cancel</button>
                 <form method="POST" id="removeHostForm" style="display: inline;">
-                    <button type="submit" class="btn btn-danger">
-                        <i class="fas fa-trash me-1"></i>Remove Host
+                    <button type="submit" class="pf-c-button pf-m-danger">
+                        <i class="fas fa-trash pf-u-mr-sm"></i>Remove Host
                     </button>
                 </form>
-            </div>
+            </footer>
         </div>
     </div>
 </div>
 
-<!-- Host Details Modal (reuse from dashboard) -->
-<div class="modal fade" id="hostDetailsModal" tabindex="-1">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Host Details</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body" id="hostDetailsContent">
-                <div class="text-center">
-                    <div class="spinner-border" role="status"></div>
-                    <p class="mt-2">Loading host details...</p>
+<!-- Host Details Modal -->
+<div class="pf-c-backdrop" id="hostDetailsModal" hidden>
+    <div class="pf-l-bullseye">
+        <div class="pf-c-modal-box pf-m-lg" role="dialog" aria-modal="true" aria-labelledby="host-details-title">
+            <button class="pf-c-button pf-m-plain" type="button" aria-label="Close" onclick="closeHostDetailsModal()">
+                <i class="fas fa-times" aria-hidden="true"></i>
+            </button>
+            <header class="pf-c-modal-box__header">
+                <h1 class="pf-c-modal-box__title" id="host-details-title">
+                    <i class="fas fa-info-circle pf-u-mr-sm pf-u-primary-color-100"></i>
+                    Host Details
+                </h1>
+            </header>
+            <div class="pf-c-modal-box__body" id="hostDetailsContent">
+                <div class="pf-u-text-align-center">
+                    <div class="pf-c-spinner" role="progressbar" aria-label="Loading...">
+                        <span class="pf-c-spinner__clipper"></span>
+                        <span class="pf-c-spinner__lead-ball"></span>
+                        <span class="pf-c-spinner__tail-ball"></span>
+                    </div>
+                    <p class="pf-u-mt-md">Loading host details...</p>
                 </div>
             </div>
+            <footer class="pf-c-modal-box__footer">
+                <button class="pf-c-button pf-m-link" type="button" onclick="closeHostDetailsModal()">Close</button>
+            </footer>
         </div>
     </div>
 </div>
 
 <!-- Host Import Modal -->
-<div class="modal fade" id="importHostsModal" tabindex="-1">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title"><i class="fas fa-upload me-2"></i>Import Hosts</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-                <div class="alert alert-info">
-                    <i class="fas fa-info-circle me-2"></i>
-                    <strong>Import hosts from a backup file</strong><br>
-                    Upload a JSON file previously exported from NetworkMap to restore your host configurations.
+<div class="pf-c-backdrop" id="importHostsModal" hidden>
+    <div class="pf-l-bullseye">
+        <div class="pf-c-modal-box pf-m-lg" role="dialog" aria-modal="true" aria-labelledby="import-hosts-title">
+            <button class="pf-c-button pf-m-plain" type="button" aria-label="Close" onclick="closeImportHostsModal()">
+                <i class="fas fa-times" aria-hidden="true"></i>
+            </button>
+            <header class="pf-c-modal-box__header">
+                <h1 class="pf-c-modal-box__title" id="import-hosts-title">
+                    <i class="fas fa-upload pf-u-mr-sm pf-u-info-color-100"></i>
+                    Import Hosts
+                </h1>
+            </header>
+            <div class="pf-c-modal-box__body">
+                <div class="pf-c-alert pf-m-info pf-m-inline" aria-label="Info alert">
+                    <div class="pf-c-alert__icon">
+                        <i class="fas fa-info-circle" aria-hidden="true"></i>
+                    </div>
+                    <div class="pf-c-alert__title">Import hosts from a backup file</div>
+                    <div class="pf-c-alert__description">
+                        Upload a JSON file previously exported from NetworkMap to restore your host configurations.
+                    </div>
                 </div>
                 
-                <form id="importHostsForm" enctype="multipart/form-data">
-                    <div class="mb-3">
-                        <label for="importFile" class="form-label">Backup File (JSON)</label>
-                        <input type="file" class="form-control" id="importFile" accept=".json" required>
-                        <div class="form-text">Select a previously exported JSON backup file</div>
-                    </div>
-                    
-                    <div class="mb-3">
-                        <label class="form-label">Import Mode</label>
-                        <div class="form-check">
-                            <input class="form-check-input" type="radio" name="importMode" id="importModeMerge" value="merge" checked>
-                            <label class="form-check-label" for="importModeMerge">
-                                <strong>Merge</strong> - Add new hosts and update existing ones
+                <form id="importHostsForm" enctype="multipart/form-data" class="pf-c-form">
+                    <div class="pf-c-form__group pf-u-mt-md">
+                        <div class="pf-c-form__group-label">
+                            <label class="pf-c-form__label" for="importFile">
+                                <span class="pf-c-form__label-text">Backup File (JSON)</span>
+                                <span class="pf-c-form__label-required" aria-hidden="true">*</span>
                             </label>
                         </div>
-                        <div class="form-check">
-                            <input class="form-check-input" type="radio" name="importMode" id="importModeReplace" value="replace">
-                            <label class="form-check-label" for="importModeReplace">
-                                <strong>Replace</strong> - Remove all existing hosts and import new ones
+                        <div class="pf-c-form__group-control">
+                            <input class="pf-c-form-control" type="file" id="importFile" accept=".json" required>
+                            <div class="pf-c-form__helper-text">
+                                <div class="pf-c-helper-text">
+                                    <div class="pf-c-helper-text__item pf-m-dynamic">
+                                        <span class="pf-c-helper-text__item-text">Select a previously exported JSON backup file</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="pf-c-form__group">
+                        <div class="pf-c-form__group-label">
+                            <label class="pf-c-form__label">
+                                <span class="pf-c-form__label-text">Import Mode</span>
                             </label>
+                        </div>
+                        <div class="pf-c-form__group-control">
+                            <div class="pf-c-radio">
+                                <input class="pf-c-radio__input" type="radio" name="importMode" id="importModeMerge" value="merge" checked>
+                                <label class="pf-c-radio__label" for="importModeMerge">
+                                    <strong>Merge</strong> - Add new hosts and update existing ones
+                                </label>
+                            </div>
+                            <div class="pf-c-radio">
+                                <input class="pf-c-radio__input" type="radio" name="importMode" id="importModeReplace" value="replace">
+                                <label class="pf-c-radio__label" for="importModeReplace">
+                                    <strong>Replace</strong> - Remove all existing hosts and import new ones
+                                </label>
+                            </div>
                         </div>
                     </div>
                 </form>
                 
                 <div id="importValidationResults" style="display: none;">
-                    <hr>
-                    <h6><i class="fas fa-check-circle me-2"></i>Validation Results</h6>
+                    <div class="pf-c-divider pf-u-my-md"></div>
+                    <h6 class="pf-u-mb-md"><i class="fas fa-check-circle pf-u-mr-sm"></i>Validation Results</h6>
                     <div id="validationContent">
                         <!-- Validation results will be displayed here -->
                     </div>
                 </div>
             </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-info" id="validateImportBtn" onclick="validateImportFile()">
-                    <i class="fas fa-check me-1"></i>Validate
+            <footer class="pf-c-modal-box__footer">
+                <button class="pf-c-button pf-m-link" type="button" onclick="closeImportHostsModal()">Cancel</button>
+                <button class="pf-c-button pf-m-secondary" id="validateImportBtn" onclick="validateImportFile()">
+                    <i class="fas fa-check pf-u-mr-sm"></i>Validate
                 </button>
-                <button type="button" class="btn btn-warning" id="importHostsBtn" onclick="importHosts()" disabled>
-                    <i class="fas fa-upload me-1"></i>Import Hosts
+                <button class="pf-c-button pf-m-primary" id="importHostsBtn" onclick="importHosts()" disabled>
+                    <i class="fas fa-upload pf-u-mr-sm"></i>Import Hosts
                 </button>
-            </div>
+            </footer>
         </div>
     </div>
 </div>
 
 <!-- Host Edit Modal -->
-<div class="modal fade" id="hostEditModal" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Edit Host</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-                <form id="hostEditForm">
+<div class="pf-c-backdrop" id="hostEditModal" hidden>
+    <div class="pf-l-bullseye">
+        <div class="pf-c-modal-box pf-m-lg" role="dialog" aria-modal="true" aria-labelledby="edit-host-title">
+            <button class="pf-c-button pf-m-plain" type="button" aria-label="Close" onclick="closeHostEditModal()">
+                <i class="fas fa-times" aria-hidden="true"></i>
+            </button>
+            <header class="pf-c-modal-box__header">
+                <h1 class="pf-c-modal-box__title" id="edit-host-title">
+                    <i class="fas fa-edit pf-u-mr-sm pf-u-primary-color-100"></i>
+                    Edit Host
+                </h1>
+            </header>
+            <div class="pf-c-modal-box__body">
+                <form id="hostEditForm" class="pf-c-form">
                     <input type="hidden" id="editHostId" value="">
                     
-                    <div class="mb-3">
-                        <label for="editHostName" class="form-label">Host Name</label>
-                        <input type="text" class="form-control" id="editHostName" placeholder="Enter host name" required>
-                        <div class="form-text">A friendly name for this host</div>
+                    <div class="pf-c-form__group">
+                        <div class="pf-c-form__group-label">
+                            <label class="pf-c-form__label" for="editHostName">
+                                <span class="pf-c-form__label-text">Host Name</span>
+                                <span class="pf-c-form__label-required" aria-hidden="true">*</span>
+                            </label>
+                        </div>
+                        <div class="pf-c-form__group-control">
+                            <input class="pf-c-form-control" type="text" id="editHostName" placeholder="Enter host name" required>
+                            <div class="pf-c-form__helper-text">
+                                <div class="pf-c-helper-text">
+                                    <div class="pf-c-helper-text__item pf-m-dynamic">
+                                        <span class="pf-c-helper-text__item-text">A friendly name for this host</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                     
-                    <div class="mb-3">
-                        <label for="editHostIpAddress" class="form-label">IP Address</label>
-                        <input type="text" class="form-control" id="editHostIpAddress" placeholder="192.168.1.100" required>
-                        <div class="form-text">IPv4 address of the host</div>
+                    <div class="pf-c-form__group">
+                        <div class="pf-c-form__group-label">
+                            <label class="pf-c-form__label" for="editHostIpAddress">
+                                <span class="pf-c-form__label-text">IP Address</span>
+                                <span class="pf-c-form__label-required" aria-hidden="true">*</span>
+                            </label>
+                        </div>
+                        <div class="pf-c-form__group-control">
+                            <input class="pf-c-form-control" type="text" id="editHostIpAddress" placeholder="192.168.1.100" required>
+                            <div class="pf-c-form__helper-text">
+                                <div class="pf-c-helper-text">
+                                    <div class="pf-c-helper-text__item pf-m-dynamic">
+                                        <span class="pf-c-helper-text__item-text">IPv4 address of the host</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                     
-                    <div class="mb-3">
-                        <label for="editHostDeviceType" class="form-label">Device Type</label>
-                        <select class="form-select" id="editHostDeviceType">
-                            <option value="server">🖥️ Server - Physical and virtual servers</option>
-                            <option value="router">📡 Router - Network routing devices</option>
-                            <option value="switch">🔗 Switch - Network switching devices</option>
-                            <option value="cloud">☁️ Cloud - Cloud services and external resources</option>
-                            <option value="vpn">🛡️ VPN - VPN endpoints and tunnels</option>
-                            <option value="workstation">💻 Workstation - Client computers</option>
-                            <option value="firewall">🔥 Firewall - Network security devices</option>
-                            <option value="gateway">🚪 Gateway - Network gateway devices</option>
-                        </select>
-                        <div class="form-text">This determines the icon shown in network diagrams</div>
+                    <div class="pf-c-form__group">
+                        <div class="pf-c-form__group-label">
+                            <label class="pf-c-form__label" for="editHostDeviceType">
+                                <span class="pf-c-form__label-text">Device Type</span>
+                            </label>
+                        </div>
+                        <div class="pf-c-form__group-control">
+                            <select class="pf-c-form-control" id="editHostDeviceType">
+                                <option value="server">🖥️ Server - Physical and virtual servers</option>
+                                <option value="router">📡 Router - Network routing devices</option>
+                                <option value="switch">🔗 Switch - Network switching devices</option>
+                                <option value="cloud">☁️ Cloud - Cloud services and external resources</option>
+                                <option value="vpn">🛡️ VPN - VPN endpoints and tunnels</option>
+                                <option value="workstation">💻 Workstation - Client computers</option>
+                                <option value="firewall">🔥 Firewall - Network security devices</option>
+                                <option value="gateway">🚪 Gateway - Network gateway devices</option>
+                            </select>
+                            <div class="pf-c-form__helper-text">
+                                <div class="pf-c-helper-text">
+                                    <div class="pf-c-helper-text__item pf-m-dynamic">
+                                        <span class="pf-c-helper-text__item-text">This determines the icon shown in network diagrams</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                     
-                    <div class="mb-3">
-                        <label for="editHostUsername" class="form-label">SSH Username</label>
-                        <input type="text" class="form-control" id="editHostUsername" placeholder="root">
-                        <div class="form-text">Username for SSH connections</div>
+                    <div class="pf-c-form__group">
+                        <div class="pf-c-form__group-label">
+                            <label class="pf-c-form__label" for="editHostUsername">
+                                <span class="pf-c-form__label-text">SSH Username</span>
+                            </label>
+                        </div>
+                        <div class="pf-c-form__group-control">
+                            <input class="pf-c-form-control" type="text" id="editHostUsername" placeholder="root">
+                            <div class="pf-c-form__helper-text">
+                                <div class="pf-c-helper-text">
+                                    <div class="pf-c-helper-text__item pf-m-dynamic">
+                                        <span class="pf-c-helper-text__item-text">Username for SSH connections</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                     
-                    <div class="mb-3">
-                        <label for="editHostSshPort" class="form-label">SSH Port</label>
-                        <input type="number" class="form-control" id="editHostSshPort" min="1" max="65535" value="22">
-                        <div class="form-text">SSH port (default: 22)</div>
+                    <div class="pf-c-form__group">
+                        <div class="pf-c-form__group-label">
+                            <label class="pf-c-form__label" for="editHostSshPort">
+                                <span class="pf-c-form__label-text">SSH Port</span>
+                            </label>
+                        </div>
+                        <div class="pf-c-form__group-control">
+                            <input class="pf-c-form-control" type="number" id="editHostSshPort" min="1" max="65535" value="22">
+                            <div class="pf-c-form__helper-text">
+                                <div class="pf-c-helper-text">
+                                    <div class="pf-c-helper-text__item pf-m-dynamic">
+                                        <span class="pf-c-helper-text__item-text">SSH port (default: 22)</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                     
-                    <div class="mb-3">
-                        <label for="editHostDescription" class="form-label">Description</label>
-                        <textarea class="form-control" id="editHostDescription" rows="3" placeholder="Optional description of this host..."></textarea>
-                        <div class="form-text">Optional notes about this host</div>
+                    <div class="pf-c-form__group">
+                        <div class="pf-c-form__group-label">
+                            <label class="pf-c-form__label" for="editHostDescription">
+                                <span class="pf-c-form__label-text">Description</span>
+                            </label>
+                        </div>
+                        <div class="pf-c-form__group-control">
+                            <textarea class="pf-c-form-control" id="editHostDescription" rows="3" placeholder="Optional description of this host..."></textarea>
+                            <div class="pf-c-form__helper-text">
+                                <div class="pf-c-helper-text">
+                                    <div class="pf-c-helper-text__item pf-m-dynamic">
+                                        <span class="pf-c-helper-text__item-text">Optional notes about this host</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </form>
             </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-primary" onclick="saveHostChanges()">Save Changes</button>
-            </div>
+            <footer class="pf-c-modal-box__footer">
+                <button class="pf-c-button pf-m-link" type="button" onclick="closeHostEditModal()">Cancel</button>
+                <button class="pf-c-button pf-m-primary" type="button" onclick="saveHostChanges()">Save Changes</button>
+            </footer>
         </div>
     </div>
 </div>
@@ -976,29 +1105,38 @@ function testAllHosts() {
 }
 
 function confirmRemoveHost(hostId, hostName) {
-    const modal = new bootstrap.Modal(document.getElementById('removeHostModal'));
+    const modal = document.getElementById('removeHostModal');
     const form = document.getElementById('removeHostForm');
     const nameElement = document.getElementById('removeHostName');
     
     nameElement.textContent = hostName;
     form.action = `/remove_host/${hostId}`;
     
-    modal.show();
+    modal.hidden = false;
+}
+
+function closeRemoveHostModal() {
+    const modal = document.getElementById('removeHostModal');
+    modal.hidden = true;
 }
 
 function showHostDetails(hostId) {
-    const modal = new bootstrap.Modal(document.getElementById('hostDetailsModal'));
+    const modal = document.getElementById('hostDetailsModal');
     const content = document.getElementById('hostDetailsContent');
     
     // Show loading state
     content.innerHTML = `
-        <div class="text-center">
-            <div class="spinner-border" role="status"></div>
-            <p class="mt-2">Loading host details...</p>
+        <div class="pf-u-text-align-center">
+            <div class="pf-c-spinner" role="progressbar" aria-label="Loading...">
+                <span class="pf-c-spinner__clipper"></span>
+                <span class="pf-c-spinner__lead-ball"></span>
+                <span class="pf-c-spinner__tail-ball"></span>
+            </div>
+            <p class="pf-u-mt-md">Loading host details...</p>
         </div>
     `;
     
-    modal.show();
+    modal.hidden = false;
     
     // Fetch host details
     fetch(`/api/host_stats/${hostId}`)
@@ -1321,8 +1459,8 @@ function openHostEditModal(hostId) {
         document.getElementById('editHostDescription').value = host.description || '';
         
         // Show modal
-        const modal = new bootstrap.Modal(document.getElementById('hostEditModal'));
-        modal.show();
+        const modal = document.getElementById('hostEditModal');
+        modal.hidden = false;
     })
     .catch(error => {
         console.error('Error loading host details:', error);
@@ -1419,8 +1557,7 @@ function saveHostChanges() {
                 }
                 
                 // Hide modal
-                const modal = bootstrap.Modal.getInstance(document.getElementById('hostEditModal'));
-                modal.hide();
+                closeHostEditModal();
                 
                 showMessage('Host updated successfully!', 'success');
                 
@@ -1498,8 +1635,23 @@ function showImportModal() {
     document.getElementById('importValidationResults').style.display = 'none';
     document.getElementById('importHostsBtn').disabled = true;
     
-    const modal = new bootstrap.Modal(document.getElementById('importHostsModal'));
-    modal.show();
+    const modal = document.getElementById('importHostsModal');
+    modal.hidden = false;
+}
+
+function closeImportHostsModal() {
+    const modal = document.getElementById('importHostsModal');
+    modal.hidden = true;
+}
+
+function closeHostDetailsModal() {
+    const modal = document.getElementById('hostDetailsModal');
+    modal.hidden = true;
+}
+
+function closeHostEditModal() {
+    const modal = document.getElementById('hostEditModal');
+    modal.hidden = true;
 }
 
 // Validate import file before importing
@@ -1709,8 +1861,7 @@ function importHosts() {
             showMessage(successMsg, 'success');
             
             // Hide modal
-            const modal = bootstrap.Modal.getInstance(document.getElementById('importHostsModal'));
-            modal.hide();
+            closeImportHostsModal();
             
             // Show detailed results in console
             console.log('Import completed:', data);
