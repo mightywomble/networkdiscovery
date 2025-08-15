@@ -1,9 +1,9 @@
 NetworkMap Agent Version Information
 =====================================
 
-Agent Version: 1.6.2
+Agent Version: 1.6.4
 Build Date: 2025-08-15
-Build Time: 17:45:41
+Build Time: 17:54:47
 Git Commit: AUTO_VERSIONED
 
 Release Notes:
@@ -16,4 +16,4 @@ File Locations:
 - Static Agent: static/networkmap_agent.py
 - Version Info: VERSION_INFO.txt
 
-Last Updated: 2025-08-15T17:45:41.233686
+Last Updated: 2025-08-15T17:54:47.877978
