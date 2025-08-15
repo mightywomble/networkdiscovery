@@ -2490,10 +2490,10 @@ function updateHostInstallStatusCards(hosts) {
                 break;
         }
         
-        // Build tools summary
+        // Build tools summary with PatternFly labels
         let toolsSummary = '';
         if (tool_categories) {
-            toolsSummary = '<div class="small mt-2">';
+            toolsSummary = '<div class="pf-u-mt-sm">';
             Object.entries(tool_categories).forEach(([category, categoryData]) => {
                 const { total, installed, missing } = categoryData;
                 const percentage = total > 0 ? Math.round((installed / total) * 100) : 0;
@@ -2502,9 +2502,11 @@ function updateHostInstallStatusCards(hosts) {
                 const categoryName = category.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
                 
                 toolsSummary += `
-                    <div class="d-flex justify-content-between align-items-center mb-1">
-                        <span>${categoryName}:</span>
-                        <span class="badge badge-${categoryClass}">${installed}/${total}</span>
+                    <div class="pf-u-display-flex pf-u-justify-content-space-between pf-u-align-items-center pf-u-mb-xs">
+                        <span class="pf-u-font-size-sm">${categoryName}:</span>
+                        <span class="pf-c-label pf-m-${categoryClass}">
+                            <span class="pf-c-label__content">${installed}/${total}</span>
+                        </span>
                     </div>
                 `;
             });
@@ -2512,37 +2514,57 @@ function updateHostInstallStatusCards(hosts) {
         } else if (installed_tools && missing_tools) {
             const total = installed_tools.length + missing_tools.length;
             toolsSummary = `
-                <div class="small mt-2">
-                    <div class="d-flex justify-content-between">
-                        <span>Installed:</span>
-                        <span class="badge badge-success">${installed_tools.length}</span>
+                <div class="pf-u-mt-sm">
+                    <div class="pf-u-display-flex pf-u-justify-content-space-between pf-u-mb-xs">
+                        <span class="pf-u-font-size-sm">Installed:</span>
+                        <span class="pf-c-label pf-m-success">
+                            <span class="pf-c-label__content">${installed_tools.length}</span>
+                        </span>
                     </div>
-                    <div class="d-flex justify-content-between">
-                        <span>Missing:</span>
-                        <span class="badge badge-danger">${missing_tools.length}</span>
+                    <div class="pf-u-display-flex pf-u-justify-content-space-between">
+                        <span class="pf-u-font-size-sm">Missing:</span>
+                        <span class="pf-c-label pf-m-danger">
+                            <span class="pf-c-label__content">${missing_tools.length}</span>
+                        </span>
                     </div>
                 </div>
             `;
         }
         
         cardsHtml += `
-            <div class="col-md-6 col-xl-4 mb-3">
-                <div class="card h-100">
-                    <div class="card-body py-2">
-                        <h6 class="card-title mb-1 d-flex justify-content-between align-items-center">
-                            <span><i class="fas fa-${statusIcon} me-1"></i> ${hostname}</span>
-                            <span class="badge bg-${statusClass}">${statusText}</span>
-                        </h6>
-                        
-                        <div class="progress mb-2" style="height: 8px;">
-                            <div class="progress-bar bg-${statusClass} ${status === 'installing' || status === 'checking' ? 'progress-bar-striped progress-bar-animated' : ''}" 
-                                 style="width: ${progress || 0}%"></div>
+            <div class="pf-c-card nm-host-install-card">
+                <div class="pf-c-card__body pf-u-p-md">
+                    <div class="pf-u-display-flex pf-u-justify-content-space-between pf-u-align-items-center pf-u-mb-sm">
+                        <div class="pf-u-display-flex pf-u-align-items-center">
+                            <i class="fas fa-${statusIcon} pf-u-mr-sm"></i>
+                            <span class="pf-u-font-weight-bold">${hostname}</span>
                         </div>
-                        
-                        <div class="small text-muted mb-1">${current_action || 'Waiting...'}</div>
-                        ${toolsSummary}
-                        ${error ? `<div class="small text-danger mt-1">Error: ${error}</div>` : ''}
+                        <span class="pf-c-label pf-m-${statusClass}">
+                            <span class="pf-c-label__content">${statusText}</span>
+                        </span>
                     </div>
+                    
+                    <!-- Custom CSS progress bar implementation -->
+                    <div class="nm-custom-progress-container" style="height: 12px; width: 100%; background-color: #EDEDED; border-radius: 6px; margin-bottom: 0.75rem; overflow: hidden;">
+                        <div role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${progress || 0}"
+                             class="nm-custom-progress-bar ${status === 'installing' || status === 'checking' ? 'nm-progress-animated' : ''}"
+                             style="height: 100%; width: ${progress || 0}%; 
+                                    background-color: ${statusClass === 'primary' ? '#0066CC' : statusClass === 'success' ? '#3E8635' : statusClass === 'danger' ? '#C9190B' : statusClass === 'warning' ? '#F0AB00' : statusClass === 'info' ? '#2B9AF3' : '#6A6E73'};
+                                    transition: width 0.3s ease-in-out;
+                                    border-radius: 6px;"
+                             title="${progress || 0}% complete">
+                        </div>
+                    </div>
+                    
+                    <div class="pf-u-font-size-sm pf-u-color-200 pf-u-mb-xs">${current_action || 'Waiting for installation to begin...'}</div>
+                    ${toolsSummary}
+                    ${error ? `<div class="pf-c-alert pf-m-danger pf-m-inline pf-u-mt-sm" style="--pf-c-alert--PaddingTop: 0.5rem; --pf-c-alert--PaddingBottom: 0.5rem;">
+                        <div class="pf-c-alert__icon">
+                            <i class="fas fa-exclamation-triangle" aria-hidden="true"></i>
+                        </div>
+                        <div class="pf-c-alert__title pf-u-font-size-sm">Installation Error</div>
+                        <div class="pf-c-alert__description pf-u-font-size-sm">${error}</div>
+                    </div>` : ''}
                 </div>
             </div>
         `;
