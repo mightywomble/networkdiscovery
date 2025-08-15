@@ -1220,31 +1220,64 @@ def network_data():
             
             return jsonify({'nodes': nodes, 'edges': edges})
         
-        # Fallback to basic topology
+        # Fallback to basic topology using hosts and agents
         hosts = host_manager.get_all_hosts()
+        agents = db.get_all_agents()
         connections = db.get_recent_connections(hours=24)
         
         # Format data for visualization
         nodes = []
         edges = []
         
+        # Add all hosts as nodes
         for host in hosts:
+            # Check if this host has an active agent
+            agent = next((a for a in agents if a.get('ip_address') == host['ip_address']), None)
+            agent_status = 'no-agent'
+            
+            if agent:
+                if agent.get('status') == 'active':
+                    agent_status = 'agent-active'
+                elif agent.get('last_heartbeat'):
+                    agent_status = 'agent-inactive'
+                else:
+                    agent_status = 'agent-error'
+            
+            # Set node color based on status and agent presence
+            if agent_status == 'agent-active':
+                node_color = {'background': '#28a745', 'border': '#1e7e34'}  # Green for active agents
+            elif agent_status == 'agent-inactive':
+                node_color = {'background': '#ffc107', 'border': '#e0a800'}  # Yellow for inactive agents
+            elif agent_status == 'agent-error':
+                node_color = {'background': '#dc3545', 'border': '#c82333'}  # Red for error agents
+            else:
+                node_color = {'background': '#6c757d', 'border': '#5a6268'}  # Gray for no agent
+            
             nodes.append({
                 'id': host['id'],
                 'label': host['name'],
                 'ip': host['ip_address'],
                 'status': host.get('status', 'unknown'),
-                'last_seen': host.get('last_seen')
+                'agent_status': agent_status,
+                'last_seen': host.get('last_seen'),
+                'group': 'host',
+                'title': f"{host['name']}\nIP: {host['ip_address']}\nStatus: {host.get('status', 'unknown')}\nAgent: {agent_status.replace('-', ' ').title()}",
+                'size': 30,
+                'shape': 'dot',
+                'color': node_color
             })
         
+        # Add connections from database if any exist
         for conn in connections:
             edges.append({
+                'id': f"{conn['source_host_id']}-{conn['dest_host_id']}-{conn.get('dest_port', 'unknown')}",
                 'from': conn['source_host_id'],
                 'to': conn['dest_host_id'],
-                'port': conn['dest_port'],
-                'protocol': conn['protocol'],
-                'count': conn['connection_count'],
-                'last_seen': conn['last_seen']
+                'label': f":{conn.get('dest_port', '?')}",
+                'title': f"Protocol: {conn.get('protocol', 'unknown')}\nPort: {conn.get('dest_port', 'unknown')}\nConnections: {conn.get('connection_count', 1)}\nLast seen: {conn.get('last_seen', 'unknown')}",
+                'width': 2,
+                'color': '#007bff',
+                'arrows': {'to': True}
             })
         
         return jsonify({'nodes': nodes, 'edges': edges})
