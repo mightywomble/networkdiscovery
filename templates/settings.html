@@ -1,0 +1,326 @@
+{% extends "base_patternfly.html" %}
+
+{% block title %}Settings - Home Lab{% endblock %}
+
+{% block breadcrumb %}
+<li class="pf-c-breadcrumb__item">
+    <a href="{{ url_for('index') }}" class="pf-c-breadcrumb__link">Home</a>
+</li>
+<li class="pf-c-breadcrumb__item">
+    <span class="pf-c-breadcrumb__item-divider">></span>
+    <span class="pf-c-breadcrumb__link pf-m-current" aria-current="page">Settings</span>
+</li>
+{% endblock %}
+
+{% block content %}
+<!-- Page header -->
+<section class="pf-c-page__main-section pf-m-light">
+    <div class="pf-c-content">
+        <h1>
+            <i class="fas fa-cog pf-u-mr-sm"></i>System Settings
+        </h1>
+        <p class="pf-c-content">Manage AI integrations, network configuration, and system preferences.</p>
+    </div>
+</section>
+
+<!-- Settings content -->
+<section class="pf-c-page__main-section">
+    <div class="pf-l-gallery pf-m-gutter">
+        
+        <!-- Cards for AI Settings -->
+        <div class="pf-l-gallery__item">
+            <div class="pf-c-card" style="min-height: 400px;">
+                <div class="pf-c-card__header">
+                    <div class="pf-c-card__header-main">
+                        <h2 class="pf-c-card__title">
+                            <i class="fas fa-robot pf-u-mr-sm"></i>AI API Configuration
+                        </h2>
+                    </div>
+                </div>
+                <div class="pf-c-card__body">
+                    <p class="pf-u-color-200">Configure AI service integrations for enhanced network analysis and insights.</p>
+                    
+                    <div id="ai-settings-overview">
+                        <!-- AI settings will be loaded here -->
+                        <div class="pf-c-empty-state pf-m-sm">
+                            <div class="pf-c-empty-state__content">
+                                <div class="pf-c-spinner pf-m-lg" role="progressbar">
+                                    <span class="pf-c-spinner__clipper"></span>
+                                    <span class="pf-c-spinner__lead-ball"></span>
+                                    <span class="pf-c-spinner__tail-ball"></span>
+                                </div>
+                                <h2 class="pf-c-title pf-m-lg">Loading AI settings...</h2>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Google Gemini Settings Card -->
+        <div class="pf-l-gallery__item">
+            <div class="pf-c-card" style="min-height: 400px;">
+                <div class="pf-c-card__header">
+                    <div class="pf-c-card__header-main">
+                        <h2 class="pf-c-card__title">
+                            <i class="fas fa-brain pf-u-mr-sm"></i>Google Gemini
+                        </h2>
+                    </div>
+                </div>
+                <div class="pf-c-card__body">
+                    <p class="pf-u-color-200">Configure the Google Gemini API for advanced AI capabilities.</p>
+                    <p>Use Google's latest AI models including gemini-2.5-flash and gemini-2.5-pro for network analysis and insights.</p>
+                    
+                    <div id="gemini-status" class="pf-u-mt-md">
+                        <!-- Gemini status will be loaded here -->
+                        <div class="pf-c-skeleton pf-u-w-100 pf-u-h-sm"></div>
+                    </div>
+                </div>
+                <div class="pf-c-card__footer">
+                    <button class="pf-c-button pf-m-primary" type="button" onclick="openAIModal('gemini')">
+                        <i class="fas fa-cog pf-u-mr-sm"></i>Configure Gemini
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- OpenAI ChatGPT Settings Card -->
+        <div class="pf-l-gallery__item">
+            <div class="pf-c-card" style="min-height: 400px;">
+                <div class="pf-c-card__header">
+                    <div class="pf-c-card__header-main">
+                        <h2 class="pf-c-card__title">
+                            <i class="fas fa-comments pf-u-mr-sm"></i>OpenAI ChatGPT
+                        </h2>
+                    </div>
+                </div>
+                <div class="pf-c-card__body">
+                    <p class="pf-u-color-200">Configure the OpenAI ChatGPT API for AI-powered assistance.</p>
+                    <p>Access OpenAI's powerful language models including GPT-4 and GPT-3.5 for enhanced network mapping capabilities.</p>
+                    
+                    <div id="chatgpt-status" class="pf-u-mt-md">
+                        <!-- ChatGPT status will be loaded here -->
+                        <div class="pf-c-skeleton pf-u-w-100 pf-u-h-sm"></div>
+                    </div>
+                </div>
+                <div class="pf-c-card__footer">
+                    <button class="pf-c-button pf-m-primary" type="button" onclick="openAIModal('chatgpt')">
+                        <i class="fas fa-cog pf-u-mr-sm"></i>Configure ChatGPT
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- System Information -->
+        <div class="pf-l-gallery__item" style="grid-column: 1 / -1;">
+            <div class="pf-c-card">
+                <div class="pf-c-card__header">
+                    <div class="pf-c-card__header-main">
+                        <h2 class="pf-c-card__title">
+                            <i class="fas fa-info-circle pf-u-mr-sm"></i>System Information
+                        </h2>
+                    </div>
+                </div>
+                <div class="pf-c-card__body">
+                    <div class="pf-l-grid pf-m-all-6-col-on-md pf-m-all-4-col-on-lg pf-m-gutter">
+                        <div class="pf-l-grid__item">
+                            <dl class="pf-c-description-list pf-m-horizontal">
+                                <dt class="pf-c-description-list__term">
+                                    <span class="pf-c-description-list__text">Application Version</span>
+                                </dt>
+                                <dd class="pf-c-description-list__description">
+                                    <div class="pf-c-description-list__text">NetworkMap v1.4.0</div>
+                                </dd>
+                            </dl>
+                        </div>
+                        <div class="pf-l-grid__item">
+                            <dl class="pf-c-description-list pf-m-horizontal">
+                                <dt class="pf-c-description-list__term">
+                                    <span class="pf-c-description-list__text">Database</span>
+                                </dt>
+                                <dd class="pf-c-description-list__description">
+                                    <div class="pf-c-description-list__text">SQLite</div>
+                                </dd>
+                            </dl>
+                        </div>
+                        <div class="pf-l-grid__item">
+                            <dl class="pf-c-description-list pf-m-horizontal">
+                                <dt class="pf-c-description-list__term">
+                                    <span class="pf-c-description-list__text">Server</span>
+                                </dt>
+                                <dd class="pf-c-description-list__description">
+                                    <div class="pf-c-description-list__text">Flask Development Server</div>
+                                </dd>
+                            </dl>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    loadAISettingsOverview();
+    loadProviderStatus('gemini');
+    loadProviderStatus('chatgpt');
+});
+
+function loadAISettingsOverview() {
+    const overviewContainer = document.getElementById('ai-settings-overview');
+    
+    fetch('/api/ai_settings')
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            const settings = data.settings || [];
+            let html = '';
+            
+            if (settings.length === 0) {
+                html = `
+                    <div class="pf-c-alert pf-m-info pf-m-inline" aria-label="Info alert">
+                        <div class="pf-c-alert__icon">
+                            <i class="fas fa-info-circle" aria-hidden="true"></i>
+                        </div>
+                        <p class="pf-c-alert__title">
+                            No AI services configured yet. Use the cards below to set up your AI integrations.
+                        </p>
+                    </div>
+                `;
+            } else {
+                // Show summary of configured services
+                const enabledCount = settings.filter(s => s.enabled).length;
+                const totalCount = settings.length;
+                const configuredServices = settings.map(s => s.provider === 'gemini' ? 'Google Gemini' : 'OpenAI ChatGPT').join(', ');
+                
+                html = `
+                    <div class="pf-c-alert pf-m-success pf-m-inline" aria-label="Success alert">
+                        <div class="pf-c-alert__icon">
+                            <i class="fas fa-check-circle" aria-hidden="true"></i>
+                        </div>
+                        <p class="pf-c-alert__title">
+                            ${enabledCount} of ${totalCount} AI services enabled: ${configuredServices}
+                        </p>
+                        <p class="pf-c-alert__description">
+                            Use the configuration cards below to modify settings or enable/disable services.
+                        </p>
+                    </div>
+                `;
+            }
+            
+            overviewContainer.innerHTML = html;
+        } else {
+            overviewContainer.innerHTML = `
+                <div class="pf-c-alert pf-m-danger pf-m-inline" aria-label="Danger alert">
+                    <div class="pf-c-alert__icon">
+                        <i class="fas fa-exclamation-circle" aria-hidden="true"></i>
+                    </div>
+                    <p class="pf-c-alert__title">
+                        Error loading AI settings: ${data.error}
+                    </p>
+                </div>
+            `;
+        }
+    })
+    .catch(error => {
+        console.error('Error loading AI settings:', error);
+        overviewContainer.innerHTML = `
+            <div class="pf-c-alert pf-m-warning pf-m-inline" aria-label="Warning alert">
+                <div class="pf-c-alert__icon">
+                    <i class="fas fa-exclamation-triangle" aria-hidden="true"></i>
+                </div>
+                <p class="pf-c-alert__title">
+                    Unable to load AI settings status. Use the configuration cards below to set up your services.
+                </p>
+            </div>
+        `;
+    });
+}
+
+function loadProviderStatus(provider) {
+    const statusContainer = document.getElementById(`${provider}-status`);
+    
+    fetch(`/api/ai_settings/${provider}`)
+    .then(response => {
+        if (response.ok) {
+            return response.json();
+        } else if (response.status === 404) {
+            // No configuration found
+            return { success: false, not_configured: true };
+        } else {
+            throw new Error('Failed to load settings');
+        }
+    })
+    .then(data => {
+        let html = '';
+        
+        if (data.success && data.settings) {
+            const setting = data.settings;
+            const statusColor = setting.enabled ? 'success' : 'warning';
+            const statusText = setting.enabled ? 'Enabled' : 'Disabled';
+            const statusIcon = setting.enabled ? 'check-circle' : 'exclamation-triangle';
+            
+            html = `
+                <div style="color: #000; font-weight: bold; margin-bottom: 8px;">Model</div>
+                <div style="margin-bottom: 12px;">${setting.model_name || 'Not configured'}</div>
+                
+                <div style="color: #000; font-weight: bold; margin-bottom: 8px;">Enabled/Disabled</div>
+                <div style="margin-bottom: 12px;">
+                    <span class="pf-c-label pf-m-${statusColor}">
+                        <span class="pf-c-label__content">
+                            <i class="fas fa-${statusIcon} pf-u-mr-xs"></i>${statusText}
+                        </span>
+                    </span>
+                </div>
+                
+                <div style="color: #000; font-weight: bold; margin-bottom: 8px;">API Key</div>
+                <div>${setting.api_key_masked || 'Not set'}</div>
+            `;
+        } else {
+            // Not configured
+            html = `
+                <div style="color: #000; font-weight: bold; margin-bottom: 8px;">Model</div>
+                <div style="margin-bottom: 12px;">Not configured</div>
+                
+                <div style="color: #000; font-weight: bold; margin-bottom: 8px;">Enabled/Disabled</div>
+                <div style="margin-bottom: 12px;">
+                    <span class="pf-c-label pf-m-grey">
+                        <span class="pf-c-label__content">
+                            <i class="fas fa-times pf-u-mr-xs"></i>Not configured
+                        </span>
+                    </span>
+                </div>
+                
+                <div style="color: #000; font-weight: bold; margin-bottom: 8px;">API Key</div>
+                <div>Not set</div>
+            `;
+        }
+        
+        statusContainer.innerHTML = html;
+    })
+    .catch(error => {
+        console.error(`Error loading ${provider} status:`, error);
+        statusContainer.innerHTML = `
+            <div class="pf-c-alert pf-m-warning pf-m-inline pf-m-plain" aria-label="Warning alert">
+                <div class="pf-c-alert__icon">
+                    <i class="fas fa-exclamation-triangle" aria-hidden="true"></i>
+                </div>
+                <p class="pf-c-alert__title">Unable to load status</p>
+            </div>
+        `;
+    });
+}
+
+// Refresh the overview and provider status when modals are closed
+document.addEventListener('hidden.bs.modal', function (event) {
+    if (event.target.id === 'geminiModal' || event.target.id === 'chatgptModal') {
+        loadAISettingsOverview();
+        loadProviderStatus('gemini');
+        loadProviderStatus('chatgpt');
+    }
+});
+</script>
+{% endblock %}

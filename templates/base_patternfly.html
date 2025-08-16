@@ -403,6 +403,27 @@
                     </ul>
                 </div>
                 
+                <!-- Settings -->
+                <div class="nm-nav-section">
+                    <div class="nm-nav-section-title">Settings</div>
+                    <ul class="nm-nav-list">
+                        <li class="nm-nav-item {% if 'settings' in request.endpoint %}expanded{% endif %}">
+                            <a href="#" class="nm-nav-link" onclick="toggleSubmenu(event, this)">
+                                <i class="fas fa-cog"></i>
+                                <span>AI Configuration</span>
+                                <i class="fas fa-chevron-right nm-nav-toggle"></i>
+                            </a>
+                            <ul class="nm-nav-submenu">
+                                <li class="nm-nav-item">
+                                    <a href="{{ url_for('settings') }}" class="nm-nav-link {% if request.endpoint == 'settings' %}active{% endif %}">
+                                        <span>AI Settings</span>
+                                    </a>
+                                </li>
+                            </ul>
+                        </li>
+                    </ul>
+                </div>
+                
                 <!-- Tools & Actions -->
                 <div class="nm-nav-section">
                     <div class="nm-nav-section-title">Tools</div>
@@ -900,7 +921,440 @@
                 }
             }
         });
+        
+        // AI Settings Modal Functions
+        function openAIModal(provider) {
+            const modalId = provider + 'Modal';
+            const modal = document.getElementById(modalId);
+            if (modal) {
+                // For PatternFly modals, we'll show them directly
+                modal.style.display = 'flex';
+                
+                // Load existing settings
+                fetch(`/api/ai_settings/${provider}`)
+                .then(response => {
+                    if (response.ok) {
+                        return response.json();
+                    } else if (response.status === 404) {
+                        // No settings found, use defaults
+                        return { success: true, settings: getDefaultSettings(provider) };
+                    } else {
+                        throw new Error('Failed to load settings');
+                    }
+                })
+                .then(data => {
+                    if (data.success) {
+                        populateAIForm(provider, data.settings);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading AI settings:', error);
+                    populateAIForm(provider, getDefaultSettings(provider));
+                });
+            }
+        }
+        
+        function closeAIModal(provider) {
+            const modalId = provider + 'Modal';
+            const modal = document.getElementById(modalId);
+            if (modal) {
+                modal.style.display = 'none';
+            }
+        }
+        
+        function getDefaultSettings(provider) {
+            const defaults = {
+                gemini: {
+                    provider: 'gemini',
+                    model_name: 'gemini-2.5-flash',
+                    api_endpoint: 'https://generativelanguage.googleapis.com/v1beta',
+                    temperature: 0.7,
+                    max_tokens: 1000,
+                    timeout: 30,
+                    enabled: false
+                },
+                chatgpt: {
+                    provider: 'chatgpt',
+                    model_name: 'gpt-3.5-turbo',
+                    api_endpoint: 'https://api.openai.com/v1/chat/completions',
+                    temperature: 0.7,
+                    max_tokens: 1000,
+                    timeout: 30,
+                    enabled: false
+                }
+            };
+            return defaults[provider] || {};
+        }
+        
+        function populateAIForm(provider, settings) {
+            const form = document.getElementById(provider + 'Form');
+            if (!form) return;
+            
+            form.querySelector('[name="api_key"]').value = settings.api_key || '';
+            form.querySelector('[name="model_name"]').value = settings.model_name || '';
+            form.querySelector('[name="api_endpoint"]').value = settings.api_endpoint || '';
+            form.querySelector('[name="temperature"]').value = settings.temperature || 0.7;
+            form.querySelector('[name="max_tokens"]').value = settings.max_tokens || 1000;
+            form.querySelector('[name="timeout"]').value = settings.timeout || 30;
+            form.querySelector('[name="enabled"]').checked = settings.enabled || false;
+            
+            // Show masked API key if available
+            if (settings.api_key_masked) {
+                form.querySelector('[name="api_key"]').placeholder = settings.api_key_masked;
+            }
+        }
+        
+        function saveAISettings(provider) {
+            const form = document.getElementById(provider + 'Form');
+            const formData = new FormData(form);
+            
+            // Prepare data object
+            const data = {
+                provider: provider,
+                api_key: formData.get('api_key') || null,
+                model_name: formData.get('model_name') || null,
+                api_endpoint: formData.get('api_endpoint') || null,
+                temperature: parseFloat(formData.get('temperature')) || 0.7,
+                max_tokens: parseInt(formData.get('max_tokens')) || 1000,
+                timeout: parseInt(formData.get('timeout')) || 30,
+                enabled: formData.get('enabled') === 'on'
+            };
+            
+            // Validate required fields
+            if (data.enabled && !data.api_key) {
+                alert('API Key is required when enabling the service');
+                return;
+            }
+            
+            // Show loading state - find the save button in the modal footer
+            const modal = document.getElementById(provider + 'Modal');
+            const saveBtn = modal.querySelector('footer .pf-c-button.pf-m-primary');
+            if (!saveBtn) {
+                console.error('Save button not found');
+                return;
+            }
+            
+            const originalText = saveBtn.innerHTML;
+            saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
+            saveBtn.disabled = true;
+            
+            // Save settings
+            fetch('/api/ai_settings', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(data)
+            })
+            .then(response => response.json())
+            .then(result => {
+                if (result.success) {
+                    // Show success message
+                    showAlert('success', 'Settings Saved', result.message);
+                    
+                    // Close modal after short delay
+                    setTimeout(() => {
+                        closeAIModal(provider);
+                    }, 1500);
+                } else {
+                    throw new Error(result.error || 'Save failed');
+                }
+            })
+            .catch(error => {
+                console.error('Error saving AI settings:', error);
+                showAlert('error', 'Save Failed', error.message);
+            })
+            .finally(() => {
+                // Restore save button
+                if (saveBtn) {
+                    saveBtn.innerHTML = originalText;
+                    saveBtn.disabled = false;
+                }
+            });
+        }
+        
+        function testAIConnection(provider) {
+            const form = document.getElementById(provider + 'Form');
+            const formData = new FormData(form);
+            
+            const apiKey = formData.get('api_key');
+            const endpoint = formData.get('api_endpoint');
+            
+            if (!apiKey) {
+                alert('Please enter an API key to test the connection');
+                return;
+            }
+            
+            const testBtn = form.querySelector('.pf-c-button[onclick*="testAIConnection"]');
+            const originalText = testBtn.innerHTML;
+            testBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Testing...';
+            testBtn.disabled = true;
+            
+            // Simple test (this would need to be implemented on backend)
+            setTimeout(() => {
+                showAlert('info', 'Connection Test', 'Connection test feature coming soon');
+                
+                testBtn.innerHTML = originalText;
+                testBtn.disabled = false;
+            }, 2000);
+        }
     </script>
+    
+    <!-- AI Settings Modals -->
+    <!-- Gemini Modal -->
+    <div class="pf-c-backdrop" id="geminiModal" style="display: none;">
+        <div class="pf-l-bullseye">
+            <div class="pf-c-modal-box pf-m-lg" role="dialog" aria-modal="true" aria-labelledby="gemini-modal-title">
+                <button class="pf-c-button pf-m-plain" type="button" aria-label="Close" onclick="closeAIModal('gemini')">
+                    <i class="fas fa-times" aria-hidden="true"></i>
+                </button>
+                <header class="pf-c-modal-box__header">
+                    <h1 class="pf-c-modal-box__title" id="gemini-modal-title">
+                        <i class="fas fa-brain pf-u-mr-sm"></i> Google Gemini API Configuration
+                    </h1>
+                </header>
+                <div class="pf-c-modal-box__body">
+                    <form id="geminiForm">
+                        <div class="pf-c-form">
+                            <div class="pf-c-form__group">
+                                <div class="pf-c-form__group-label">
+                                    <label class="pf-c-form__label" for="gemini-api-key">
+                                        <span class="pf-c-form__label-text">API Key <span class="pf-c-form__label-required">*</span></span>
+                                    </label>
+                                </div>
+                                <div class="pf-c-form__group-control">
+                                    <input class="pf-c-form-control" type="password" name="api_key" id="gemini-api-key" 
+                                           placeholder="Enter your Gemini API key" required>
+                                    <div class="pf-c-form__helper-text">
+                                        Get your API key from <a href="https://makersuite.google.com/app/apikey" target="_blank">Google AI Studio</a>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="pf-c-form__group">
+                                <div class="pf-c-form__group-label">
+                                    <label class="pf-c-form__label" for="gemini-model">
+                                        <span class="pf-c-form__label-text">Model Name</span>
+                                    </label>
+                                </div>
+                                <div class="pf-c-form__group-control">
+                                    <select class="pf-c-form-control" name="model_name" id="gemini-model">
+                                        <option value="gemini-2.5-flash">gemini-2.5-flash</option>
+                                        <option value="gemini-2.5-pro">gemini-2.5-pro</option>
+                                        <option value="gemini-1.5-pro">gemini-1.5-pro</option>
+                                        <option value="gemini-1.5-flash">gemini-1.5-flash</option>
+                                        <option value="gemini-pro">gemini-pro (legacy)</option>
+                                        <option value="gemini-pro-vision">gemini-pro-vision (legacy)</option>
+                                    </select>
+                                </div>
+                            </div>
+                            
+                            <div class="pf-c-form__group">
+                                <div class="pf-c-form__group-label">
+                                    <label class="pf-c-form__label" for="gemini-endpoint">
+                                        <span class="pf-c-form__label-text">API Endpoint</span>
+                                    </label>
+                                </div>
+                                <div class="pf-c-form__group-control">
+                                    <input class="pf-c-form-control" type="url" name="api_endpoint" id="gemini-endpoint" 
+                                           value="https://generativelanguage.googleapis.com/v1beta">
+                                </div>
+                            </div>
+                            
+                            <div class="pf-l-grid pf-m-all-6-col-on-lg">
+                                <div class="pf-l-grid__item">
+                                    <div class="pf-c-form__group">
+                                        <div class="pf-c-form__group-label">
+                                            <label class="pf-c-form__label" for="gemini-temperature">
+                                                <span class="pf-c-form__label-text">Temperature</span>
+                                            </label>
+                                        </div>
+                                        <div class="pf-c-form__group-control">
+                                            <input class="pf-c-form-control" type="number" name="temperature" id="gemini-temperature" 
+                                                   min="0" max="1" step="0.1" value="0.7">
+                                            <div class="pf-c-form__helper-text">Controls randomness (0-1)</div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="pf-l-grid__item">
+                                    <div class="pf-c-form__group">
+                                        <div class="pf-c-form__group-label">
+                                            <label class="pf-c-form__label" for="gemini-tokens">
+                                                <span class="pf-c-form__label-text">Max Tokens</span>
+                                            </label>
+                                        </div>
+                                        <div class="pf-c-form__group-control">
+                                            <input class="pf-c-form-control" type="number" name="max_tokens" id="gemini-tokens" 
+                                                   min="1" max="8192" value="1000">
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="pf-c-form__group">
+                                <div class="pf-c-form__group-label">
+                                    <label class="pf-c-form__label" for="gemini-timeout">
+                                        <span class="pf-c-form__label-text">Timeout (seconds)</span>
+                                    </label>
+                                </div>
+                                <div class="pf-c-form__group-control">
+                                    <input class="pf-c-form-control" type="number" name="timeout" id="gemini-timeout" 
+                                           min="5" max="300" value="30">
+                                </div>
+                            </div>
+                            
+                            <div class="pf-c-form__group">
+                                <div class="pf-c-form__group-control">
+                                    <div class="pf-c-check">
+                                        <input class="pf-c-check__input" type="checkbox" name="enabled" id="gemini-enabled">
+                                        <label class="pf-c-check__label" for="gemini-enabled">
+                                            Enable Gemini API
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <footer class="pf-c-modal-box__footer">
+                    <button type="button" class="pf-c-button pf-m-secondary" onclick="testAIConnection('gemini')">
+                        <i class="fas fa-wifi"></i> Test Connection
+                    </button>
+                    <button type="button" class="pf-c-button pf-m-link" onclick="closeAIModal('gemini')">Cancel</button>
+                    <button type="button" class="pf-c-button pf-m-primary" onclick="saveAISettings('gemini')">
+                        <i class="fas fa-save"></i> Save Settings
+                    </button>
+                </footer>
+            </div>
+        </div>
+    </div>
+    
+    <!-- ChatGPT Modal -->
+    <div class="pf-c-backdrop" id="chatgptModal" style="display: none;">
+        <div class="pf-l-bullseye">
+            <div class="pf-c-modal-box pf-m-lg" role="dialog" aria-modal="true" aria-labelledby="chatgpt-modal-title">
+                <button class="pf-c-button pf-m-plain" type="button" aria-label="Close" onclick="closeAIModal('chatgpt')">
+                    <i class="fas fa-times" aria-hidden="true"></i>
+                </button>
+                <header class="pf-c-modal-box__header">
+                    <h1 class="pf-c-modal-box__title" id="chatgpt-modal-title">
+                        <i class="fas fa-comments pf-u-mr-sm"></i> OpenAI ChatGPT API Configuration
+                    </h1>
+                </header>
+                <div class="pf-c-modal-box__body">
+                    <form id="chatgptForm">
+                        <div class="pf-c-form">
+                            <div class="pf-c-form__group">
+                                <div class="pf-c-form__group-label">
+                                    <label class="pf-c-form__label" for="chatgpt-api-key">
+                                        <span class="pf-c-form__label-text">API Key <span class="pf-c-form__label-required">*</span></span>
+                                    </label>
+                                </div>
+                                <div class="pf-c-form__group-control">
+                                    <input class="pf-c-form-control" type="password" name="api_key" id="chatgpt-api-key" 
+                                           placeholder="Enter your OpenAI API key" required>
+                                    <div class="pf-c-form__helper-text">
+                                        Get your API key from <a href="https://platform.openai.com/api-keys" target="_blank">OpenAI Platform</a>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="pf-c-form__group">
+                                <div class="pf-c-form__group-label">
+                                    <label class="pf-c-form__label" for="chatgpt-model">
+                                        <span class="pf-c-form__label-text">Model Name</span>
+                                    </label>
+                                </div>
+                                <div class="pf-c-form__group-control">
+                                    <select class="pf-c-form-control" name="model_name" id="chatgpt-model">
+                                        <option value="gpt-3.5-turbo">gpt-3.5-turbo</option>
+                                        <option value="gpt-3.5-turbo-16k">gpt-3.5-turbo-16k</option>
+                                        <option value="gpt-4">gpt-4</option>
+                                        <option value="gpt-4-turbo">gpt-4-turbo</option>
+                                        <option value="gpt-4o">gpt-4o</option>
+                                    </select>
+                                </div>
+                            </div>
+                            
+                            <div class="pf-c-form__group">
+                                <div class="pf-c-form__group-label">
+                                    <label class="pf-c-form__label" for="chatgpt-endpoint">
+                                        <span class="pf-c-form__label-text">API Endpoint</span>
+                                    </label>
+                                </div>
+                                <div class="pf-c-form__group-control">
+                                    <input class="pf-c-form-control" type="url" name="api_endpoint" id="chatgpt-endpoint" 
+                                           value="https://api.openai.com/v1/chat/completions">
+                                </div>
+                            </div>
+                            
+                            <div class="pf-l-grid pf-m-all-6-col-on-lg">
+                                <div class="pf-l-grid__item">
+                                    <div class="pf-c-form__group">
+                                        <div class="pf-c-form__group-label">
+                                            <label class="pf-c-form__label" for="chatgpt-temperature">
+                                                <span class="pf-c-form__label-text">Temperature</span>
+                                            </label>
+                                        </div>
+                                        <div class="pf-c-form__group-control">
+                                            <input class="pf-c-form-control" type="number" name="temperature" id="chatgpt-temperature" 
+                                                   min="0" max="2" step="0.1" value="0.7">
+                                            <div class="pf-c-form__helper-text">Controls randomness (0-2)</div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="pf-l-grid__item">
+                                    <div class="pf-c-form__group">
+                                        <div class="pf-c-form__group-label">
+                                            <label class="pf-c-form__label" for="chatgpt-tokens">
+                                                <span class="pf-c-form__label-text">Max Tokens</span>
+                                            </label>
+                                        </div>
+                                        <div class="pf-c-form__group-control">
+                                            <input class="pf-c-form-control" type="number" name="max_tokens" id="chatgpt-tokens" 
+                                                   min="1" max="16384" value="1000">
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="pf-c-form__group">
+                                <div class="pf-c-form__group-label">
+                                    <label class="pf-c-form__label" for="chatgpt-timeout">
+                                        <span class="pf-c-form__label-text">Timeout (seconds)</span>
+                                    </label>
+                                </div>
+                                <div class="pf-c-form__group-control">
+                                    <input class="pf-c-form-control" type="number" name="timeout" id="chatgpt-timeout" 
+                                           min="5" max="300" value="30">
+                                </div>
+                            </div>
+                            
+                            <div class="pf-c-form__group">
+                                <div class="pf-c-form__group-control">
+                                    <div class="pf-c-check">
+                                        <input class="pf-c-check__input" type="checkbox" name="enabled" id="chatgpt-enabled">
+                                        <label class="pf-c-check__label" for="chatgpt-enabled">
+                                            Enable ChatGPT API
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <footer class="pf-c-modal-box__footer">
+                    <button type="button" class="pf-c-button pf-m-secondary" onclick="testAIConnection('chatgpt')">
+                        <i class="fas fa-wifi"></i> Test Connection
+                    </button>
+                    <button type="button" class="pf-c-button pf-m-link" onclick="closeAIModal('chatgpt')">Cancel</button>
+                    <button type="button" class="pf-c-button pf-m-primary" onclick="saveAISettings('chatgpt')">
+                        <i class="fas fa-save"></i> Save Settings
+                    </button>
+                </footer>
+            </div>
+        </div>
+    </div>
     
     {% block scripts %}{% endblock %}
 </body>
