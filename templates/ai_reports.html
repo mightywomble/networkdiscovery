@@ -1,0 +1,1006 @@
+{% extends "base_patternfly.html" %}
+
+{% block title %}AI Reports - Home Lab{% endblock %}
+
+{% block breadcrumb %}
+<li class="pf-c-breadcrumb__item">
+    <a href="{{ url_for('index') }}" class="pf-c-breadcrumb__link">Home</a>
+</li>
+<li class="pf-c-breadcrumb__item pf-m-current" aria-current="page">
+    <span class="pf-c-breadcrumb__item-divider">
+        <i class="fas fa-angle-right" aria-hidden="true"></i>
+    </span>
+    AI Reports
+</li>
+{% endblock %}
+
+{% block styles %}
+<!-- Include marked.js for markdown parsing -->
+<script src="https://cdn.jsdelivr.net/npm/marked@9.1.2/lib/marked.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/dompurify@3.0.6/dist/purify.min.js"></script>
+
+<style>
+/* AI Reports specific styles */
+.nm-ai-card {
+    height: 100%;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    border: 2px solid transparent;
+    cursor: pointer;
+}
+
+.nm-ai-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+}
+
+.nm-ai-card.selected {
+    border-color: var(--pf-global--primary-color--100);
+    background-color: var(--pf-global--BackgroundColor--light-300);
+}
+
+.nm-ai-card .pf-c-card__header {
+    text-align: center;
+    padding-bottom: var(--pf-global--spacer--sm);
+}
+
+.nm-ai-card .pf-c-card__title {
+    font-size: var(--pf-global--FontSize--lg);
+    font-weight: var(--pf-global--FontWeight--bold);
+}
+
+.nm-data-icon {
+    font-size: 3rem;
+    margin-bottom: var(--pf-global--spacer--md);
+    color: var(--pf-global--primary-color--100);
+}
+
+.nm-data-description {
+    color: var(--pf-global--Color--200);
+    font-size: var(--pf-global--FontSize--sm);
+    line-height: 1.5;
+    text-align: center;
+}
+
+/* Updated report output styles for markdown */
+.nm-report-output {
+    background-color: #ffffff;
+    border: 1px solid var(--pf-global--BorderColor--100);
+    border-radius: var(--pf-global--BorderRadius--sm);
+    padding: var(--pf-global--spacer--lg);
+    min-height: 400px;
+    max-height: 700px;
+    overflow-y: auto;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+    font-size: var(--pf-global--FontSize--sm);
+    line-height: 1.6;
+    color: #333333;
+}
+
+/* Markdown-specific styles */
+.nm-report-output h1,
+.nm-report-output h2,
+.nm-report-output h3,
+.nm-report-output h4,
+.nm-report-output h5,
+.nm-report-output h6 {
+    color: var(--pf-global--primary-color--100);
+    margin-top: var(--pf-global--spacer--lg);
+    margin-bottom: var(--pf-global--spacer--md);
+    font-weight: var(--pf-global--FontWeight--bold);
+}
+
+.nm-report-output h1 {
+    font-size: var(--pf-global--FontSize--xl);
+    border-bottom: 2px solid var(--pf-global--primary-color--100);
+    padding-bottom: var(--pf-global--spacer--sm);
+}
+
+.nm-report-output h2 {
+    font-size: var(--pf-global--FontSize--lg);
+    border-bottom: 1px solid var(--pf-global--BorderColor--100);
+    padding-bottom: var(--pf-global--spacer--xs);
+}
+
+.nm-report-output h3 {
+    font-size: var(--pf-global--FontSize--md);
+    color: var(--pf-global--secondary-color--100);
+}
+
+.nm-report-output p {
+    margin-bottom: var(--pf-global--spacer--md);
+    text-align: justify;
+}
+
+.nm-report-output ul,
+.nm-report-output ol {
+    margin-bottom: var(--pf-global--spacer--md);
+    padding-left: var(--pf-global--spacer--lg);
+}
+
+.nm-report-output li {
+    margin-bottom: var(--pf-global--spacer--xs);
+}
+
+.nm-report-output blockquote {
+    border-left: 4px solid var(--pf-global--primary-color--100);
+    padding-left: var(--pf-global--spacer--md);
+    margin: var(--pf-global--spacer--lg) 0;
+    font-style: italic;
+    color: var(--pf-global--Color--200);
+    background-color: var(--pf-global--BackgroundColor--light-200);
+    padding: var(--pf-global--spacer--md);
+    border-radius: var(--pf-global--BorderRadius--sm);
+}
+
+.nm-report-output code {
+    background-color: #f5f5f5;
+    padding: 2px 4px;
+    border-radius: 3px;
+    font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+    font-size: var(--pf-global--FontSize--xs);
+    color: #d73027;
+}
+
+.nm-report-output pre {
+    background-color: #f8f9fa;
+    padding: var(--pf-global--spacer--md);
+    border-radius: var(--pf-global--BorderRadius--sm);
+    overflow-x: auto;
+    margin-bottom: var(--pf-global--spacer--md);
+    border: 1px solid #dee2e6;
+}
+
+.nm-report-output pre code {
+    background: none;
+    padding: 0;
+    color: #333333;
+}
+
+.nm-report-output table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: var(--pf-global--spacer--lg);
+    border: 1px solid var(--pf-global--BorderColor--100);
+}
+
+.nm-report-output th,
+.nm-report-output td {
+    padding: var(--pf-global--spacer--sm);
+    border: 1px solid var(--pf-global--BorderColor--100);
+    text-align: left;
+}
+
+.nm-report-output th {
+    background-color: var(--pf-global--primary-color--100);
+    color: white;
+    font-weight: var(--pf-global--FontWeight--bold);
+}
+
+.nm-report-output tr:nth-child(even) {
+    background-color: var(--pf-global--BackgroundColor--light-200);
+}
+
+.nm-report-output strong,
+.nm-report-output b {
+    color: var(--pf-global--Color--dark-100);
+    font-weight: var(--pf-global--FontWeight--bold);
+}
+
+.nm-report-output em,
+.nm-report-output i {
+    color: var(--pf-global--Color--200);
+    font-style: italic;
+}
+
+/* Alert-like sections for different types of content */
+.nm-report-output .alert-info,
+.nm-report-output .info {
+    background-color: var(--pf-global--info-color--50);
+    border-left: 4px solid var(--pf-global--info-color--100);
+    padding: var(--pf-global--spacer--md);
+    margin: var(--pf-global--spacer--md) 0;
+    border-radius: var(--pf-global--BorderRadius--sm);
+}
+
+.nm-report-output .alert-warning,
+.nm-report-output .warning {
+    background-color: var(--pf-global--warning-color--50);
+    border-left: 4px solid var(--pf-global--warning-color--100);
+    padding: var(--pf-global--spacer--md);
+    margin: var(--pf-global--spacer--md) 0;
+    border-radius: var(--pf-global--BorderRadius--sm);
+}
+
+.nm-report-output .alert-danger,
+.nm-report-output .critical {
+    background-color: var(--pf-global--danger-color--50);
+    border-left: 4px solid var(--pf-global--danger-color--100);
+    padding: var(--pf-global--spacer--md);
+    margin: var(--pf-global--spacer--md) 0;
+    border-radius: var(--pf-global--BorderRadius--sm);
+}
+
+.nm-report-output .alert-success,
+.nm-report-output .success {
+    background-color: var(--pf-global--success-color--50);
+    border-left: 4px solid var(--pf-global--success-color--100);
+    padding: var(--pf-global--spacer--md);
+    margin: var(--pf-global--spacer--md) 0;
+    border-radius: var(--pf-global--BorderRadius--sm);
+}
+
+.nm-report-loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 200px;
+    color: var(--pf-global--Color--200);
+}
+
+.nm-model-selector {
+    max-width: 250px;
+}
+
+.nm-generate-section {
+    background-color: var(--pf-global--BackgroundColor--light-100);
+    border: 1px solid var(--pf-global--BorderColor--100);
+    border-radius: var(--pf-global--BorderRadius--lg);
+    padding: var(--pf-global--spacer--lg);
+}
+
+.nm-section-divider {
+    height: 2px;
+    background: linear-gradient(to right, var(--pf-global--primary-color--100), var(--pf-global--secondary-color--100));
+    border: none;
+    margin: var(--pf-global--spacer--xl) 0;
+}
+
+.nm-data-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    gap: var(--pf-global--spacer--md);
+    margin-top: var(--pf-global--spacer--md);
+}
+
+.nm-data-stat {
+    text-align: center;
+    padding: var(--pf-global--spacer--sm);
+    background-color: var(--pf-global--BackgroundColor--200);
+    border-radius: var(--pf-global--BorderRadius--sm);
+}
+
+.nm-stat-number {
+    font-size: var(--pf-global--FontSize--lg);
+    font-weight: var(--pf-global--FontWeight--bold);
+    color: var(--pf-global--primary-color--100);
+}
+
+.nm-stat-label {
+    font-size: var(--pf-global--FontSize--xs);
+    color: var(--pf-global--Color--200);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-top: var(--pf-global--spacer--xs);
+}
+
+/* Report sections */
+.nm-report-section {
+    margin-bottom: var(--pf-global--spacer--xl);
+    padding-bottom: var(--pf-global--spacer--lg);
+    border-bottom: 1px solid var(--pf-global--BorderColor--100);
+}
+
+.nm-report-section:last-child {
+    border-bottom: none;
+}
+
+.nm-report-section h3 {
+    color: var(--pf-global--primary-color--100);
+    margin-bottom: var(--pf-global--spacer--md);
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Page Header -->
+<section class="pf-c-page__main-section pf-m-light nm-page-header">
+    <div class="pf-c-content">
+        <h1>
+            <i class="fas fa-brain pf-u-mr-sm"></i>
+            AI-Powered Network Analysis Reports
+        </h1>
+        <p>Generate comprehensive network analysis reports using AI to identify issues, security concerns, and optimization opportunities.</p>
+    </div>
+</section>
+
+<!-- AI Model Selection & Generate Section -->
+<section class="pf-c-page__main-section">
+    <div class="nm-generate-section">
+        <div class="pf-l-grid pf-m-all-12-col-on-sm pf-m-all-6-col-on-md pf-m-all-4-col-on-lg pf-m-gutter">
+            <!-- AI Model Selection -->
+            <div class="pf-l-grid__item">
+                <div class="pf-c-form__group">
+                    <div class="pf-c-form__group-label">
+                        <label class="pf-c-form__label" for="ai-model-select">
+                            <span class="pf-c-form__label-text">
+                                <i class="fas fa-robot pf-u-mr-sm"></i>
+                                AI Model
+                            </span>
+                        </label>
+                    </div>
+                    <div class="pf-c-form__group-control">
+                        <select class="pf-c-form-control nm-model-selector" id="ai-model-select">
+                            <option value="">Select AI Model...</option>
+                            <option value="gemini">Google Gemini</option>
+                            <option value="chatgpt">OpenAI ChatGPT</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Data Type Selection Status -->
+            <div class="pf-l-grid__item">
+                <div class="pf-c-form__group">
+                    <div class="pf-c-form__group-label">
+                        <label class="pf-c-form__label">
+                            <span class="pf-c-form__label-text">
+                                <i class="fas fa-database pf-u-mr-sm"></i>
+                                Selected Data Type
+                            </span>
+                        </label>
+                    </div>
+                    <div class="pf-c-form__group-control">
+                        <div id="selected-data-type" class="pf-c-form-control" style="height: auto; min-height: 36px; display: flex; align-items: center; color: var(--pf-global--Color--200);">
+                            Select a data type below...
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Generate Button -->
+            <div class="pf-l-grid__item">
+                <div class="pf-c-form__group">
+                    <div class="pf-c-form__group-label">
+                        <label class="pf-c-form__label">
+                            <span class="pf-c-form__label-text">&nbsp;</span>
+                        </label>
+                    </div>
+                    <div class="pf-c-form__group-control">
+                        <button class="pf-c-button pf-m-primary pf-m-block" id="generate-report-btn" onclick="generateReport()" disabled>
+                            <i class="fas fa-magic pf-u-mr-sm"></i>
+                            Generate AI Report
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- AI Model Status -->
+        <div class="pf-u-mt-md" id="ai-model-status">
+            <div class="pf-c-alert pf-m-info pf-m-inline" aria-label="Info alert">
+                <div class="pf-c-alert__icon">
+                    <i class="fas fa-info-circle" aria-hidden="true"></i>
+                </div>
+                <p class="pf-c-alert__title">
+                    Please select an AI model and data type to generate a report.
+                </p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<hr class="nm-section-divider">
+
+<!-- Data Type Selection Cards -->
+<section class="pf-c-page__main-section">
+    <div class="pf-c-content pf-u-mb-lg">
+        <h2>
+            <i class="fas fa-database pf-u-mr-sm"></i>
+            Select Data Source for Analysis
+        </h2>
+        <p>Choose the type of network data you want the AI to analyze and generate insights from.</p>
+    </div>
+
+    <div class="pf-l-gallery pf-m-gutter">
+        <!-- All Data Card -->
+        <div class="pf-l-gallery__item">
+            <div class="pf-c-card nm-ai-card" onclick="selectDataType('all_data', this)">
+                <div class="pf-c-card__header">
+                    <div class="nm-data-icon">
+                        <i class="fas fa-globe"></i>
+                    </div>
+                    <h3 class="pf-c-card__title">
+                        Complete Network Dataset
+                    </h3>
+                </div>
+                <div class="pf-c-card__body">
+                    <div class="nm-data-description">
+                        Analyze all historical data including database records, network connections, host information, and log files for each host. Provides the most comprehensive analysis.
+                    </div>
+                    <div class="nm-data-stats">
+                        <div class="nm-data-stat">
+                            <div class="nm-stat-number" id="all-data-hosts">-</div>
+                            <div class="nm-stat-label">Hosts</div>
+                        </div>
+                        <div class="nm-data-stat">
+                            <div class="nm-stat-number" id="all-data-connections">-</div>
+                            <div class="nm-stat-label">Connections</div>
+                        </div>
+                        <div class="nm-data-stat">
+                            <div class="nm-stat-number" id="all-data-logs">-</div>
+                            <div class="nm-stat-label">Log Entries</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="pf-c-card__footer">
+                    <div class="pf-c-label pf-m-blue">
+                        <span class="pf-c-label__content">
+                            <i class="fas fa-chart-line pf-u-mr-xs"></i>
+                            Historical Analysis
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Latest Capture Card -->
+        <div class="pf-l-gallery__item">
+            <div class="pf-c-card nm-ai-card" onclick="selectDataType('latest_capture', this)">
+                <div class="pf-c-card__header">
+                    <div class="nm-data-icon">
+                        <i class="fas fa-camera"></i>
+                    </div>
+                    <h3 class="pf-c-card__title">
+                        Latest Data Snapshot
+                    </h3>
+                </div>
+                <div class="pf-c-card__body">
+                    <div class="nm-data-description">
+                        Analyze the most recent network scan results, current host status, and latest connection data. Perfect for current state analysis and immediate issue detection.
+                    </div>
+                    <div class="nm-data-stats">
+                        <div class="nm-data-stat">
+                            <div class="nm-stat-number" id="latest-data-hosts">-</div>
+                            <div class="nm-stat-label">Active Hosts</div>
+                        </div>
+                        <div class="nm-data-stat">
+                            <div class="nm-stat-number" id="latest-data-connections">-</div>
+                            <div class="nm-stat-label">Recent Connections</div>
+                        </div>
+                        <div class="nm-data-stat">
+                            <div class="nm-stat-number" id="latest-data-time">-</div>
+                            <div class="nm-stat-label">Hours Ago</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="pf-c-card__footer">
+                    <div class="pf-c-label pf-m-green">
+                        <span class="pf-c-label__content">
+                            <i class="fas fa-clock pf-u-mr-xs"></i>
+                            Current State
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Latest Logs Card -->
+        <div class="pf-l-gallery__item">
+            <div class="pf-c-card nm-ai-card" onclick="selectDataType('latest_logs', this)">
+                <div class="pf-c-card__header">
+                    <div class="nm-data-icon">
+                        <i class="fas fa-file-alt"></i>
+                    </div>
+                    <h3 class="pf-c-card__title">
+                        Latest System Logs
+                    </h3>
+                </div>
+                <div class="pf-c-card__body">
+                    <div class="nm-data-description">
+                        Analyze the most recent log files collected from all monitored hosts. Ideal for troubleshooting recent issues and security event analysis.
+                    </div>
+                    <div class="nm-data-stats">
+                        <div class="nm-data-stat">
+                            <div class="nm-stat-number" id="logs-data-hosts">-</div>
+                            <div class="nm-stat-label">Log Sources</div>
+                        </div>
+                        <div class="nm-data-stat">
+                            <div class="nm-stat-number" id="logs-data-files">-</div>
+                            <div class="nm-stat-label">Log Files</div>
+                        </div>
+                        <div class="nm-data-stat">
+                            <div class="nm-stat-number" id="logs-data-size">-</div>
+                            <div class="nm-stat-label">MB</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="pf-c-card__footer">
+                    <div class="pf-c-label pf-m-orange">
+                        <span class="pf-c-label__content">
+                            <i class="fas fa-search pf-u-mr-xs"></i>
+                            Log Analysis
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<hr class="nm-section-divider">
+
+<!-- Report Output Section -->
+<section class="pf-c-page__main-section">
+    <div class="pf-c-card">
+        <div class="pf-c-card__header">
+            <div class="pf-c-card__header-main">
+                <h2 class="pf-c-card__title">
+                    <i class="fas fa-file-contract pf-u-mr-sm"></i>
+                    AI Analysis Report
+                </h2>
+            </div>
+            <div class="pf-c-card__actions" id="report-actions" style="display: none;">
+                <div class="pf-c-button-group" role="group">
+                    <button class="pf-c-button pf-m-secondary pf-m-small" onclick="copyReport()">
+                        <i class="fas fa-copy pf-u-mr-sm"></i>
+                        Copy Report
+                    </button>
+                    <button class="pf-c-button pf-m-secondary pf-m-small" onclick="downloadReport()">
+                        <i class="fas fa-download pf-u-mr-sm"></i>
+                        Download
+                    </button>
+                    <button class="pf-c-button pf-m-secondary pf-m-small" onclick="clearReport()">
+                        <i class="fas fa-trash pf-u-mr-sm"></i>
+                        Clear
+                    </button>
+                </div>
+            </div>
+        </div>
+        <div class="pf-c-card__body">
+            <div id="report-output" class="nm-report-output">
+                <div class="nm-report-loading">
+                    <i class="fas fa-brain fa-3x pf-u-mb-md" style="color: var(--pf-global--primary-color--100);"></i>
+                    <p><strong>AI Report Output</strong></p>
+                    <p>Select an AI model and data type, then click "Generate AI Report" to begin analysis.</p>
+                    <p class="pf-u-mt-md"><small>Reports will include:</small></p>
+                    <ul style="text-align: left; margin-top: var(--pf-global--spacer--sm);">
+                        <li>• System overview and summary</li>
+                        <li>• Technical issues identification</li>
+                        <li>• Security vulnerability analysis</li>
+                        <li>• Troubleshooting recommendations</li>
+                        <li>• Additional observations and insights</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Global variables
+let selectedDataType = null;
+let selectedCard = null;
+let currentAIModel = null;
+
+// Initialize page
+document.addEventListener('DOMContentLoaded', function() {
+    loadDataStats();
+    checkAIModelStatus();
+    
+    // Set up AI model change handler
+    document.getElementById('ai-model-select').addEventListener('change', function() {
+        currentAIModel = this.value;
+        checkAIModelStatus();
+        updateGenerateButton();
+    });
+});
+
+// Load data statistics for the cards
+function loadDataStats() {
+    fetch('/api/ai_reports/data_stats')
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            const stats = data.stats;
+            
+            // All data stats (Complete Network Dataset)
+            document.getElementById('all-data-hosts').textContent = stats.hosts.total || 0;
+            document.getElementById('all-data-connections').textContent = stats.connections.total || 0;
+            document.getElementById('all-data-logs').textContent = stats.logs.total || 0;
+            
+            // Latest capture stats (Latest Data Snapshot)
+            document.getElementById('latest-data-hosts').textContent = stats.hosts.online || 0;
+            document.getElementById('latest-data-connections').textContent = stats.connections.last_24h || 0;
+            // Calculate hours ago from time_range if available
+            let hoursAgo = 0;
+            if (stats.connections.time_range && stats.connections.time_range.latest) {
+                const latestTime = new Date(stats.connections.time_range.latest);
+                const now = new Date();
+                hoursAgo = Math.floor((now - latestTime) / (1000 * 60 * 60));
+            }
+            document.getElementById('latest-data-time').textContent = hoursAgo;
+            
+            // Latest logs stats (Latest System Logs)
+            document.getElementById('logs-data-hosts').textContent = stats.agents.active || 0;
+            document.getElementById('logs-data-files').textContent = stats.scan_data.agent_scans || 0;
+            // Convert log count to approximate MB size (assuming ~100 bytes per log entry)
+            const logSizeMB = Math.round((stats.logs.recent * 100) / (1024 * 1024) * 100) / 100;
+            document.getElementById('logs-data-size').textContent = logSizeMB;
+        }
+    })
+    .catch(error => {
+        console.error('Error loading data stats:', error);
+        // Set default values
+        document.querySelectorAll('.nm-stat-number').forEach(el => {
+            if (el.textContent === '-') el.textContent = '0';
+        });
+    });
+}
+
+// Check AI model configuration status
+function checkAIModelStatus() {
+    const statusDiv = document.getElementById('ai-model-status');
+    
+    if (!currentAIModel) {
+        statusDiv.innerHTML = `
+            <div class="pf-c-alert pf-m-info pf-m-inline" aria-label="Info alert">
+                <div class="pf-c-alert__icon">
+                    <i class="fas fa-info-circle" aria-hidden="true"></i>
+                </div>
+                <p class="pf-c-alert__title">
+                    Please select an AI model and data type to generate a report.
+                </p>
+            </div>
+        `;
+        return;
+    }
+
+    // Check if the selected model is configured
+    fetch(`/api/ai_settings/${currentAIModel}`)
+    .then(response => {
+        if (response.ok) {
+            return response.json();
+        } else if (response.status === 404) {
+            throw new Error('not_configured');
+        } else {
+            throw new Error('error_checking');
+        }
+    })
+    .then(data => {
+        if (data.success && data.settings && data.settings.enabled) {
+            // Model is configured and enabled
+            const modelName = currentAIModel === 'gemini' ? 'Google Gemini' : 'OpenAI ChatGPT';
+            statusDiv.innerHTML = `
+                <div class="pf-c-alert pf-m-success pf-m-inline" aria-label="Success alert">
+                    <div class="pf-c-alert__icon">
+                        <i class="fas fa-check-circle" aria-hidden="true"></i>
+                    </div>
+                    <p class="pf-c-alert__title">
+                        ${modelName} is configured and ready to generate reports.
+                    </p>
+                </div>
+            `;
+        } else {
+            // Model exists but not enabled
+            throw new Error('not_enabled');
+        }
+    })
+    .catch(error => {
+        const modelName = currentAIModel === 'gemini' ? 'Google Gemini' : 'OpenAI ChatGPT';
+        let message = '';
+        
+        if (error.message === 'not_configured') {
+            message = `${modelName} is not configured. Please configure it in AI Settings first.`;
+        } else if (error.message === 'not_enabled') {
+            message = `${modelName} is configured but not enabled. Please enable it in AI Settings.`;
+        } else {
+            message = `Error checking ${modelName} configuration. Please verify your settings.`;
+        }
+        
+        statusDiv.innerHTML = `
+            <div class="pf-c-alert pf-m-warning pf-m-inline" aria-label="Warning alert">
+                <div class="pf-c-alert__icon">
+                    <i class="fas fa-exclamation-triangle" aria-hidden="true"></i>
+                </div>
+                <p class="pf-c-alert__title">
+                    ${message}
+                </p>
+                <div class="pf-c-alert__action">
+                    <button class="pf-c-button pf-m-link pf-m-inline" onclick="window.location.href='/settings'">
+                        Configure AI Settings
+                    </button>
+                </div>
+            </div>
+        `;
+    });
+}
+
+// Select data type
+function selectDataType(dataType, cardElement) {
+    // Remove previous selection
+    if (selectedCard) {
+        selectedCard.classList.remove('selected');
+    }
+    
+    // Set new selection
+    selectedDataType = dataType;
+    selectedCard = cardElement;
+    cardElement.classList.add('selected');
+    
+    // Update UI
+    const selectedTypeDiv = document.getElementById('selected-data-type');
+    const typeNames = {
+        'all_data': 'Complete Network Dataset',
+        'latest_capture': 'Latest Data Snapshot',
+        'latest_logs': 'Latest System Logs'
+    };
+    
+    selectedTypeDiv.innerHTML = `
+        <i class="fas fa-check-circle pf-u-mr-sm" style="color: var(--pf-global--success-color--100);"></i>
+        ${typeNames[dataType]}
+    `;
+    
+    updateGenerateButton();
+}
+
+// Update generate button state
+function updateGenerateButton() {
+    const generateBtn = document.getElementById('generate-report-btn');
+    const canGenerate = currentAIModel && selectedDataType;
+    
+    generateBtn.disabled = !canGenerate;
+    
+    if (canGenerate) {
+        generateBtn.innerHTML = '<i class="fas fa-magic pf-u-mr-sm"></i>Generate AI Report';
+    } else {
+        generateBtn.innerHTML = '<i class="fas fa-magic pf-u-mr-sm"></i>Select Model & Data Type';
+    }
+}
+
+// Generate AI report
+function generateReport() {
+    if (!currentAIModel || !selectedDataType) {
+        showAlert('warning', 'Missing Selection', 'Please select both an AI model and data type.');
+        return;
+    }
+    
+    const generateBtn = document.getElementById('generate-report-btn');
+    const reportOutput = document.getElementById('report-output');
+    const reportActions = document.getElementById('report-actions');
+    
+    // Update UI for loading state
+    generateBtn.disabled = true;
+    generateBtn.innerHTML = '<i class="fas fa-spinner fa-spin pf-u-mr-sm"></i>Generating Report...';
+    
+    reportActions.style.display = 'none';
+    
+    // Show progress message with timeout information
+    const modelName = currentAIModel === 'gemini' ? 'Google Gemini' : 'OpenAI ChatGPT';
+    reportOutput.innerHTML = `
+        <div class="nm-report-loading">
+            <div class="pf-c-spinner pf-m-lg" role="progressbar">
+                <span class="pf-c-spinner__clipper"></span>
+                <span class="pf-c-spinner__lead-ball"></span>
+                <span class="pf-c-spinner__tail-ball"></span>
+            </div>
+            <p class="pf-u-mt-md"><strong>AI is analyzing your network data...</strong></p>
+            <p>This may take up to 2 minutes with ${modelName}. Please be patient.</p>
+            <p><small>Complex data analysis with many hosts and connections takes longer.</small></p>
+        </div>
+    `;
+    
+    // Create a timeout for the request (3 minutes = 180000ms)
+    const TIMEOUT_MS = 180000;
+    let timeoutId;
+    
+    // Create an AbortController for fetch request
+    const controller = new AbortController();
+    const signal = controller.signal;
+    
+    // Set timeout to abort the fetch after TIMEOUT_MS
+    timeoutId = setTimeout(() => {
+        controller.abort();
+    }, TIMEOUT_MS);
+    
+    // Generate the report with timeout handling
+    fetch('/api/ai_reports/generate', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            ai_model: currentAIModel,
+            data_type: selectedDataType
+        }),
+        signal: signal
+    })
+    .then(response => {
+        // Clear the timeout as we got a response
+        clearTimeout(timeoutId);
+        
+        // Check if response is ok
+        if (!response.ok) {
+            throw new Error(`Server returned ${response.status}: ${response.statusText}`);
+        }
+        
+        // Try to parse the response as JSON
+        return response.json().catch(e => {
+            console.error('JSON parse error:', e);
+            throw new Error('The server returned an invalid response format. Please try again.');
+        });
+    })
+    .then(data => {
+        if (data.success) {
+            // Display the HTML report (already formatted from backend)
+            let reportContent = data.report;
+            
+            // Handle different types of content that might be returned
+            if (typeof reportContent === 'object') {
+                // If it's still an object, convert to readable format
+                if (reportContent.error_details) {
+                    reportOutput.innerHTML = `
+                        <div style="color: #c9190b; font-weight: bold; margin-bottom: 10px;">
+                            Report Generation Failed
+                        </div>
+                        <div style="background: #f9f2f2; padding: 15px; border-left: 4px solid #c9190b; border-radius: 4px;">
+                            ${reportContent.error_details || 'Unknown error occurred'}
+                        </div>
+                    `;
+                } else {
+                    reportOutput.innerHTML = `
+                        <div style="color: #c9190b; font-weight: bold; margin-bottom: 10px;">
+                            Unexpected Response Format
+                        </div>
+                        <pre style="background: #f5f5f5; padding: 15px; border-radius: 4px; overflow: auto;">
+                            ${JSON.stringify(reportContent, null, 2)}
+                        </pre>
+                    `;
+                }
+            } else if (typeof reportContent === 'string') {
+                // String content - display as HTML
+                reportOutput.innerHTML = reportContent;
+            } else {
+                // Unknown format
+                reportOutput.innerHTML = `
+                    <div style="color: #c9190b; font-weight: bold; margin-bottom: 10px;">
+                        Invalid Report Format
+                    </div>
+                    <div>The server returned an unexpected format. Please try again.</div>
+                `;
+            }
+            
+            reportActions.style.display = 'block';
+            showAlert('success', 'Report Generated', 'AI analysis completed successfully.');
+        } else {
+            throw new Error(data.error || 'Report generation failed');
+        }
+    })
+    .catch(error => {
+        console.error('Error generating report:', error);
+        
+        // Check if this was an abort error (timeout)
+        let errorMessage = error.message;
+        if (error.name === 'AbortError') {
+            errorMessage = `Request timed out after ${TIMEOUT_MS/1000} seconds. The AI service may be overloaded or unresponsive.`;
+        }
+        
+        reportOutput.innerHTML = `
+            <div class="nm-report-loading">
+                <i class="fas fa-exclamation-triangle fa-3x pf-u-mb-md" style="color: var(--pf-global--danger-color--100);"></i>
+                <p><strong>Error Generating Report</strong></p>
+                <p>Failed to generate AI report: ${errorMessage}</p>
+                <p class="pf-u-mt-md"><small>Check your AI model configuration or try using a different data source or model.</small></p>
+            </div>
+        `;
+        
+        showAlert('error', 'Generation Failed', errorMessage);
+    })
+    .finally(() => {
+        // Restore generate button
+        generateBtn.disabled = false;
+        generateBtn.innerHTML = '<i class="fas fa-magic pf-u-mr-sm"></i>Generate AI Report';
+    });
+}
+
+
+// Utility function to escape HTML
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+// Copy report to clipboard (as markdown if available, otherwise as text)
+function copyReport() {
+    const reportElement = document.getElementById('report-output');
+    // Try to get the original markdown content if it's stored
+    let reportText = reportElement.textContent;
+    
+    // If there's a data attribute with original markdown, use that
+    if (reportElement.dataset.originalMarkdown) {
+        reportText = reportElement.dataset.originalMarkdown;
+    }
+    
+    navigator.clipboard.writeText(reportText).then(function() {
+        showAlert('success', 'Copied', 'Report copied to clipboard.');
+    }).catch(function(err) {
+        console.error('Could not copy text: ', err);
+        showAlert('error', 'Copy Failed', 'Could not copy report to clipboard.');
+    });
+}
+
+// Download report as markdown or text file
+function downloadReport() {
+    const reportElement = document.getElementById('report-output');
+    let reportText = reportElement.textContent;
+    let fileExtension = 'txt';
+    
+    // If there's original markdown, use that and save as .md
+    if (reportElement.dataset.originalMarkdown) {
+        reportText = reportElement.dataset.originalMarkdown;
+        fileExtension = 'md';
+    }
+    
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+    const filename = `ai-network-report-${timestamp}.${fileExtension}`;
+    
+    const mimeType = fileExtension === 'md' ? 'text/markdown' : 'text/plain';
+    const blob = new Blob([reportText], { type: mimeType });
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(url);
+    
+    showAlert('success', 'Downloaded', `Report saved as ${filename} to downloads folder.`);
+}
+
+// Clear report output
+function clearReport() {
+    const reportOutput = document.getElementById('report-output');
+    const reportActions = document.getElementById('report-actions');
+    
+    reportActions.style.display = 'none';
+    reportOutput.innerHTML = `
+        <div class="nm-report-loading">
+            <i class="fas fa-brain fa-3x pf-u-mb-md" style="color: var(--pf-global--primary-color--100);"></i>
+            <p><strong>AI Report Output</strong></p>
+            <p>Select an AI model and data type, then click "Generate AI Report" to begin analysis.</p>
+        </div>
+    `;
+}
+
+// Show alert notification
+function showAlert(type, title, message) {
+    const alertHtml = `
+        <div class="pf-c-alert pf-m-${type === 'error' ? 'danger' : type} pf-m-inline" aria-label="${type} alert">
+            <div class="pf-c-alert__icon">
+                <i class="fas fa-${type === 'error' ? 'exclamation-circle' : type === 'success' ? 'check-circle' : 'info-circle'}" aria-hidden="true"></i>
+            </div>
+            <p class="pf-c-alert__title">${title}: ${message}</p>
+            <div class="pf-c-alert__action">
+                <button class="pf-c-button pf-m-plain" type="button" aria-label="Close" onclick="this.parentElement.parentElement.remove()">
+                    <i class="fas fa-times" aria-hidden="true"></i>
+                </button>
+            </div>
+        </div>
+    `;
+    
+    const content = document.querySelector('.nm-content');
+    content.insertAdjacentHTML('afterbegin', alertHtml);
+    
+    // Auto-remove after 5 seconds
+    setTimeout(() => {
+        const alert = content.querySelector('.pf-c-alert');
+        if (alert) alert.remove();
+    }, 5000);
+}
+</script>
+{% endblock %}
