@@ -1257,14 +1257,18 @@ async function deploySelectedAgents() {
             progressText.textContent = progress + '%';
             statusElement.textContent = `Deploying to ${host.name} (${i + 1}/${selectedHostsArray.length})`;
             
-            logsElement.textContent += `\n[${new Date().toLocaleTimeString()}] Starting deployment to ${host.name} (${host.ip_address})\n`;
+            logsElement.textContent += `
+[${new Date().toLocaleTimeString()}] Starting deployment to ${host.name} (${host.ip_address})
+`;
             logsElement.scrollTop = logsElement.scrollHeight;
             
             try {
                 await deployAgentToHost(host);
-                logsElement.textContent += `[${new Date().toLocaleTimeString()}] ✓ Successfully deployed to ${host.name}\n`;
+                logsElement.textContent += `[${new Date().toLocaleTimeString()}] ✓ Successfully deployed to ${host.name}
+`;
             } catch (error) {
-                logsElement.textContent += `[${new Date().toLocaleTimeString()}] ✗ Failed to deploy to ${host.name}: ${error.message}\n`;
+                logsElement.textContent += `[${new Date().toLocaleTimeString()}] ✗ Failed to deploy to ${host.name}: ${error.message}
+`;
             }
             
             logsElement.scrollTop = logsElement.scrollHeight;
@@ -1583,13 +1587,15 @@ async function runAgentNow(hostname, ipAddress) {
         progressIndicator.style.width = '10%';
         progressText.textContent = '10%';
         statusElement.textContent = 'Connecting to agent...';
-        logsElement.textContent += `[${new Date().toLocaleTimeString()}] Connecting to ${hostname}\n`;
+        logsElement.textContent += `[${new Date().toLocaleTimeString()}] Connecting to ${hostname}
+`;
         
         // Step 2: Send run command (30%)
         progressIndicator.style.width = '30%';
         progressText.textContent = '30%';
         statusElement.textContent = 'Sending scan command...';
-        logsElement.textContent += `[${new Date().toLocaleTimeString()}] Sending immediate scan command\n`;
+        logsElement.textContent += `[${new Date().toLocaleTimeString()}] Sending immediate scan command
+`;
         logsElement.scrollTop = logsElement.scrollHeight;
         
         const response = await fetch('/api/agent/run_now', {
@@ -1611,13 +1617,15 @@ async function runAgentNow(hostname, ipAddress) {
         statusElement.textContent = 'Processing response...';
         
         if (data.success) {
-            logsElement.textContent += `[${new Date().toLocaleTimeString()}] ✓ Scan command sent successfully\n`;
+            logsElement.textContent += `[${new Date().toLocaleTimeString()}] ✓ Scan command sent successfully
+`;
             
             // Step 4: Waiting for scan to start (80%)
             progressIndicator.style.width = '80%';
             progressText.textContent = '80%';
             statusElement.textContent = 'Starting network scan...';
-            logsElement.textContent += `[${new Date().toLocaleTimeString()}] Agent is starting network scan\n`;
+            logsElement.textContent += `[${new Date().toLocaleTimeString()}] Agent is starting network scan
+`;
             
             // Simulate scan initialization delay
             await new Promise(resolve => setTimeout(resolve, 2000));
@@ -1626,8 +1634,10 @@ async function runAgentNow(hostname, ipAddress) {
             progressIndicator.style.width = '100%';
             progressText.textContent = '100%';
             statusElement.textContent = 'Scan initiated successfully';
-            logsElement.textContent += `[${new Date().toLocaleTimeString()}] ✓ Network scan has been triggered\n`;
-            logsElement.textContent += `[${new Date().toLocaleTimeString()}] Scan results will be available shortly\n`;
+            logsElement.textContent += `[${new Date().toLocaleTimeString()}] ✓ Network scan has been triggered
+`;
+            logsElement.textContent += `[${new Date().toLocaleTimeString()}] Scan results will be available shortly
+`;
             
             // Change progress bar to success color
             progressIndicator.parentElement.classList.add('pf-m-success');
@@ -1641,7 +1651,8 @@ async function runAgentNow(hostname, ipAddress) {
         progressIndicator.style.width = '100%';
         progressText.textContent = '100%';
         statusElement.textContent = 'Scan failed';
-        logsElement.textContent += `[${new Date().toLocaleTimeString()}] ✗ Error: ${error.message}\n`;
+        logsElement.textContent += `[${new Date().toLocaleTimeString()}] ✗ Error: ${error.message}
+`;
         
         // Change progress bar to error color
         progressIndicator.parentElement.classList.add('pf-m-danger');
@@ -1696,7 +1707,9 @@ function viewLastAgentData(agentId) {
 }
 
 async function uninstallAgent(hostname, ipAddress) {
-    if (!confirm(`Are you sure you want to uninstall the agent from ${hostname}?\n\nThis action cannot be undone.`)) {
+    if (!confirm(`Are you sure you want to uninstall the agent from ${hostname}?
+
+This action cannot be undone.`)) {
         return;
     }
     
@@ -1889,7 +1902,7 @@ function displayTestResults(testResults) {
     
     if (!testResults) {
         document.getElementById('test-results-content').innerHTML = 
-            '\u003cdiv class="pf-u-text-align-center pf-u-p-lg pf-u-color-200"\u003eNo test results available\u003c/div\u003e';
+            '<div class="pf-u-text-align-center pf-u-p-lg pf-u-color-200">No test results available</div>';
         return;
     }
     
@@ -1905,11 +1918,11 @@ function displayTestResults(testResults) {
     
     if (testArray.length === 0) {
         document.getElementById('test-results-content').innerHTML = 
-            '\u003cdiv class="pf-u-text-align-center pf-u-p-lg pf-u-color-200"\u003eNo test results available\u003c/div\u003e';
+            '<div class="pf-u-text-align-center pf-u-p-lg pf-u-color-200">No test results available</div>';
         return;
     }
     
-    const resultsHtml = testArray.map(test =\u003e `
+    const resultsHtml = testArray.map(test => `
         <div class="pf-c-card pf-m-compact pf-u-mb-md">
             <div class="pf-c-card__header">
                 <div class="pf-c-card__title">
@@ -2302,7 +2315,9 @@ async function performAgentUpdates(agentsToUpdate) {
                 agentProgressBar.className = 'nm-progress-bar nm-progress-animated';
             }
             
-            logsElement.textContent += `\n[${new Date().toLocaleTimeString()}] Starting update for ${agent.hostname} (${agent.ip_address})\n`;
+            logsElement.textContent += `
+[${new Date().toLocaleTimeString()}] Starting update for ${agent.hostname} (${agent.ip_address})
+`;
             logsElement.scrollTop = logsElement.scrollHeight;
             
             try {
@@ -2323,7 +2338,8 @@ async function performAgentUpdates(agentsToUpdate) {
                     agentProgressBar.className = 'nm-progress-bar success';
                 }
                 
-                logsElement.textContent += `[${new Date().toLocaleTimeString()}] ✓ Successfully updated ${agent.hostname} to version ${targetVersion}\n`;
+                logsElement.textContent += `[${new Date().toLocaleTimeString()}] ✓ Successfully updated ${agent.hostname} to version ${targetVersion}
+`;
             } catch (error) {
                 // Error individual progress bar
                 if (agentProgressBar) {
@@ -2331,7 +2347,8 @@ async function performAgentUpdates(agentsToUpdate) {
                     agentProgressBar.className = 'nm-progress-bar danger';
                 }
                 
-                logsElement.textContent += `[${new Date().toLocaleTimeString()}] ✗ Failed to update ${agent.hostname}: ${error.message}\n`;
+                logsElement.textContent += `[${new Date().toLocaleTimeString()}] ✗ Failed to update ${agent.hostname}: ${error.message}
+`;
             }
             
             logsElement.scrollTop = logsElement.scrollHeight;
