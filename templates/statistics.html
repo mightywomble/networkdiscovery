@@ -1,363 +1,406 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Statistics Dashboard - Home Lab</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <style>
-        body {
-            background-color: #f8f9fa;
-        }
-        
-        .stat-card {
-            background: white;
-            border-radius: 8px;
-            padding: 1.5rem;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-            border: 1px solid #e9ecef;
-            height: 100%;
-        }
-        
-        .stat-number {
-            font-size: 2.5rem;
-            font-weight: bold;
-            margin: 0;
-            line-height: 1;
-        }
-        
-        .stat-label {
-            color: #6c757d;
-            font-size: 0.875rem;
-            margin-top: 0.5rem;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-        
-        .chart-container {
-            position: relative;
-            height: 400px;
-        }
-        
-        .metric-row {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 0.75rem 0;
-            border-bottom: 1px solid #e9ecef;
-        }
-        
-        .metric-row:last-child {
-            border-bottom: none;
-        }
-        
-        .metric-label {
-            font-weight: 500;
-            color: #495057;
-        }
-        
-        .metric-value {
-            font-weight: bold;
-            color: #007bff;
-        }
-        
-        .section-title {
-            font-size: 1.25rem;
-            font-weight: 600;
-            color: #343a40;
-            margin-bottom: 1rem;
-        }
-        
-        .refresh-indicator {
-            display: inline-block;
-            margin-left: 0.5rem;
-        }
-        
-        .refresh-indicator.spinning {
-            animation: spin 1s linear infinite;
-        }
-        
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-        
-        .lan-vs-external {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-        }
-        
-        .lan-vs-external .stat-number {
-            color: white;
-        }
-        
-        .lan-vs-external .stat-label {
-            color: rgba(255,255,255,0.8);
-        }
-        
-        .status-indicator {
-            display: inline-block;
-            width: 12px;
-            height: 12px;
-            border-radius: 50%;
-            margin-right: 8px;
-        }
-        
-        .status-online {
-            background-color: #28a745;
-        }
-        
-        .status-offline {
-            background-color: #dc3545;
-        }
-        
-        .status-warning {
-            background-color: #ffc107;
-        }
-        
-        .navbar-brand {
-            font-weight: bold;
-        }
-        
-        .table-container {
-            max-height: 400px;
-            overflow-y: auto;
-        }
-        
-        .progress-thin {
-            height: 4px;
-        }
-        
-        .connection-timeline {
-            height: 300px;
-        }
-        
-        .filter-controls {
-            background: #f8f9fa;
-            padding: 1rem;
-            border-radius: 6px;
-            margin-bottom: 1rem;
-        }
-    </style>
-</head>
-<body>
-    <!-- Navigation -->
-    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
-        <div class="container-fluid">
-            <a class="navbar-brand" href="/">
-                <i class="fas fa-network-wired me-2"></i>Home Lab
-            </a>
-            <div class="navbar-nav">
-                <a class="nav-link" href="/"><i class="fas fa-home me-1"></i>Dashboard</a>
-                <a class="nav-link" href="/hosts"><i class="fas fa-server me-1"></i>Hosts</a>
-                <a class="nav-link" href="/agents"><i class="fas fa-robot me-1"></i>Agents</a>
-                <a class="nav-link" href="/network_diagram"><i class="fas fa-project-diagram me-1"></i>Network Map</a>
-                <a class="nav-link active" href="/statistics"><i class="fas fa-chart-bar me-1"></i>Statistics</a>
-            </div>
-            <div class="navbar-text">
-                <small>
-                    <i class="fas fa-clock me-1"></i>
-                    Last Updated: <span id="lastUpdateTime">Loading...</span>
-                    <i id="refreshIcon" class="fas fa-sync refresh-indicator ms-2"></i>
-                </small>
-            </div>
-        </div>
-    </nav>
+{% extends "base_patternfly.html" %}
 
-    <div class="container-fluid py-4">
-        <!-- Real-time Overview Stats -->
-        <div class="row mb-4">
-            <div class="col-12">
-                <h2 class="mb-3">
-                    <i class="fas fa-tachometer-alt me-2"></i>Network Statistics Dashboard
-                </h2>
+{% block title %}Statistics Dashboard - Home Lab{% endblock %}
+
+{% block breadcrumb %}
+<li class="pf-c-breadcrumb__item">
+    <a href="{{ url_for('index') }}" class="pf-c-breadcrumb__link">Home</a>
+</li>
+<li class="pf-c-breadcrumb__item" aria-current="page">
+    <a href="#" class="pf-c-breadcrumb__link pf-m-current" aria-current="page">Statistics</a>
+</li>
+{% endblock %}
+
+{% block styles %}
+<style>
+/* Statistics-specific styles */
+.nm-chart-container {
+    position: relative;
+    height: 300px;
+    margin-top: var(--pf-global--spacer--md);
+}
+
+.nm-chart-container.large {
+    height: 400px;
+}
+
+.nm-metric-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--pf-global--spacer--sm) 0;
+    border-bottom: 1px solid var(--pf-global--BorderColor--100);
+}
+
+.nm-metric-row:last-child {
+    border-bottom: none;
+}
+
+.nm-metric-label {
+    font-weight: var(--pf-global--FontWeight--semi-bold);
+    color: var(--pf-global--Color--dark-200);
+}
+
+.nm-metric-value {
+    font-weight: var(--pf-global--FontWeight--bold);
+    color: var(--pf-global--primary-color--100);
+}
+
+.nm-section-title {
+    display: flex;
+    align-items: center;
+    font-size: var(--pf-global--FontSize--lg);
+    font-weight: var(--pf-global--FontWeight--semi-bold);
+    color: var(--pf-global--Color--dark-100);
+    margin-bottom: var(--pf-global--spacer--md);
+}
+
+.nm-section-title i {
+    margin-right: var(--pf-global--spacer--sm);
+}
+
+.nm-status-indicator {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--pf-global--spacer--xs);
+}
+
+.nm-status-indicator::before {
+    content: '';
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    display: inline-block;
+}
+
+.nm-status-indicator.online::before {
+    background-color: var(--pf-global--success-color--100);
+}
+
+.nm-status-indicator.offline::before {
+    background-color: var(--pf-global--danger-color--100);
+}
+
+.nm-status-indicator.warning::before {
+    background-color: var(--pf-global--warning-color--100);
+}
+
+.nm-stats-overview {
+    margin-bottom: var(--pf-global--spacer--xl);
+}
+
+.nm-stats-grid {
+    display: grid;
+    gap: var(--pf-global--spacer--lg);
+    grid-template-columns: 1fr;
+}
+
+@media (min-width: 768px) {
+    .nm-stats-grid {
+        grid-template-columns: 1fr 1fr;
+    }
+}
+
+@media (min-width: 1200px) {
+    .nm-stats-grid-triple {
+        grid-template-columns: 1fr 1fr 1fr;
+    }
+}
+
+.nm-refresh-indicator {
+    display: inline-block;
+    margin-left: var(--pf-global--spacer--sm);
+}
+
+.nm-refresh-indicator.spinning {
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+.nm-table-container {
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+/* PatternFly table enhancements */
+.pf-c-table.pf-m-compact td {
+    padding: var(--pf-global--spacer--sm);
+}
+
+/* Statistics card styling */
+.nm-stat-card {
+    height: 100%;
+    transition: all 0.2s ease;
+}
+
+.nm-stat-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.nm-stat-value {
+    font-size: var(--pf-global--FontSize--2xl);
+    font-weight: var(--pf-global--FontWeight--bold);
+    line-height: 1.2;
+}
+
+.nm-stat-label {
+    font-size: var(--pf-global--FontSize--md);
+    font-weight: var(--pf-global--FontWeight--semi-bold);
+    color: var(--pf-global--Color--dark-200);
+    margin-top: var(--pf-global--spacer--xs);
+}
+
+/* Chart responsiveness */
+.nm-chart-responsive {
+    position: relative;
+    width: 100%;
+    height: 0;
+    padding-bottom: 60%; /* 16:10 aspect ratio */
+}
+
+.nm-chart-responsive canvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Page Header -->
+<section class="pf-c-page__main-section pf-m-light">
+    <div class="pf-c-content">
+        <h1>
+            <i class="fas fa-chart-bar pf-u-mr-sm"></i>
+            Statistics Dashboard
+        </h1>
+        <p class="pf-u-color-200">Network activity and performance analytics</p>
+    </div>
+</section>
+
+<!-- Last Update Info -->
+<section class="pf-c-page__main-section" style="padding-top: 0;">
+    <div class="pf-c-alert pf-m-info pf-m-inline pf-u-mb-md" style="border: none; background: transparent; padding: 0;">
+        <div class="pf-c-alert__title" style="color: var(--pf-global--Color--200); font-size: var(--pf-global--FontSize--sm);">
+            <i class="fas fa-clock pf-u-mr-sm"></i>
+            Last Updated: <span id="lastUpdateTime">Loading...</span>
+            <i id="refreshIcon" class="fas fa-sync nm-refresh-indicator pf-u-ml-sm"></i>
+        </div>
+    </div>
+</section>
+
+<!-- Overview Statistics -->
+<section class="pf-c-page__main-section" style="padding-top: 0;">
+    <div class="pf-l-gallery pf-m-gutter" id="overviewStats" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));">
+        <!-- Stats will be populated here -->
+    </div>
+</section>
+
+<!-- Main Dashboard Content -->
+<section class="pf-c-page__main-section">
+    <div class="nm-stats-grid">
+        <!-- LAN vs External Analysis -->
+        <div class="pf-c-card">
+            <div class="pf-c-card__header">
+                <div class="pf-c-card__title nm-section-title">
+                    <i class="fas fa-globe-americas"></i>LAN vs External Connections
+                </div>
             </div>
-        </div>
-
-        <!-- Key Metrics Row -->
-        <div class="row mb-4" id="overviewStats">
-            <!-- Stats will be populated here -->
-        </div>
-
-        <!-- Main Dashboard Content -->
-        <div class="row">
-            <!-- LAN vs External Analysis -->
-            <div class="col-xl-6 col-lg-6 mb-4">
-                <div class="stat-card">
-                    <div class="section-title">
-                        <i class="fas fa-globe-americas me-2"></i>LAN vs External Connections
-                    </div>
-                    <div class="row">
-                        <div class="col-6">
-                            <div class="text-center p-3 bg-success bg-opacity-10 rounded">
-                                <div class="h3 text-success mb-1" id="lanConnectionsCount">-</div>
-                                <div class="small text-muted">LAN Connections</div>
-                                <div class="small" id="lanPercentage">-</div>
-                            </div>
+            <div class="pf-c-card__body">
+                <div class="pf-l-flex pf-m-space-items-lg pf-u-mb-md">
+                    <div class="pf-l-flex__item pf-m-flex-1">
+                        <div class="pf-u-text-align-center pf-u-p-md" style="background-color: var(--pf-global--success-color--200); border-radius: var(--pf-global--BorderRadius--sm);">
+                            <div class="nm-stat-value" style="color: var(--pf-global--success-color--100);" id="lanConnectionsCount">-</div>
+                            <div class="pf-u-color-200 pf-u-font-size-sm">LAN Connections</div>
+                            <div class="pf-u-font-size-sm" id="lanPercentage">-</div>
                         </div>
-                        <div class="col-6">
-                            <div class="text-center p-3 bg-warning bg-opacity-10 rounded">
-                                <div class="h3 text-warning mb-1" id="externalConnectionsCount">-</div>
-                                <div class="small text-muted">External Connections</div>
-                                <div class="small" id="externalPercentage">-</div>
-                            </div>
+                    </div>
+                    <div class="pf-l-flex__item pf-m-flex-1">
+                        <div class="pf-u-text-align-center pf-u-p-md" style="background-color: var(--pf-global--warning-color--200); border-radius: var(--pf-global--BorderRadius--sm);">
+                            <div class="nm-stat-value" style="color: var(--pf-global--warning-color--100);" id="externalConnectionsCount">-</div>
+                            <div class="pf-u-color-200 pf-u-font-size-sm">External Connections</div>
+                            <div class="pf-u-font-size-sm" id="externalPercentage">-</div>
                         </div>
                     </div>
-                    <div class="mt-3">
-                        <canvas id="lanVsExternalChart" style="height: 200px;"></canvas>
-                    </div>
                 </div>
-            </div>
-
-            <!-- Connection Timeline -->
-            <div class="col-xl-6 col-lg-6 mb-4">
-                <div class="stat-card">
-                    <div class="section-title">
-                        <i class="fas fa-chart-line me-2"></i>Connection Activity (24 Hours)
-                    </div>
-                    <div class="connection-timeline">
-                        <canvas id="connectionTimelineChart"></canvas>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="row">
-            <!-- Top Hosts by Connections -->
-            <div class="col-xl-6 col-lg-12 mb-4">
-                <div class="stat-card">
-                    <div class="section-title">
-                        <i class="fas fa-server me-2"></i>Top Hosts by Connections
-                    </div>
-                    <div class="table-container">
-                        <table class="table table-sm table-hover">
-                            <thead class="table-light">
-                                <tr>
-                                    <th>Host</th>
-                                    <th>IP Address</th>
-                                    <th>Connections</th>
-                                    <th>Traffic</th>
-                                    <th>Destinations</th>
-                                </tr>
-                            </thead>
-                            <tbody id="topHostsTable">
-                                <tr><td colspan="5" class="text-center text-muted">Loading...</td></tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Top External Destinations -->
-            <div class="col-xl-6 col-lg-12 mb-4">
-                <div class="stat-card">
-                    <div class="section-title">
-                        <i class="fas fa-external-link-alt me-2"></i>Top External Destinations
-                    </div>
-                    <div class="table-container">
-                        <table class="table table-sm table-hover">
-                            <thead class="table-light">
-                                <tr>
-                                    <th>Destination IP</th>
-                                    <th>Connections</th>
-                                    <th>Source Hosts</th>
-                                    <th>Ports</th>
-                                    <th>Traffic</th>
-                                </tr>
-                            </thead>
-                            <tbody id="topExternalTable">
-                                <tr><td colspan="5" class="text-center text-muted">Loading...</td></tr>
-                            </tbody>
-                        </table>
-                    </div>
+                <div class="nm-chart-container">
+                    <canvas id="lanVsExternalChart"></canvas>
                 </div>
             </div>
         </div>
 
-        <!-- Historical Analysis -->
-        <div class="row">
-            <div class="col-xl-8 col-lg-12 mb-4">
-                <div class="stat-card">
-                    <div class="section-title">
-                        <i class="fas fa-history me-2"></i>Historical Analysis
-                    </div>
-                    <div class="row text-center">
-                        <div class="col">
-                            <div class="small text-muted">Last Hour</div>
-                            <div class="fw-bold" id="connections1h">-</div>
-                            <div class="small text-success" id="hosts1h">- hosts</div>
-                        </div>
-                        <div class="col">
-                            <div class="small text-muted">Last 6 Hours</div>
-                            <div class="fw-bold" id="connections6h">-</div>
-                            <div class="small text-success" id="hosts6h">- hosts</div>
-                        </div>
-                        <div class="col">
-                            <div class="small text-muted">Last Day</div>
-                            <div class="fw-bold" id="connections1d">-</div>
-                            <div class="small text-success" id="hosts1d">- hosts</div>
-                        </div>
-                        <div class="col">
-                            <div class="small text-muted">Last 3 Days</div>
-                            <div class="fw-bold" id="connections3d">-</div>
-                            <div class="small text-success" id="hosts3d">- hosts</div>
-                        </div>
-                        <div class="col">
-                            <div class="small text-muted">Last Week</div>
-                            <div class="fw-bold" id="connections1w">-</div>
-                            <div class="small text-success" id="hosts1w">- hosts</div>
-                        </div>
-                    </div>
+        <!-- Connection Timeline -->
+        <div class="pf-c-card">
+            <div class="pf-c-card__header">
+                <div class="pf-c-card__title nm-section-title">
+                    <i class="fas fa-chart-line"></i>Connection Activity (24 Hours)
                 </div>
             </div>
-
-            <!-- Protocol and Port Breakdown -->
-            <div class="col-xl-4 col-lg-12 mb-4">
-                <div class="stat-card">
-                    <div class="section-title">
-                        <i class="fas fa-network-wired me-2"></i>Protocol Breakdown
-                    </div>
-                    <div id="protocolBreakdown">
-                        <p class="text-muted text-center">Loading protocol statistics...</p>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Real-time Activity Feed -->
-        <div class="row">
-            <div class="col-12">
-                <div class="stat-card">
-                    <div class="section-title">
-                        <i class="fas fa-activity me-2"></i>Real-time Activity Monitor
-                    </div>
-                    <div class="row">
-                        <div class="col-md-3 col-6 text-center">
-                            <div class="h4 text-primary mb-1" id="realtimeConnections">-</div>
-                            <div class="small text-muted">Active Connections</div>
-                        </div>
-                        <div class="col-md-3 col-6 text-center">
-                            <div class="h4 text-success mb-1" id="realtimeHosts">-</div>
-                            <div class="small text-muted">Active Hosts</div>
-                        </div>
-                        <div class="col-md-3 col-6 text-center">
-                            <div class="h4 text-info mb-1" id="realtimeAgents">-</div>
-                            <div class="small text-muted">Active Agents</div>
-                        </div>
-                        <div class="col-md-3 col-6 text-center">
-                            <div class="h4 text-warning mb-1" id="realtimeHeartbeats">-</div>
-                            <div class="small text-muted">Recent Heartbeats</div>
-                        </div>
-                    </div>
+            <div class="pf-c-card__body">
+                <div class="nm-chart-container">
+                    <canvas id="connectionTimelineChart"></canvas>
                 </div>
             </div>
         </div>
     </div>
+</section>
 
-    <!-- Scripts -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+<!-- Additional Statistics Sections -->
+<section class="pf-c-page__main-section">
+    <div class="nm-stats-grid">
+        <!-- Top Hosts by Connections -->
+        <div class="pf-c-card">
+            <div class="pf-c-card__header">
+                <div class="pf-c-card__title nm-section-title">
+                    <i class="fas fa-server"></i>Top Hosts by Connections
+                </div>
+            </div>
+            <div class="pf-c-card__body">
+                <div class="nm-table-container">
+                    <table class="pf-c-table pf-m-compact pf-m-grid-md">
+                        <thead>
+                            <tr>
+                                <th>Host</th>
+                                <th>IP Address</th>
+                                <th>Connections</th>
+                                <th>Traffic</th>
+                                <th>Destinations</th>
+                            </tr>
+                        </thead>
+                        <tbody id="topHostsTable">
+                            <tr><td colspan="5" class="pf-u-text-align-center pf-u-color-200">Loading...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Top External Destinations -->
+        <div class="pf-c-card">
+            <div class="pf-c-card__header">
+                <div class="pf-c-card__title nm-section-title">
+                    <i class="fas fa-external-link-alt"></i>Top External Destinations
+                </div>
+            </div>
+            <div class="pf-c-card__body">
+                <div class="nm-table-container">
+                    <table class="pf-c-table pf-m-compact pf-m-grid-md">
+                        <thead>
+                            <tr>
+                                <th>Destination IP</th>
+                                <th>Connections</th>
+                                <th>Source Hosts</th>
+                                <th>Ports</th>
+                                <th>Traffic</th>
+                            </tr>
+                        </thead>
+                        <tbody id="topExternalTable">
+                            <tr><td colspan="5" class="pf-u-text-align-center pf-u-color-200">Loading...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Historical Analysis Section -->
+<section class="pf-c-page__main-section">
+    <div class="nm-stats-grid" style="grid-template-columns: 2fr 1fr;">
+        <!-- Historical Analysis -->
+        <div class="pf-c-card">
+            <div class="pf-c-card__header">
+                <div class="pf-c-card__title nm-section-title">
+                    <i class="fas fa-history"></i>Historical Analysis
+                </div>
+            </div>
+            <div class="pf-c-card__body">
+                <div class="pf-l-flex pf-m-space-items-lg pf-u-text-align-center">
+                    <div class="pf-l-flex__item pf-m-flex-1">
+                        <div class="pf-u-font-size-sm pf-u-color-200">Last Hour</div>
+                        <div class="pf-u-font-weight-bold pf-u-font-size-lg" id="connections1h">-</div>
+                        <div class="pf-u-font-size-sm" style="color: var(--pf-global--success-color--100);" id="hosts1h">- hosts</div>
+                    </div>
+                    <div class="pf-l-flex__item pf-m-flex-1">
+                        <div class="pf-u-font-size-sm pf-u-color-200">Last 6 Hours</div>
+                        <div class="pf-u-font-weight-bold pf-u-font-size-lg" id="connections6h">-</div>
+                        <div class="pf-u-font-size-sm" style="color: var(--pf-global--success-color--100);" id="hosts6h">- hosts</div>
+                    </div>
+                    <div class="pf-l-flex__item pf-m-flex-1">
+                        <div class="pf-u-font-size-sm pf-u-color-200">Last Day</div>
+                        <div class="pf-u-font-weight-bold pf-u-font-size-lg" id="connections1d">-</div>
+                        <div class="pf-u-font-size-sm" style="color: var(--pf-global--success-color--100);" id="hosts1d">- hosts</div>
+                    </div>
+                    <div class="pf-l-flex__item pf-m-flex-1">
+                        <div class="pf-u-font-size-sm pf-u-color-200">Last 3 Days</div>
+                        <div class="pf-u-font-weight-bold pf-u-font-size-lg" id="connections3d">-</div>
+                        <div class="pf-u-font-size-sm" style="color: var(--pf-global--success-color--100);" id="hosts3d">- hosts</div>
+                    </div>
+                    <div class="pf-l-flex__item pf-m-flex-1">
+                        <div class="pf-u-font-size-sm pf-u-color-200">Last Week</div>
+                        <div class="pf-u-font-weight-bold pf-u-font-size-lg" id="connections1w">-</div>
+                        <div class="pf-u-font-size-sm" style="color: var(--pf-global--success-color--100);" id="hosts1w">- hosts</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Protocol and Port Breakdown -->
+        <div class="pf-c-card">
+            <div class="pf-c-card__header">
+                <div class="pf-c-card__title nm-section-title">
+                    <i class="fas fa-network-wired"></i>Protocol Breakdown
+                </div>
+            </div>
+            <div class="pf-c-card__body">
+                <div id="protocolBreakdown">
+                    <p class="pf-u-text-align-center pf-u-color-200">Loading protocol statistics...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Real-time Activity Monitor -->
+<section class="pf-c-page__main-section">
+    <div class="pf-c-card">
+        <div class="pf-c-card__header">
+            <div class="pf-c-card__title nm-section-title">
+                <i class="fas fa-activity"></i>Real-time Activity Monitor
+            </div>
+        </div>
+        <div class="pf-c-card__body">
+            <div class="pf-l-gallery pf-m-gutter" style="grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));">
+                <div class="pf-u-text-align-center">
+                    <div class="nm-stat-value" style="color: var(--pf-global--primary-color--100);" id="realtimeConnections">-</div>
+                    <div class="pf-u-font-size-sm pf-u-color-200">Active Connections</div>
+                </div>
+                <div class="pf-u-text-align-center">
+                    <div class="nm-stat-value" style="color: var(--pf-global--success-color--100);" id="realtimeHosts">-</div>
+                    <div class="pf-u-font-size-sm pf-u-color-200">Active Hosts</div>
+                </div>
+                <div class="pf-u-text-align-center">
+                    <div class="nm-stat-value" style="color: var(--pf-global--info-color--100);" id="realtimeAgents">-</div>
+                    <div class="pf-u-font-size-sm pf-u-color-200">Active Agents</div>
+                </div>
+                <div class="pf-u-text-align-center">
+                    <div class="nm-stat-value" style="color: var(--pf-global--warning-color--100);" id="realtimeHeartbeats">-</div>
+                    <div class="pf-u-font-size-sm pf-u-color-200">Recent Heartbeats</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
     
     <script>
         // Global variables
@@ -462,14 +505,16 @@
             ];
 
             container.innerHTML = stats.map(stat => `
-                <div class="col-xl col-lg-4 col-md-6 mb-3">
-                    <div class="stat-card text-center">
-                        <div class="mb-2">
-                            <i class="${stat.icon} fa-2x text-${stat.color}"></i>
+                <div class="pf-l-gallery__item">
+                    <div class="pf-c-card nm-stat-card">
+                        <div class="pf-c-card__body pf-u-text-align-center">
+                            <div class="pf-u-mb-sm">
+                                <i class="${stat.icon} fa-2x" style="color: var(--pf-global--${stat.color}-color--100);"></i>
+                            </div>
+                            <div class="nm-stat-value" style="color: var(--pf-global--${stat.color}-color--100);">${stat.value.toLocaleString()}</div>
+                            <div class="nm-stat-label">${stat.title}</div>
+                            <div class="pf-u-font-size-sm pf-u-color-200 pf-u-mt-sm">${stat.subtitle}</div>
                         </div>
-                        <h3 class="stat-number text-${stat.color}">${stat.value.toLocaleString()}</h3>
-                        <div class="stat-label">${stat.title}</div>
-                        <div class="small text-muted mt-1">${stat.subtitle}</div>
                     </div>
                 </div>
             `).join('');
