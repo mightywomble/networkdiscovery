@@ -598,17 +598,86 @@
 <!-- Version Summary Modal -->
 <div class="pf-c-backdrop" id="version-summary-backdrop" hidden>
     <div class="pf-l-bullseye">
-        <div class="pf-c-modal-box pf-m-lg" role="dialog" aria-modal="true" aria-labelledby="version-summary-title">
-            <button class="pf-c-button pf-m-plain" type="button" aria-label="Close" onclick="closeVersionSummaryModal()">
+        <div class="pf-c-modal-box pf-m-xl" role="dialog" aria-modal="true" aria-labelledby="version-summary-title">
+            <button class="pf-c-button pf-m-plain" type="button" aria-label="Close" onclick="closeVersionSummaryModal()" id="close-version-modal-btn">
                 <i class="fas fa-times" aria-hidden="true"></i>
             </button>
             <header class="pf-c-modal-box__header">
                 <h1 class="pf-c-modal-box__title" id="version-summary-title">
                     <i class="fas fa-code-branch pf-u-mr-sm"></i>
-                    Agent Version Summary
+                    Agent Version Management
                 </h1>
             </header>
             <div class="pf-c-modal-box__body">
+                <!-- Statistics Section -->
+                <div class="pf-l-gallery pf-m-gutter pf-u-mb-lg" style="grid-template-columns: repeat(4, 1fr);">
+                    <div class="pf-c-card nm-stat-card">
+                        <div class="pf-c-card__body pf-u-text-align-center">
+                            <div class="nm-stat-value" style="color: var(--pf-global--primary-color--100)" id="version-total-hosts">-</div>
+                            <div class="nm-stat-label">Total Hosts</div>
+                        </div>
+                    </div>
+                    <div class="pf-c-card nm-stat-card">
+                        <div class="pf-c-card__body pf-u-text-align-center">
+                            <div class="nm-stat-value" style="color: var(--pf-global--success-color--100)" id="version-total-agents">-</div>
+                            <div class="nm-stat-label">Total Agents</div>
+                        </div>
+                    </div>
+                    <div class="pf-c-card nm-stat-card">
+                        <div class="pf-c-card__body pf-u-text-align-center">
+                            <div class="nm-stat-value" style="color: var(--pf-global--info-color--100)" id="version-online-agents">-</div>
+                            <div class="nm-stat-label">Online Agents</div>
+                        </div>
+                    </div>
+                    <div class="pf-c-card nm-stat-card">
+                        <div class="pf-c-card__body pf-u-text-align-center">
+                            <div class="nm-stat-value" style="color: var(--pf-global--danger-color--100)" id="version-offline-agents">-</div>
+                            <div class="nm-stat-label">Offline Agents</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Action Buttons -->
+                <div class="pf-u-text-align-center pf-u-mb-lg">
+                    <div class="pf-c-button-group">
+                        <button class="pf-c-button pf-m-primary" onclick="updateSelectedAgents()" disabled id="update-selected-agents-btn">
+                            <i class="fas fa-arrow-up pf-u-mr-sm"></i>
+                            Update Selected
+                        </button>
+                        <button class="pf-c-button pf-m-secondary" onclick="updateAllAgents()" disabled id="update-all-agents-btn">
+                            <i class="fas fa-sync-alt pf-u-mr-sm"></i>
+                            Update All
+                        </button>
+                        <button class="pf-c-button pf-m-control" onclick="selectAllVersionHosts()" id="select-all-version-btn">
+                            <i class="fas fa-check-square pf-u-mr-sm"></i>
+                            Select All
+                        </button>
+                        <button class="pf-c-button pf-m-control" onclick="refreshVersionSummary()" id="refresh-versions-btn">
+                            <i class="fas fa-sync-alt pf-u-mr-sm"></i>
+                            Refresh
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Update Progress (Hidden by default) -->
+                <div class="pf-u-mb-lg" id="version-update-progress-container" hidden>
+                    <div class="pf-c-progress">
+                        <div class="pf-c-progress__description">
+                            <span id="version-update-status">Starting update...</span>
+                        </div>
+                        <div class="pf-c-progress__status">
+                            <span class="pf-c-progress__measure" id="version-update-progress-text">0%</span>
+                        </div>
+                        <div class="pf-c-progress__bar">
+                            <div class="pf-c-progress__indicator" style="width: 0%;" id="version-update-progress">
+                                <span class="pf-c-progress__measure">0%</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="nm-code-block pf-u-mt-md" style="max-height: 200px;" id="version-update-logs"></div>
+                </div>
+                
+                <!-- Version Summary Content -->
                 <div id="version-summary-content">
                     <div class="pf-u-text-align-center pf-u-p-lg">
                         <div class="pf-c-spinner" role="progressbar">
@@ -620,13 +689,6 @@
                     </div>
                 </div>
             </div>
-            <footer class="pf-c-modal-box__footer">
-                <button class="pf-c-button pf-m-primary" onclick="refreshVersionSummary()" id="refresh-versions-btn">
-                    <i class="fas fa-sync-alt pf-u-mr-sm"></i>
-                    Refresh
-                </button>
-                <button class="pf-c-button pf-m-link" onclick="closeVersionSummaryModal()">Close</button>
-            </footer>
         </div>
     </div>
 </div>
@@ -1626,31 +1688,58 @@ function closeAgentDataModal() {
     document.getElementById('agent-data-backdrop').hidden = true;
 }
 
+// Global variables for version management
+let selectedVersionHosts = new Set();
+let versionUpdateInProgress = false;
+let latestVersion = '1.0.0'; // This should be fetched from API
+
 // Version Summary Modal Functions
 function showVersionSummary() {
     document.getElementById('version-summary-backdrop').hidden = false;
+    selectedVersionHosts.clear();
     loadVersionSummary();
 }
 
 function closeVersionSummaryModal() {
     document.getElementById('version-summary-backdrop').hidden = true;
+    selectedVersionHosts.clear();
 }
 
 async function loadVersionSummary() {
     try {
-        const response = await fetch('/api/agent/versions');
-        const data = await response.json();
+        // Load both agent versions and latest version info
+        const [versionsResponse, latestResponse] = await Promise.all([
+            fetch('/api/agent/versions'),
+            fetch('/api/agent/latest_version')
+        ]);
         
-        if (data.success) {
-            displayVersionSummary(data.agents || []);
+        const versionsData = await versionsResponse.json();
+        const latestData = latestResponse.ok ? await latestResponse.json() : { version: '1.0.0' };
+        
+        if (versionsData.success) {
+            latestVersion = latestData.version || '1.0.0';
+            await displayVersionSummary(versionsData.agents || []);
+            updateVersionStats(versionsData.agents || []);
         } else {
             document.getElementById('version-summary-content').innerHTML = 
-                `<div class="pf-c-alert pf-m-danger pf-m-inline"><div class="pf-c-alert__icon"><i class="fas fa-exclamation-circle"></i></div><p class="pf-c-alert__title">Failed to load version data: ${data.error}</p></div>`;
+                `<div class="pf-c-alert pf-m-danger pf-m-inline"><div class="pf-c-alert__icon"><i class="fas fa-exclamation-circle"></i></div><p class="pf-c-alert__title">Failed to load version data: ${versionsData.error}</p></div>`;
         }
     } catch (error) {
         document.getElementById('version-summary-content').innerHTML = 
             `<div class="pf-c-alert pf-m-danger pf-m-inline"><div class="pf-c-alert__icon"><i class="fas fa-exclamation-circle"></i></div><p class="pf-c-alert__title">Error loading version data: ${error.message}</p></div>`;
     }
+}
+
+function updateVersionStats(agents) {
+    const totalHosts = hosts.length;
+    const totalAgents = agents.length;
+    const onlineAgents = agents.filter(a => a.heartbeat_status === 'online').length;
+    const offlineAgents = agents.filter(a => a.heartbeat_status === 'offline').length;
+    
+    document.getElementById('version-total-hosts').textContent = totalHosts;
+    document.getElementById('version-total-agents').textContent = totalAgents;
+    document.getElementById('version-online-agents').textContent = onlineAgents;
+    document.getElementById('version-offline-agents').textContent = offlineAgents;
 }
 
 function displayVersionSummary(versions) {
@@ -1660,43 +1749,325 @@ function displayVersionSummary(versions) {
         return;
     }
     
-    const versionGroups = versions.reduce((acc, agent) => {
-        const version = agent.agent_version || 'Unknown';
-        if (!acc[version]) {
-            acc[version] = [];
-        }
-        acc[version].push(agent);
-        return acc;
-    }, {});
-    
-    const versionsHtml = Object.entries(versionGroups).map(([version, agents]) => `
-        <div class="pf-c-card pf-m-compact pf-u-mb-md">
-            <div class="pf-c-card__header">
-                <div class="pf-c-card__title">
-                    <i class="fas fa-code-branch pf-u-mr-sm"></i>
-                    Version ${version}
-                </div>
-                <div class="pf-c-card__actions">
-                    <span class="pf-c-badge pf-m-read">${agents.length}</span>
-                </div>
-            </div>
-            <div class="pf-c-card__body">
-                <div class="pf-l-flex pf-m-column pf-m-gutter-sm">
-                    ${agents.map(agent => `
-                        <div class="pf-l-flex__item">
-                            <span class="pf-u-font-weight-bold">${agent.hostname}</span>
-                            <span class="pf-u-color-200">(${agent.ip_address})</span>
+    // Create individual cards for each host
+    const hostCards = versions.map(agent => {
+        const isSelected = selectedVersionHosts.has(agent.agent_id);
+        const currentVersion = agent.agent_version || 'Unknown';
+        const isOutdated = currentVersion !== latestVersion && currentVersion !== 'Unknown';
+        const versionStatusClass = currentVersion === latestVersion ? 'green' : isOutdated ? 'orange' : 'red';
+        const versionStatusText = currentVersion === latestVersion ? 'Current' : isOutdated ? 'Outdated' : 'Unknown';
+        
+        return `
+            <div class="pf-l-gallery__item">
+                <div class="pf-c-card pf-m-compact ${isSelected ? 'nm-agent-card selected' : 'nm-agent-card'}" onclick="toggleVersionHostSelection('${agent.agent_id}', event)">
+                    <div class="pf-c-card__header">
+                        <div class="pf-c-card__header-main">
+                            <div class="nm-agent-header">
+                                <div>
+                                    <h4 class="pf-c-card__title">
+                                        <i class="fas fa-server pf-u-mr-xs"></i>
+                                        ${agent.hostname}
+                                    </h4>
+                                    <p class="pf-u-color-200 pf-u-font-size-sm">${agent.ip_address}</p>
+                                </div>
+                                <div class="pf-c-check">
+                                    <input class="pf-c-check__input" type="checkbox" 
+                                           id="version-check-${agent.agent_id}" 
+                                           ${isSelected ? 'checked' : ''}
+                                           onchange="event.stopPropagation(); toggleVersionHostSelection('${agent.agent_id}')">
+                                    <label class="pf-c-check__label" for="version-check-${agent.agent_id}"></label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="pf-c-card__body">
+                        <!-- Current Version -->
+                        <div class="pf-u-mb-sm">
+                            <span class="pf-u-font-weight-bold">Current Version:</span>
+                            <span class="pf-c-label pf-m-${versionStatusClass} pf-u-ml-sm">
+                                <i class="fas fa-${versionStatusClass === 'green' ? 'check' : versionStatusClass === 'orange' ? 'exclamation-triangle' : 'times'} pf-u-mr-xs"></i>
+                                ${currentVersion} (${versionStatusText})
+                            </span>
+                        </div>
+                        
+                        <!-- Version Select -->
+                        <div class="pf-u-mb-sm">
+                            <label class="pf-c-form__label" for="version-select-${agent.agent_id}">
+                                <span class="pf-c-form__label-text">Update to:</span>
+                            </label>
+                            <select class="pf-c-form-control" id="version-select-${agent.agent_id}" onchange="event.stopPropagation()">
+                                <option value="${latestVersion}" ${currentVersion === latestVersion ? 'selected' : ''}>${latestVersion} (Latest)</option>
+                                ${currentVersion !== latestVersion && currentVersion !== 'Unknown' ? 
+                                    `<option value="${currentVersion}" selected>${currentVersion} (Current)</option>` : ''}
+                            </select>
+                        </div>
+                        
+                        <!-- Agent Status -->
+                        <div class="pf-u-mb-sm">
+                            <span class="pf-u-font-weight-bold">Status:</span>
                             <span class="pf-c-label pf-m-${agent.heartbeat_status === 'online' ? 'green' : agent.heartbeat_status === 'warning' ? 'orange' : 'red'} pf-u-ml-sm">
                                 ${agent.heartbeat_status || 'unknown'}
                             </span>
                         </div>
-                    `).join('')}
+                        
+                        <!-- Last Communication -->
+                        <div class="pf-u-mb-sm">
+                            <span class="pf-u-font-weight-bold pf-u-font-size-sm">Last Heartbeat:</span>
+                            <span class="pf-u-color-200 pf-u-font-size-sm">
+                                ${agent.last_heartbeat ? new Date(agent.last_heartbeat).toLocaleString() : 'Never'}
+                            </span>
+                        </div>
+                        
+                        <!-- Progress Bar (Hidden by default) -->
+                        <div class="nm-progress-container" id="version-progress-${agent.agent_id}" style="display: none;">
+                            <div class="nm-progress-bar" id="version-progress-bar-${agent.agent_id}"></div>
+                        </div>
+                    </div>
                 </div>
             </div>
-        </div>
-    `).join('');
+        `;
+    }).join('');
     
-    document.getElementById('version-summary-content').innerHTML = versionsHtml;
+    document.getElementById('version-summary-content').innerHTML = 
+        `<div class="pf-l-gallery pf-m-gutter">${hostCards}</div>`;
+    
+    updateVersionActionButtons();
+}
+
+function toggleVersionHostSelection(agentId, event) {
+    if (event) event.stopPropagation();
+    
+    if (versionUpdateInProgress) {
+        showAlert('warning', 'Update in progress, cannot change selection');
+        return;
+    }
+    
+    if (selectedVersionHosts.has(agentId)) {
+        selectedVersionHosts.delete(agentId);
+    } else {
+        selectedVersionHosts.add(agentId);
+    }
+    
+    // Re-render to update selection state
+    loadVersionSummary();
+}
+
+function selectAllVersionHosts() {
+    if (versionUpdateInProgress) {
+        showAlert('warning', 'Update in progress, cannot change selection');
+        return;
+    }
+    
+    // Get all available agent IDs from the DOM
+    const checkboxes = document.querySelectorAll('[id^="version-check-"]');
+    const agentIds = Array.from(checkboxes).map(cb => cb.id.replace('version-check-', ''));
+    
+    if (selectedVersionHosts.size === agentIds.length) {
+        // Unselect all
+        selectedVersionHosts.clear();
+    } else {
+        // Select all
+        selectedVersionHosts.clear();
+        agentIds.forEach(id => selectedVersionHosts.add(id));
+    }
+    
+    loadVersionSummary();
+}
+
+function updateVersionActionButtons() {
+    const updateSelectedBtn = document.getElementById('update-selected-agents-btn');
+    const updateAllBtn = document.getElementById('update-all-agents-btn');
+    const selectAllBtn = document.getElementById('select-all-version-btn');
+    
+    const hasSelection = selectedVersionHosts.size > 0;
+    const totalAgents = document.querySelectorAll('[id^="version-check-"]').length;
+    
+    if (updateSelectedBtn) {
+        updateSelectedBtn.disabled = !hasSelection || versionUpdateInProgress;
+    }
+    
+    if (updateAllBtn) {
+        updateAllBtn.disabled = totalAgents === 0 || versionUpdateInProgress;
+    }
+    
+    if (selectAllBtn) {
+        if (selectedVersionHosts.size === 0) {
+            selectAllBtn.innerHTML = '<i class="fas fa-check-square pf-u-mr-sm"></i>Select All';
+        } else if (selectedVersionHosts.size === totalAgents) {
+            selectAllBtn.innerHTML = '<i class="fas fa-square pf-u-mr-sm"></i>Unselect All';
+        } else {
+            selectAllBtn.innerHTML = '<i class="fas fa-minus-square pf-u-mr-sm"></i>Select All';
+        }
+    }
+}
+
+// Update functions
+async function updateSelectedAgents() {
+    if (selectedVersionHosts.size === 0) {
+        showAlert('warning', 'Please select agents to update');
+        return;
+    }
+    
+    if (versionUpdateInProgress) {
+        showAlert('warning', 'Update already in progress');
+        return;
+    }
+    
+    const selectedAgents = agents.filter(a => selectedVersionHosts.has(a.agent_id));
+    await performAgentUpdates(selectedAgents);
+}
+
+async function updateAllAgents() {
+    if (agents.length === 0) {
+        showAlert('warning', 'No agents available to update');
+        return;
+    }
+    
+    if (versionUpdateInProgress) {
+        showAlert('warning', 'Update already in progress');
+        return;
+    }
+    
+    if (!confirm('Are you sure you want to update all agents? This will update all deployed agents to the latest version.')) {
+        return;
+    }
+    
+    await performAgentUpdates(agents);
+}
+
+async function performAgentUpdates(agentsToUpdate) {
+    versionUpdateInProgress = true;
+    
+    // Show progress container
+    document.getElementById('version-update-progress-container').hidden = false;
+    
+    // Disable action buttons and close button
+    document.getElementById('close-version-modal-btn').disabled = true;
+    updateVersionActionButtons();
+    
+    const progressIndicator = document.getElementById('version-update-progress');
+    const progressText = document.getElementById('version-update-progress-text');
+    const statusElement = document.getElementById('version-update-status');
+    const logsElement = document.getElementById('version-update-logs');
+    
+    progressIndicator.style.width = '0%';
+    progressText.textContent = '0%';
+    statusElement.textContent = 'Starting agent updates...';
+    logsElement.textContent = '';
+    
+    try {
+        for (let i = 0; i < agentsToUpdate.length; i++) {
+            const agent = agentsToUpdate[i];
+            const progress = Math.round(((i + 1) / agentsToUpdate.length) * 100);
+            
+            // Update main progress bar
+            progressIndicator.style.width = progress + '%';
+            progressText.textContent = progress + '%';
+            statusElement.textContent = `Updating ${agent.hostname} (${i + 1}/${agentsToUpdate.length})`;
+            
+            // Show individual progress bar for this agent
+            const agentProgressContainer = document.getElementById(`version-progress-${agent.agent_id}`);
+            const agentProgressBar = document.getElementById(`version-progress-bar-${agent.agent_id}`);
+            
+            if (agentProgressContainer && agentProgressBar) {
+                agentProgressContainer.style.display = 'block';
+                agentProgressBar.style.width = '0%';
+                agentProgressBar.className = 'nm-progress-bar nm-progress-animated';
+            }
+            
+            logsElement.textContent += `\n[${new Date().toLocaleTimeString()}] Starting update for ${agent.hostname} (${agent.ip_address})\n`;
+            logsElement.scrollTop = logsElement.scrollHeight;
+            
+            try {
+                // Get selected version for this agent
+                const versionSelect = document.getElementById(`version-select-${agent.agent_id}`);
+                const targetVersion = versionSelect ? versionSelect.value : latestVersion;
+                
+                // Animate individual progress bar
+                if (agentProgressBar) {
+                    agentProgressBar.style.width = '50%';
+                }
+                
+                await updateAgentToVersion(agent, targetVersion);
+                
+                // Complete individual progress bar
+                if (agentProgressBar) {
+                    agentProgressBar.style.width = '100%';
+                    agentProgressBar.className = 'nm-progress-bar success';
+                }
+                
+                logsElement.textContent += `[${new Date().toLocaleTimeString()}] ✓ Successfully updated ${agent.hostname} to version ${targetVersion}\n`;
+            } catch (error) {
+                // Error individual progress bar
+                if (agentProgressBar) {
+                    agentProgressBar.style.width = '100%';
+                    agentProgressBar.className = 'nm-progress-bar danger';
+                }
+                
+                logsElement.textContent += `[${new Date().toLocaleTimeString()}] ✗ Failed to update ${agent.hostname}: ${error.message}\n`;
+            }
+            
+            logsElement.scrollTop = logsElement.scrollHeight;
+        }
+        
+        statusElement.textContent = 'Agent updates completed';
+        selectedVersionHosts.clear();
+        
+        // Refresh data to show new versions
+        setTimeout(() => {
+            refreshData();
+            loadVersionSummary();
+        }, 2000);
+        
+    } catch (error) {
+        statusElement.textContent = 'Update failed: ' + error.message;
+    } finally {
+        versionUpdateInProgress = false;
+        document.getElementById('close-version-modal-btn').disabled = false;
+        updateVersionActionButtons();
+    }
+}
+
+async function updateAgentToVersion(agent, targetVersion) {
+    try {
+        const response = await fetch('/api/agent/update', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                agent_id: agent.agent_id,
+                hostname: agent.hostname,
+                ip_address: agent.ip_address,
+                target_version: targetVersion
+            })
+        });
+        
+        if (!response.ok) {
+            let errorText;
+            try {
+                errorText = await response.text();
+                const errorData = JSON.parse(errorText);
+                throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+            } catch (jsonError) {
+                throw new Error(`HTTP ${response.status}: ${errorText || response.statusText}`);
+            }
+        }
+        
+        const data = await response.json();
+        
+        if (!data.success) {
+            throw new Error(data.error || 'Update failed');
+        }
+        
+        return data;
+        
+    } catch (error) {
+        if (error.name === 'TypeError' && error.message.includes('fetch')) {
+            throw new Error(`Network error: Cannot connect to server. ${error.message}`);
+        }
+        throw error;
+    }
 }
 
 async function refreshVersionSummary() {
@@ -1707,6 +2078,7 @@ async function refreshVersionSummary() {
     refreshBtn.disabled = true;
     
     try {
+        await refreshData();
         await loadVersionSummary();
     } finally {
         refreshBtn.innerHTML = originalText;
