@@ -978,7 +978,7 @@
             const defaults = {
                 gemini: {
                     provider: 'gemini',
-                    model_name: 'gemini-pro',
+                    model_name: 'gemini-2.5-flash',
                     api_endpoint: 'https://generativelanguage.googleapis.com/v1beta',
                     temperature: 0.7,
                     max_tokens: 1000,
@@ -1143,10 +1143,12 @@
                                 </div>
                                 <div class="pf-c-form__group-control">
                                     <select class="pf-c-form-control" name="model_name" id="gemini-model">
-                                        <option value="gemini-pro">gemini-pro</option>
-                                        <option value="gemini-pro-vision">gemini-pro-vision</option>
+                                        <option value="gemini-2.5-flash">gemini-2.5-flash</option>
+                                        <option value="gemini-2.5-pro">gemini-2.5-pro</option>
                                         <option value="gemini-1.5-pro">gemini-1.5-pro</option>
                                         <option value="gemini-1.5-flash">gemini-1.5-flash</option>
+                                        <option value="gemini-pro">gemini-pro (legacy)</option>
+                                        <option value="gemini-pro-vision">gemini-pro-vision (legacy)</option>
                                     </select>
                                 </div>
                             </div>
