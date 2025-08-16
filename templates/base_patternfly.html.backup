@@ -16,7 +16,7 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     
     <!-- Vis.js for network visualization -->
-    {% if not disable_visjs %}<script src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>{% endif %}
+    <script src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
     
     <style>
         /* Custom styles for Home Lab with PatternFly */

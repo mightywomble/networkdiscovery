@@ -142,7 +142,7 @@ class EnhancedTopologyBuilder:
                 ORDER BY created_at DESC
             """
             
-            cutoff_date = (datetime.now() - timedelta(hours=72)).isoformat()
+            cutoff_date = (datetime.now() - timedelta(hours=24)).isoformat()
             
             try:
                 with self.db.get_connection() as conn:
@@ -180,7 +180,7 @@ class EnhancedTopologyBuilder:
                 ORDER BY connection_count DESC
             """
             
-            cutoff_date = (datetime.now() - timedelta(hours=72)).isoformat()
+            cutoff_date = (datetime.now() - timedelta(hours=24)).isoformat()
             
             try:
                 with self.db.get_connection() as conn:
