@@ -832,10 +832,68 @@ function determineAgentStatus(agent) {
         };
     }
     
-    // Check if agent has last_heartbeat timestamp
+    // Use the heartbeat status calculated by the server if available
+    if (agent.heartbeat_status) {
+        const serverStatus = agent.heartbeat_status.toLowerCase();
+        switch (serverStatus) {
+            case 'online':
+                return {
+                    status: 'Online',
+                    statusClass: 'success',
+                    statusIcon: 'fas fa-check-circle',
+                    cardClass: 'online',
+                    heartbeatStatus: 'online'
+                };
+            case 'warning':
+                return {
+                    status: 'Warning',
+                    statusClass: 'warning',
+                    statusIcon: 'fas fa-exclamation-triangle',
+                    cardClass: 'warning',
+                    heartbeatStatus: 'warning'
+                };
+            case 'offline':
+                return {
+                    status: 'Offline',
+                    statusClass: 'danger',
+                    statusIcon: 'fas fa-times-circle',
+                    cardClass: 'offline',
+                    heartbeatStatus: 'offline'
+                };
+            case 'never':
+                return {
+                    status: 'Never Connected',
+                    statusClass: 'danger',
+                    statusIcon: 'fas fa-times-circle',
+                    cardClass: 'offline',
+                    heartbeatStatus: 'offline'
+                };
+        }
+    }
+    
+    // Fallback: Check if agent has last_heartbeat timestamp
     if (agent.last_heartbeat) {
         const now = new Date();
-        const lastHeartbeat = new Date(agent.last_heartbeat);
+        // Handle different timestamp formats from server
+        let lastHeartbeat;
+        try {
+            // Try parsing as-is first (ISO format)
+            lastHeartbeat = new Date(agent.last_heartbeat);
+            // If that gives invalid date, try with 'T' separator
+            if (isNaN(lastHeartbeat.getTime())) {
+                lastHeartbeat = new Date(agent.last_heartbeat.replace(' ', 'T') + 'Z');
+            }
+        } catch (e) {
+            console.warn('Failed to parse heartbeat timestamp:', agent.last_heartbeat);
+            return {
+                status: 'Unknown',
+                statusClass: 'secondary',
+                statusIcon: 'fas fa-question-circle',
+                cardClass: '',
+                heartbeatStatus: 'unknown'
+            };
+        }
+        
         const minutesSinceHeartbeat = Math.floor((now - lastHeartbeat) / (1000 * 60));
         
         // Update the agent object with calculated minutes
