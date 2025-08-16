@@ -4537,6 +4537,159 @@ def get_realtime_statistics():
             'error': str(e)
         }), 500
 
+# AI Settings routes
+@app.route('/settings')
+def settings():
+    """Render the settings page"""
+    return render_template('settings.html')
+
+@app.route('/api/ai_settings', methods=['GET'])
+def get_ai_settings():
+    """Get all AI API settings"""
+    try:
+        settings = db.get_all_ai_api_settings()
+        # Mask API keys for security
+        for setting in settings:
+            if setting.get('api_key'):
+                setting['api_key_masked'] = '••••••••' + setting['api_key'][-4:] if len(setting['api_key']) > 4 else '••••••••'
+                setting['api_key'] = None  # Remove actual key from response
+        
+        return jsonify({
+            'success': True,
+            'settings': settings
+        })
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@app.route('/api/ai_settings/<provider>', methods=['GET'])
+def get_ai_setting(provider):
+    """Get AI API settings for a specific provider"""
+    try:
+        settings = db.get_ai_api_settings(provider)
+        if not settings:
+            return jsonify({
+                'success': False,
+                'error': f'Settings for provider {provider} not found'
+            }), 404
+        
+        # Mask API key for security
+        if settings.get('api_key'):
+            settings['api_key_masked'] = '••••••••' + settings['api_key'][-4:] if len(settings['api_key']) > 4 else '••••••••'
+            settings['api_key'] = None  # Remove actual key from response
+        
+        return jsonify({
+            'success': True,
+            'settings': settings
+        })
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@app.route('/api/ai_settings', methods=['POST'])
+def save_ai_settings():
+    """Save AI API settings"""
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({
+                'success': False,
+                'error': 'No data provided'
+            }), 400
+        
+        provider = data.get('provider')
+        if not provider:
+            return jsonify({
+                'success': False,
+                'error': 'Provider is required'
+            }), 400
+        
+        if provider not in ['gemini', 'chatgpt']:
+            return jsonify({
+                'success': False,
+                'error': 'Provider must be either "gemini" or "chatgpt"'
+            }), 400
+        
+        # Extract settings from request data
+        api_key = data.get('api_key')
+        model_name = data.get('model_name')
+        api_endpoint = data.get('api_endpoint')
+        temperature = float(data.get('temperature', 0.7))
+        max_tokens = int(data.get('max_tokens', 1000))
+        timeout = int(data.get('timeout', 30))
+        enabled = bool(data.get('enabled', False))
+        additional_config = data.get('additional_config', {})
+        
+        # Save settings to database
+        db.save_ai_api_settings(
+            provider=provider,
+            api_key=api_key,
+            model_name=model_name,
+            api_endpoint=api_endpoint,
+            temperature=temperature,
+            max_tokens=max_tokens,
+            timeout=timeout,
+            enabled=enabled,
+            additional_config=additional_config
+        )
+        
+        return jsonify({
+            'success': True,
+            'message': f'Settings saved for {provider}',
+            'provider': provider
+        })
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@app.route('/api/ai_settings/<provider>', methods=['DELETE'])
+def delete_ai_settings(provider):
+    """Delete AI API settings for a provider"""
+    try:
+        success = db.delete_ai_api_settings(provider)
+        if success:
+            return jsonify({
+                'success': True,
+                'message': f'Settings deleted for {provider}'
+            })
+        else:
+            return jsonify({
+                'success': False,
+                'error': f'Settings for {provider} not found'
+            }), 404
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@app.route('/api/ai_settings/<provider>/enable', methods=['POST'])
+def toggle_ai_api(provider):
+    """Enable or disable AI API for a provider"""
+    try:
+        data = request.get_json() or {}
+        enabled = bool(data.get('enabled', True))
+        
+        db.enable_ai_api(provider, enabled)
+        
+        status = 'enabled' if enabled else 'disabled'
+        return jsonify({
+            'success': True,
+            'message': f'{provider} API {status}',
+            'enabled': enabled
+        })
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
 # Statistics page route
 @app.route('/statistics')
 def statistics_dashboard():

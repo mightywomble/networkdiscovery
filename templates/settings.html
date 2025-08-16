@@ -1,0 +1,217 @@
+{% extends "base.html" %}
+
+{% block title %}Settings - Network Map{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h1 class="h3">
+                    <i class="fas fa-cog me-2"></i>System Settings
+                </h1>
+                <nav aria-label="breadcrumb">
+                    <ol class="breadcrumb mb-0">
+                        <li class="breadcrumb-item"><a href="{{ url_for('index') }}">Dashboard</a></li>
+                        <li class="breadcrumb-item active" aria-current="page">Settings</li>
+                    </ol>
+                </nav>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- AI API Settings -->
+        <div class="col-lg-6">
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-robot me-2"></i>AI API Configuration
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted mb-4">Configure AI service integrations for enhanced network analysis and insights.</p>
+                    
+                    <div class="row" id="ai-settings-overview">
+                        <!-- AI settings will be loaded here -->
+                        <div class="col-12 text-center py-4">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <hr>
+                    <div class="d-flex gap-2">
+                        <button type="button" class="btn btn-outline-primary" onclick="openAIModal('gemini')">
+                            <i class="fas fa-brain me-2"></i>Configure Gemini
+                        </button>
+                        <button type="button" class="btn btn-outline-primary" onclick="openAIModal('chatgpt')">
+                            <i class="fas fa-comments me-2"></i>Configure ChatGPT
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Future Settings Categories -->
+        <div class="col-lg-6">
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-secondary text-white">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-network-wired me-2"></i>Network Settings
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted mb-3">Network scanning and monitoring configuration.</p>
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>
+                        Network settings configuration coming in future release.
+                    </div>
+                </div>
+            </div>
+
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-success text-white">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-shield-alt me-2"></i>Security Settings
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted mb-3">Authentication, access control, and security configuration.</p>
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>
+                        Security settings configuration coming in future release.
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- System Information -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card shadow-sm">
+                <div class="card-header bg-info text-white">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-info-circle me-2"></i>System Information
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-4">
+                            <strong>Application Version:</strong><br>
+                            <span class="text-muted">NetworkMap v1.4.0</span>
+                        </div>
+                        <div class="col-md-4">
+                            <strong>Database:</strong><br>
+                            <span class="text-muted">SQLite</span>
+                        </div>
+                        <div class="col-md-4">
+                            <strong>Server:</strong><br>
+                            <span class="text-muted">Flask Development Server</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    loadAISettingsOverview();
+});
+
+function loadAISettingsOverview() {
+    const overviewContainer = document.getElementById('ai-settings-overview');
+    
+    fetch('/api/ai_settings')
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            const settings = data.settings || [];
+            let html = '';
+            
+            if (settings.length === 0) {
+                html = `
+                    <div class="col-12">
+                        <div class="alert alert-warning">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            No AI API configurations found. Click the buttons below to configure AI services.
+                        </div>
+                    </div>
+                `;
+            } else {
+                settings.forEach(setting => {
+                    const statusBadge = setting.enabled 
+                        ? '<span class="badge bg-success">Enabled</span>' 
+                        : '<span class="badge bg-secondary">Disabled</span>';
+                    
+                    const providerIcon = setting.provider === 'gemini' 
+                        ? 'fas fa-brain' 
+                        : 'fas fa-comments';
+                    
+                    const providerName = setting.provider === 'gemini' 
+                        ? 'Google Gemini' 
+                        : 'OpenAI ChatGPT';
+                    
+                    html += `
+                        <div class="col-md-6 mb-3">
+                            <div class="border rounded p-3">
+                                <div class="d-flex justify-content-between align-items-start mb-2">
+                                    <h6 class="mb-0">
+                                        <i class="${providerIcon} me-2"></i>${providerName}
+                                    </h6>
+                                    ${statusBadge}
+                                </div>
+                                <small class="text-muted">
+                                    Model: ${setting.model_name || 'Not configured'}<br>
+                                    API Key: ${setting.api_key_masked || 'Not set'}
+                                </small>
+                                <div class="mt-2">
+                                    <button class="btn btn-sm btn-outline-primary" onclick="openAIModal('${setting.provider}')">
+                                        <i class="fas fa-edit me-1"></i>Configure
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                });
+            }
+            
+            overviewContainer.innerHTML = html;
+        } else {
+            overviewContainer.innerHTML = `
+                <div class="col-12">
+                    <div class="alert alert-danger">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        Error loading AI settings: ${data.error}
+                    </div>
+                </div>
+            `;
+        }
+    })
+    .catch(error => {
+        console.error('Error loading AI settings:', error);
+        overviewContainer.innerHTML = `
+            <div class="col-12">
+                <div class="alert alert-danger">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    Failed to load AI settings. Please check your network connection.
+                </div>
+            </div>
+        `;
+    });
+}
+
+// Refresh the overview when modals are closed
+document.addEventListener('hidden.bs.modal', function (event) {
+    if (event.target.id === 'geminiModal' || event.target.id === 'chatgptModal') {
+        loadAISettingsOverview();
+    }
+});
+</script>
+{% endblock %}

@@ -231,6 +231,24 @@ class Database:
                 )
             ''')
             
+            # AI API settings
+            conn.execute('''
+                CREATE TABLE IF NOT EXISTS ai_api_settings (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    provider TEXT UNIQUE NOT NULL,
+                    api_key TEXT,
+                    model_name TEXT,
+                    api_endpoint TEXT,
+                    temperature REAL DEFAULT 0.7,
+                    max_tokens INTEGER DEFAULT 1000,
+                    timeout INTEGER DEFAULT 30,
+                    enabled BOOLEAN DEFAULT 0,
+                    additional_config TEXT,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            ''')
+            
             conn.commit()
     
     # Host management
@@ -1519,6 +1537,109 @@ class Database:
                 'port_history': port_history,
                 'agent_scans': agent_history
             }
+    
+    # AI API settings management
+    def save_ai_api_settings(self, provider, api_key=None, model_name=None, api_endpoint=None, 
+                            temperature=0.7, max_tokens=1000, timeout=30, enabled=False, additional_config=None):
+        """Save AI API settings for a provider"""
+        with self.get_connection() as conn:
+            # Check if settings exist for this provider
+            cursor = conn.execute('SELECT id FROM ai_api_settings WHERE provider = ?', (provider,))
+            existing = cursor.fetchone()
+            
+            # Convert additional_config to JSON if provided
+            config_json = json.dumps(additional_config) if additional_config is not None else None
+            
+            if existing:
+                # Update existing settings
+                conn.execute('''
+                    UPDATE ai_api_settings 
+                    SET api_key = ?, model_name = ?, api_endpoint = ?, temperature = ?,
+                        max_tokens = ?, timeout = ?, enabled = ?, additional_config = ?,
+                        updated_at = CURRENT_TIMESTAMP
+                    WHERE provider = ?
+                ''', (api_key, model_name, api_endpoint, temperature, max_tokens, 
+                     timeout, enabled, config_json, provider))
+            else:
+                # Insert new settings
+                conn.execute('''
+                    INSERT INTO ai_api_settings 
+                    (provider, api_key, model_name, api_endpoint, temperature, max_tokens, 
+                     timeout, enabled, additional_config)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ''', (provider, api_key, model_name, api_endpoint, temperature, max_tokens,
+                     timeout, enabled, config_json))
+            
+            conn.commit()
+    
+    def get_ai_api_settings(self, provider):
+        """Get AI API settings for a specific provider"""
+        with self.get_connection() as conn:
+            cursor = conn.execute('SELECT * FROM ai_api_settings WHERE provider = ?', (provider,))
+            row = cursor.fetchone()
+            if row:
+                settings = dict(row)
+                # Parse additional_config JSON if present
+                if settings.get('additional_config'):
+                    try:
+                        settings['additional_config'] = json.loads(settings['additional_config'])
+                    except json.JSONDecodeError:
+                        settings['additional_config'] = {}
+                return settings
+            return None
+    
+    def get_all_ai_api_settings(self):
+        """Get all AI API settings"""
+        with self.get_connection() as conn:
+            cursor = conn.execute('SELECT * FROM ai_api_settings ORDER BY provider')
+            settings_list = []
+            for row in cursor.fetchall():
+                settings = dict(row)
+                # Parse additional_config JSON if present
+                if settings.get('additional_config'):
+                    try:
+                        settings['additional_config'] = json.loads(settings['additional_config'])
+                    except json.JSONDecodeError:
+                        settings['additional_config'] = {}
+                else:
+                    settings['additional_config'] = {}
+                settings_list.append(settings)
+            return settings_list
+    
+    def delete_ai_api_settings(self, provider):
+        """Delete AI API settings for a provider"""
+        with self.get_connection() as conn:
+            cursor = conn.execute('DELETE FROM ai_api_settings WHERE provider = ?', (provider,))
+            conn.commit()
+            return cursor.rowcount > 0
+    
+    def enable_ai_api(self, provider, enabled=True):
+        """Enable or disable AI API for a provider"""
+        with self.get_connection() as conn:
+            conn.execute('''
+                UPDATE ai_api_settings 
+                SET enabled = ?, updated_at = CURRENT_TIMESTAMP
+                WHERE provider = ?
+            ''', (enabled, provider))
+            conn.commit()
+    
+    def get_enabled_ai_apis(self):
+        """Get all enabled AI API providers"""
+        with self.get_connection() as conn:
+            cursor = conn.execute('SELECT * FROM ai_api_settings WHERE enabled = 1 ORDER BY provider')
+            settings_list = []
+            for row in cursor.fetchall():
+                settings = dict(row)
+                # Parse additional_config JSON if present  
+                if settings.get('additional_config'):
+                    try:
+                        settings['additional_config'] = json.loads(settings['additional_config'])
+                    except json.JSONDecodeError:
+                        settings['additional_config'] = {}
+                else:
+                    settings['additional_config'] = {}
+                settings_list.append(settings)
+            return settings_list
     
     # Helper methods
     def _format_bytes(self, bytes_value):
