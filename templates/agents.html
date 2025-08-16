@@ -1697,7 +1697,7 @@ function closeAgentDataModal() {
 // Global variables for version management
 let selectedVersionHosts = new Set();
 let versionUpdateInProgress = false;
-let latestVersion = '1.0.0'; // This should be fetched from API
+let latestVersion = null; // Will be determined from actual agent versions
 
 // Version Summary Modal Functions
 function showVersionSummary() {
@@ -1713,19 +1713,43 @@ function closeVersionSummaryModal() {
 
 async function loadVersionSummary() {
     try {
-        // Load both agent versions and latest version info
-        const [versionsResponse, latestResponse] = await Promise.all([
-            fetch('/api/agent/versions'),
-            fetch('/api/agent/latest_version')
-        ]);
-        
+        // Load agent versions
+        const versionsResponse = await fetch('/api/agent/versions');
         const versionsData = await versionsResponse.json();
-        const latestData = latestResponse.ok ? await latestResponse.json() : { version: '1.0.0' };
         
         if (versionsData.success) {
-            latestVersion = latestData.version || '1.0.0';
-            await displayVersionSummary(versionsData.agents || []);
-            updateVersionStats(versionsData.agents || []);
+            const agents = versionsData.agents || [];
+            
+            // Determine latest version from actual agent versions
+            if (agents.length > 0) {
+                const versions = agents
+                    .map(a => a.agent_version)
+                    .filter(v => v && v !== 'Unknown')
+                    .map(v => {
+                        // Parse semantic version (e.g., "1.6.6" -> [1, 6, 6])
+                        const parts = v.split('.').map(n => parseInt(n) || 0);
+                        return { version: v, parts: parts };
+                    })
+                    .sort((a, b) => {
+                        // Sort by semantic version (descending)
+                        for (let i = 0; i < Math.max(a.parts.length, b.parts.length); i++) {
+                            const aPart = a.parts[i] || 0;
+                            const bPart = b.parts[i] || 0;
+                            if (aPart !== bPart) {
+                                return bPart - aPart; // Descending order
+                            }
+                        }
+                        return 0;
+                    });
+                
+                // Set latest version to the highest version found
+                latestVersion = versions.length > 0 ? versions[0].version : 'Unknown';
+            } else {
+                latestVersion = 'Unknown';
+            }
+            
+            await displayVersionSummary(agents);
+            updateVersionStats(agents);
         } else {
             document.getElementById('version-summary-content').innerHTML = 
                 `<div class="pf-c-alert pf-m-danger pf-m-inline"><div class="pf-c-alert__icon"><i class="fas fa-exclamation-circle"></i></div><p class="pf-c-alert__title">Failed to load version data: ${versionsData.error}</p></div>`;
@@ -1760,7 +1784,7 @@ function displayVersionSummary(versions) {
     const hostCards = versions.map(agent => {
         const isSelected = selectedVersionHosts.has(agent.agent_id);
         const currentVersion = agent.agent_version || 'Unknown';
-        const isOutdated = currentVersion !== latestVersion && currentVersion !== 'Unknown';
+        const isOutdated = currentVersion !== latestVersion && currentVersion !== 'Unknown' && latestVersion !== 'Unknown';
         const versionStatusClass = currentVersion === latestVersion ? 'green' : isOutdated ? 'orange' : 'red';
         const versionStatusText = currentVersion === latestVersion ? 'Current' : isOutdated ? 'Outdated' : 'Unknown';
         
@@ -1797,17 +1821,17 @@ function displayVersionSummary(versions) {
                             </span>
                         </div>
                         
-                        <!-- Version Select -->
+                        <!-- Version Select (only show if not already latest) -->
+                        ${currentVersion !== latestVersion && latestVersion !== 'Unknown' ? `
                         <div class="pf-u-mb-sm">
                             <label class="pf-c-form__label" for="version-select-${agent.agent_id}">
                                 <span class="pf-c-form__label-text">Update to:</span>
                             </label>
                             <select class="pf-c-form-control" id="version-select-${agent.agent_id}" onchange="event.stopPropagation()">
-                                <option value="${latestVersion}" ${currentVersion === latestVersion ? 'selected' : ''}>${latestVersion} (Latest)</option>
-                                ${currentVersion !== latestVersion && currentVersion !== 'Unknown' ? 
-                                    `<option value="${currentVersion}" selected>${currentVersion} (Current)</option>` : ''}
+                                <option value="${latestVersion}">${latestVersion} (Latest)</option>
                             </select>
                         </div>
+                        ` : ''}
                         
                         <!-- Agent Status -->
                         <div class="pf-u-mb-sm">
@@ -2037,6 +2061,9 @@ async function performAgentUpdates(agentsToUpdate) {
 
 async function updateAgentToVersion(agent, targetVersion) {
     try {
+        // If no target version specified, use the latest version
+        const versionToUpdate = targetVersion || latestVersion;
+        
         const response = await fetch('/api/agent/update', {
             method: 'POST',
             headers: {
@@ -2046,7 +2073,7 @@ async function updateAgentToVersion(agent, targetVersion) {
                 agent_id: agent.agent_id,
                 hostname: agent.hostname,
                 ip_address: agent.ip_address,
-                target_version: targetVersion
+                target_version: versionToUpdate
             })
         });
         
