@@ -610,7 +610,13 @@
             </header>
             <div class="pf-c-modal-box__body">
                 <!-- Statistics Section -->
-                <div class="pf-l-gallery pf-m-gutter pf-u-mb-lg" style="grid-template-columns: repeat(4, 1fr);">
+                <div class="pf-l-gallery pf-m-gutter pf-u-mb-lg" style="grid-template-columns: repeat(5, 1fr);">
+                    <div class="pf-c-card nm-stat-card">
+                        <div class="pf-c-card__body pf-u-text-align-center">
+                            <div class="nm-stat-value" style="color: var(--pf-global--warning-color--100)" id="version-latest-version">-</div>
+                            <div class="nm-stat-label">Latest Version</div>
+                        </div>
+                    </div>
                     <div class="pf-c-card nm-stat-card">
                         <div class="pf-c-card__body pf-u-text-align-center">
                             <div class="nm-stat-value" style="color: var(--pf-global--primary-color--100)" id="version-total-hosts">-</div>
@@ -1736,6 +1742,7 @@ function updateVersionStats(agents) {
     const onlineAgents = agents.filter(a => a.heartbeat_status === 'online').length;
     const offlineAgents = agents.filter(a => a.heartbeat_status === 'offline').length;
     
+    document.getElementById('version-latest-version').textContent = latestVersion;
     document.getElementById('version-total-hosts').textContent = totalHosts;
     document.getElementById('version-total-agents').textContent = totalAgents;
     document.getElementById('version-online-agents').textContent = onlineAgents;
