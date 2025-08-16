@@ -345,11 +345,44 @@
                                 <span>Hosts</span>
                             </a>
                         </li>
-                        <li class="nm-nav-item">
-                            <a href="{{ url_for('agents') }}" class="nm-nav-link {% if request.endpoint == 'agents' %}active{% endif %}">
+                        <li class="nm-nav-item {% if 'agents' in request.endpoint %}expanded{% endif %}">
+                            <a href="#" class="nm-nav-link" onclick="toggleSubmenu(event, this)">
                                 <i class="fas fa-robot"></i>
                                 <span>Agents</span>
+                                <i class="fas fa-chevron-right nm-nav-toggle"></i>
                             </a>
+                            <ul class="nm-nav-submenu">
+                                <li class="nm-nav-item">
+                                    <a href="{{ url_for('agents') }}" class="nm-nav-link {% if request.endpoint == 'agents' %}active{% endif %}">
+                                        <span>View Agents</span>
+                                    </a>
+                                </li>
+                                <li class="nm-nav-item">
+                                    <a href="#" class="nm-nav-link" onclick="refreshAgentData(event)">
+                                        <span>Refresh</span>
+                                    </a>
+                                </li>
+                                <li class="nm-nav-item">
+                                    <a href="#" class="nm-nav-link" onclick="showAgentLogsFromSidebar(event)">
+                                        <span>View Logs</span>
+                                    </a>
+                                </li>
+                                <li class="nm-nav-item">
+                                    <a href="#" class="nm-nav-link" onclick="showCleanupToolsFromSidebar(event)">
+                                        <span>Cleanup Tools</span>
+                                    </a>
+                                </li>
+                                <li class="nm-nav-item">
+                                    <a href="#" class="nm-nav-link" onclick="showVersionSummaryFromSidebar(event)">
+                                        <span>Version Summary</span>
+                                    </a>
+                                </li>
+                                <li class="nm-nav-item">
+                                    <a href="#" class="nm-nav-link" onclick="updateAllAgentsFromSidebar(event)">
+                                        <span>Update All</span>
+                                    </a>
+                                </li>
+                            </ul>
                         </li>
                     </ul>
                 </div>
@@ -792,6 +825,80 @@
             const toggle = document.getElementById('auto-scan-toggle');
             menu.hidden = true;
             toggle.setAttribute('aria-expanded', 'false');
+        }
+        
+        // Agent submenu functions for sidebar
+        function refreshAgentData(event) {
+            event.preventDefault();
+            
+            // Check if we're on the agents page and the function exists
+            if (typeof refreshData === 'function') {
+                refreshData();
+                showAlert('info', 'Refreshing', 'Agent data is being refreshed...');
+            } else {
+                // Redirect to agents page if not there
+                if (window.location.pathname !== '/agents') {
+                    window.location.href = '/agents';
+                } else {
+                    location.reload();
+                }
+            }
+        }
+        
+        function showAgentLogsFromSidebar(event) {
+            event.preventDefault();
+            
+            if (typeof showAgentLogs === 'function') {
+                showAgentLogs();
+            } else {
+                if (window.location.pathname !== '/agents') {
+                    window.location.href = '/agents';
+                } else {
+                    showAlert('error', 'Agent Logs', 'Log viewing functionality is not available on this page');
+                }
+            }
+        }
+        
+        function showCleanupToolsFromSidebar(event) {
+            event.preventDefault();
+            
+            if (typeof showAgentCleanupTools === 'function') {
+                showAgentCleanupTools();
+            } else {
+                if (window.location.pathname !== '/agents') {
+                    window.location.href = '/agents';
+                } else {
+                    showAlert('error', 'Cleanup Tools', 'Cleanup functionality is not available on this page');
+                }
+            }
+        }
+        
+        function showVersionSummaryFromSidebar(event) {
+            event.preventDefault();
+            
+            if (typeof showVersionSummary === 'function') {
+                showVersionSummary();
+            } else {
+                if (window.location.pathname !== '/agents') {
+                    window.location.href = '/agents';
+                } else {
+                    showAlert('error', 'Version Summary', 'Version summary functionality is not available on this page');
+                }
+            }
+        }
+        
+        function updateAllAgentsFromSidebar(event) {
+            event.preventDefault();
+            
+            if (typeof updateAllAgents === 'function') {
+                updateAllAgents();
+            } else {
+                if (window.location.pathname !== '/agents') {
+                    window.location.href = '/agents';
+                } else {
+                    showAlert('error', 'Update Agents', 'Agent update functionality is not available on this page');
+                }
+            }
         }
         
         // Initialize on page load
