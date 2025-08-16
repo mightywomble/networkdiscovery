@@ -1,0 +1,1302 @@
+{% extends "base_patternfly.html" %}
+
+{% block title %}Network Diagram - Home Lab{% endblock %}
+
+{% block breadcrumb %}
+<li class="pf-c-breadcrumb__item">
+    <a href="{{ url_for('index') }}" class="pf-c-breadcrumb__link">Home</a>
+</li>
+<li class="pf-c-breadcrumb__item pf-m-current" aria-current="page">
+    <span class="pf-c-breadcrumb__item-divider">
+        <i class="fas fa-angle-right" aria-hidden="true"></i>
+    </span>
+    <span class="pf-c-breadcrumb__link">Network Diagram</span>
+</li>
+{% endblock %}
+
+{% block extra_head %}
+<!-- Override base template to exclude vis.js -->
+<style>
+    .network-canvas {
+        background: white;
+        border: 2px solid #ccc;
+        border-radius: 8px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        cursor: grab;
+    }
+    
+    .network-canvas.dragging {
+        cursor: grabbing;
+    }
+    
+    .device-icon {
+        cursor: move;
+        transition: opacity 0.2s ease;
+    }
+    
+    .device-icon:hover {
+        opacity: 0.8;
+    }
+    
+    .device-icon.dragging {
+        opacity: 0.7;
+        cursor: grabbing;
+    }
+    
+    .device-icon.selected {
+        filter: drop-shadow(0 0 8px #007bff);
+    }
+    
+    .device-label {
+        font-size: 12px;
+        font-weight: bold;
+        text-anchor: middle;
+        fill: #333;
+        pointer-events: none;
+    }
+    
+    .connection-line {
+        stroke: #0066cc;
+        stroke-width: 4;
+        opacity: 1;
+        pointer-events: none;
+    }
+    
+    .connection-line.external {
+        stroke: #dc3545;
+        stroke-dasharray: 5,5;
+    }
+    
+    .connection-line.internal {
+        stroke: #007bff;
+    }
+    
+    .tooltip {
+        position: absolute;
+        background: rgba(0,0,0,0.8);
+        color: white;
+        padding: 8px 12px;
+        border-radius: 4px;
+        font-size: 12px;
+        pointer-events: none;
+        z-index: 1000;
+        display: none;
+    }
+    
+    .banner {
+        background: #28a745;
+        color: white;
+        padding: 10px 15px;
+        text-align: center;
+        margin-bottom: 15px;
+        border-radius: 6px;
+        font-weight: bold;
+        font-size: 16px;
+    }
+    
+    .diagram-controls {
+        margin-bottom: 15px;
+        text-align: right;
+    }
+    
+    .diagram-controls .pf-c-button {
+        margin-left: 8px;
+    }
+    
+    .layout-mode {
+        background: #17a2b8;
+        color: white;
+        padding: 8px 12px;
+        border-radius: 4px;
+        margin-bottom: 10px;
+        text-align: center;
+        font-weight: bold;
+    }
+    
+    .layout-mode.edit-mode {
+        background: #fd7e14;
+        animation: pulse 2s infinite;
+    }
+    
+    @keyframes pulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.7; }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="pf-l-grid pf-m-gutter">
+    <div class="pf-l-grid__item pf-m-12-col">
+        <div class="pf-c-card">
+            <div class="pf-c-card__header">
+                <div class="pf-c-card__header-main">
+                    <div class="pf-c-card__title">
+                        <h1 class="pf-c-title pf-m-lg">
+                            <i class="fas fa-project-diagram pf-u-mr-sm"></i>
+                            Network Diagram
+                        </h1>
+                    </div>
+                </div>
+                <div class="pf-c-card__actions">
+                    <div class="diagram-controls">
+                        <button class="pf-c-button pf-m-secondary" onclick="refreshDiagram()">
+                            <i class="fas fa-sync pf-u-mr-sm"></i>Refresh
+                        </button>
+                        <button class="pf-c-button pf-m-secondary" onclick="exportSVG()">
+                            <i class="fas fa-download pf-u-mr-sm"></i>Export SVG
+                        </button>
+                        <button class="pf-c-button pf-m-secondary" onclick="zoomIn()" title="Zoom In">
+                            <i class="fas fa-search-plus pf-u-mr-sm"></i>Zoom In
+                        </button>
+                        <button class="pf-c-button pf-m-secondary" onclick="zoomOut()" title="Zoom Out">
+                            <i class="fas fa-search-minus pf-u-mr-sm"></i>Zoom Out
+                        </button>
+                        <button class="pf-c-button pf-m-secondary" onclick="togglePanMode()" title="Toggle Pan Mode" id="pan-btn">
+                            <i class="fas fa-hand-paper pf-u-mr-sm"></i><span id="pan-mode-text">Enable Pan</span>
+                        </button>
+                        <button class="pf-c-button pf-m-tertiary" onclick="toggleEditMode()">
+                            <i class="fas fa-edit pf-u-mr-sm"></i><span id="edit-mode-text">Edit Layout</span>
+                        </button>
+                        <button class="pf-c-button pf-m-warning" onclick="resetLayout()" id="reset-btn" style="display: none;">
+                            <i class="fas fa-undo pf-u-mr-sm"></i>Reset Layout
+                        </button>
+                        <button class="pf-c-button pf-m-primary" onclick="saveLayout()" id="save-btn" style="display: none;">
+                            <i class="fas fa-save pf-u-mr-sm"></i>Save Layout
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <div class="pf-c-card__body">
+                <div class="banner">
+                </div>
+                
+                <div id="layout-mode" class="layout-mode" style="display: none;">
+                    📝 Edit Mode: Drag devices to reposition them, then save your layout
+                </div>
+                
+                <div id="network-canvas" class="network-canvas" style="height: 600px; position: relative;">
+                    <div id="loading" style="display: flex; justify-content: center; align-items: center; height: 100%; font-size: 18px; color: #666;">
+                        <div class="pf-c-spinner pf-m-lg" role="progressbar">
+                            <span class="pf-c-spinner__clipper"></span>
+                            <span class="pf-c-spinner__lead-ball"></span>
+                            <span class="pf-c-spinner__tail-ball"></span>
+                        </div>
+                        <span class="pf-u-ml-md">Loading network diagram...</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<div id="device-details-card" class="pf-c-card pf-u-mt-md" style="display: none;"><div class="pf-c-card__header"><div class="pf-c-card__header-main"><h3 class="pf-c-card__title"><i class="fas fa-info-circle pf-u-mr-sm"></i>Device Details</h3></div><div class="pf-c-card__actions"><button class="pf-c-button pf-m-secondary" onclick="editDevice()" id="edit-device-btn"><i class="fas fa-edit pf-u-mr-sm"></i>Edit</button></div></div><div class="pf-c-card__body" id="device-details-content"><!-- Content will be populated by JavaScript --></div></div>
+<div class="pf-c-backdrop" id="device-edit-modal" style="display: none;"><div class="pf-c-modal-box"><div class="pf-c-modal-box__header"><h1 class="pf-c-modal-box__title">Edit Device</h1><button class="pf-c-button pf-m-plain" onclick="closeEditModal()"><i class="fas fa-times"></i></button></div><div class="pf-c-modal-box__body"><div class="pf-c-form__group"><label class="pf-c-form__label"><span class="pf-c-form__label-text">Device Name</span></label><input class="pf-c-form-control" type="text" id="edit-device-name"></div><div class="pf-c-form__group"><label class="pf-c-form__label"><span class="pf-c-form__label-text">Device Type</span></label><select class="pf-c-form-control" id="edit-device-type"><option value="server">Server</option><option value="router">Router</option><option value="switch">Switch</option><option value="workstation">Workstation</option></select></div><div class="pf-c-form__group"><label class="pf-c-form__label"><span class="pf-c-form__label-text">Notes</span></label><textarea class="pf-c-form-control" id="edit-device-notes" rows="3"></textarea></div></div><div class="pf-c-modal-box__footer"><button class="pf-c-button pf-m-primary" onclick="saveDeviceChanges()">Save Changes</button><button class="pf-c-button pf-m-link" onclick="closeEditModal()">Cancel</button></div></div></div>
+
+<div id="tooltip" class="tooltip"></div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Global state
+    let networkData = null;
+    let svgElement = null;
+    let tooltip = null;
+    let editMode = false;
+    let isDragging = false;
+    let dragElement = null;
+    let dragOffset = { x: 0, y: 0 };
+    let savedPositions = {};
+    let originalPositions = {};
+    
+    // Device configuration
+    const deviceConfig = {
+        server: { icon: '🖥️', color: '#007bff' },
+        router: { icon: '📡', color: '#fd7e14' },
+        switch: { icon: '🔗', color: '#17a2b8' },
+        workstation: { icon: '💻', color: '#28a745' },
+        external: { icon: '🌐', color: '#dc3545' },
+        unknown: { icon: '📟', color: '#6c757d' }
+    };
+    
+    // Initialize on page load
+    document.addEventListener('DOMContentLoaded', function() {
+        console.log("📝 JavaScript file loaded and executing");
+        tooltip = document.getElementById('tooltip');
+        loadSavedPositions();
+        loadNetworkData();
+    });
+    
+    // Load network data
+    function loadNetworkData() {
+        const loadingEl = document.getElementById('loading');
+        if (loadingEl) loadingEl.style.display = 'flex';
+        
+        fetch('/api/network_data')
+            .then(response => response.json())
+            .then(data => {
+                console.log('📊 Network data loaded:', data);
+                networkData = processData(data);
+                renderDiagram();
+                const loading = document.getElementById('loading');
+                if (loading) loading.style.display = 'none';
+            })
+            .catch(error => {
+                console.error('❌ Error loading data:', error);
+                showError(error.message);
+            });
+    }
+    
+    // Process raw network data
+    function processData(rawData) {
+        // Debug: Check for duplicate IDs in raw data first
+        console.log('🔍 Raw nodes count:', rawData.nodes.length);
+        const idCounts = {};
+        rawData.nodes.forEach(node => {
+            idCounts[node.id] = (idCounts[node.id] || 0) + 1;
+        });
+        const duplicateIds = Object.entries(idCounts).filter(([id, count]) => count > 1);
+        if (duplicateIds.length > 0) {
+            console.log('🚨 DUPLICATE NODE IDs FOUND:', duplicateIds);
+            duplicateIds.forEach(([id, count]) => {
+                const nodesWithId = rawData.nodes.filter(n => n.id === id);
+                console.log(`  ID: ${id} appears ${count} times:`);
+                nodesWithId.forEach((node, i) => {
+                    console.log(`    ${i+1}: label="${node.label || node.name}", ip="${node.ip}"`);
+                });
+            });
+        }
+        
+        // BETTER FIX: Merge duplicate nodes into single consolidated nodes
+        const mergedNodes = [];
+        const nodeMap = {};
+        
+        rawData.nodes.forEach(node => {
+            if (nodeMap[node.id]) {
+                // This ID already exists, merge with existing node
+                console.log(`🔗 Merging duplicate node: ${node.id} (${node.label || node.name})`);
+                // Keep the existing node but potentially update info if needed
+                // Could merge additional properties here if desired
+            } else {
+                // First occurrence of this ID, add it
+                nodeMap[node.id] = {
+                    id: node.id,
+                    label: node.label || node.name || `Node ${node.id}`,
+                    ip: node.ip,
+                    type: classifyNodeType(node),
+                    status: node.status || 'unknown'
+                };
+                mergedNodes.push(nodeMap[node.id]);
+            }
+        });
+        
+        // Remove duplicate edges (same from/to combination)
+        const edgeSet = new Set();
+        const processedEdges = [];
+        
+        rawData.edges.forEach(edge => {
+            const edgeKey = `${edge.from}->${edge.to}`;
+            if (!edgeSet.has(edgeKey)) {
+                edgeSet.add(edgeKey);
+                processedEdges.push({
+                    from: edge.from,
+                    to: edge.to,
+                    label: edge.label || '',
+                    type: classifyEdgeType(edge)
+                });
+            } else {
+                console.log(`🔗 Skipping duplicate edge: ${edgeKey}`);
+            }
+        });
+        
+        const processed = {
+            nodes: mergedNodes,
+            edges: processedEdges
+        };
+        
+        console.log(`🔧 Processed: ${rawData.nodes.length} raw nodes -> ${processed.nodes.length} unique nodes`);
+        console.log(`🔧 Processed: ${rawData.edges.length} raw edges -> ${processed.edges.length} edges`);
+        
+        return processed;
+    }
+    
+    // Classify node type based on properties
+    function classifyNodeType(node) {
+        if (node.id && node.id.toString().startsWith('ext_')) return 'external';
+        if (node.group === 'external') return 'external';
+        if (node.label && node.label.toLowerCase().includes('router')) return 'router';
+        if (node.label && node.label.toLowerCase().includes('switch')) return 'switch';
+        return 'server';
+    }
+    
+    // Classify edge type
+    function classifyEdgeType(edge) {
+        if (edge.to && edge.to.toString().startsWith('ext_')) return 'external';
+        if (edge.dashes) return 'external';
+        return 'internal';
+    }
+    
+    // Render the SVG diagram
+    function renderDiagram() {
+        console.log('🎨 Rendering interactive SVG diagram...');
+        
+        const container = document.getElementById('network-canvas');
+        const rect = container.getBoundingClientRect();
+        
+        // Clear container
+        container.innerHTML = '';
+        
+        // Create SVG
+        svgElement = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+        svgElement.setAttribute('width', '100%');
+        svgElement.setAttribute('height', '100%');
+        svgElement.setAttribute('viewBox', `0 0 ${rect.width} ${rect.height}`);
+        
+        // Layout nodes (use saved positions if available, otherwise default)
+        layoutNodes(rect.width, rect.height);
+        
+        // Draw connections first (behind nodes)
+        drawConnections();
+        
+        // Draw nodes on top
+        drawNodes();
+        
+        // Add to container
+        container.appendChild(svgElement);
+        
+        console.log(`✅ Rendered ${networkData.nodes.length} nodes and ${networkData.edges.length} connections`);
+    }
+    
+    // Layout nodes with saved positions or default grid
+    function layoutNodes(width, height) {
+        const margin = 60;
+        const nodeSpacing = 140;
+        
+        // Separate internal and external nodes
+        const internalNodes = networkData.nodes.filter(n => n.type !== 'external');
+        const externalNodes = networkData.nodes.filter(n => n.type === 'external');
+        
+        // Layout internal nodes in the center (default positions)
+        const cols = Math.ceil(Math.sqrt(internalNodes.length));
+        const rows = Math.ceil(internalNodes.length / cols);
+        
+        const centerX = width / 2;
+        const centerY = height / 2;
+        const startX = centerX - (cols * nodeSpacing) / 2;
+        const startY = centerY - (rows * nodeSpacing) / 2;
+        
+        internalNodes.forEach((node, i) => {
+            const col = i % cols;
+            const row = Math.floor(i / cols);
+            
+            // Default position
+            const defaultX = startX + (col * nodeSpacing);
+            const defaultY = startY + (row * nodeSpacing);
+            
+            // Use saved position if available, otherwise default
+            if (savedPositions[node.id]) {
+                node.x = savedPositions[node.id].x;
+                node.y = savedPositions[node.id].y;
+            } else {
+                node.x = defaultX;
+                node.y = defaultY;
+            }
+            
+            // Store original position for reset
+            originalPositions[node.id] = { x: defaultX, y: defaultY };
+        });
+        
+        // Layout external nodes around the perimeter (default positions)
+        externalNodes.forEach((node, i) => {
+            const angle = (i / externalNodes.length) * 2 * Math.PI;
+            const radius = Math.min(width, height) * 0.35;
+            
+            // Default position
+            const defaultX = centerX + Math.cos(angle) * radius;
+            const defaultY = centerY + Math.sin(angle) * radius;
+            
+            // Use saved position if available, otherwise default
+            if (savedPositions[node.id]) {
+                node.x = savedPositions[node.id].x;
+                node.y = savedPositions[node.id].y;
+            } else {
+                node.x = defaultX;
+                node.y = defaultY;
+            }
+            
+            // Store original position for reset
+            originalPositions[node.id] = { x: defaultX, y: defaultY };
+        });
+    }
+    
+    // Draw connection lines
+    function drawConnections() {
+        console.log('🔗 Drawing connections...', networkData.edges.length, 'edges');
+        const nodeMap = new Map(networkData.nodes.map(n => [n.id, n]));
+        let drawnLines = 0;
+        let skippedLines = 0;
+        
+        // Debug: Check for duplicate labels
+        const labelCounts = {};
+        networkData.nodes.forEach(node => {
+            labelCounts[node.label] = (labelCounts[node.label] || 0) + 1;
+        });
+        const duplicateLabels = Object.entries(labelCounts).filter(([label, count]) => count > 1);
+        if (duplicateLabels.length > 0) {
+            console.log('🔍 Found nodes with duplicate labels:', duplicateLabels);
+            duplicateLabels.forEach(([label, count]) => {
+                const nodesWithLabel = networkData.nodes.filter(n => n.label === label);
+                console.log(`  ${label} (${count} instances):`, nodesWithLabel.map(n => ({ id: n.id, x: n.x, y: n.y })));
+            });
+        }
+        
+        networkData.edges.forEach((edge, index) => {
+            const fromNode = nodeMap.get(edge.from);
+            const toNode = nodeMap.get(edge.to);
+            
+            if (!fromNode || !toNode) {
+                console.log(`⚠️  Skipping edge ${index}: missing node`, edge);
+                skippedLines++;
+                return;
+            }
+            
+            const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+            line.setAttribute('x1', fromNode.x);
+            line.setAttribute('y1', fromNode.y);
+            line.setAttribute('x2', toNode.x);
+            line.setAttribute('y2', toNode.y);
+            line.setAttribute('class', `connection-line ${edge.type}`);
+            line.setAttribute('data-from', edge.from);
+            line.setAttribute('data-to', edge.to);
+            
+            // Apply inline styles to ensure visibility
+            if (edge.type === 'external') {
+                line.setAttribute('stroke', '#dc3545');
+                line.setAttribute('stroke-dasharray', '5,5');
+            } else {
+                line.setAttribute('stroke', '#007bff');
+            }
+            line.setAttribute('stroke-width', '4');
+            line.setAttribute('opacity', '1');
+            line.setAttribute('pointer-events', 'none');
+            
+            // Debug connections involving dns.google nodes
+            if (fromNode.label.includes('dns.google') || toNode.label.includes('dns.google')) {
+                console.log(`🔗 DNS.Google connection: ${fromNode.label} (ID: ${fromNode.id}) -> ${toNode.label} (ID: ${toNode.id})`);
+            }
+            
+            svgElement.appendChild(line);
+            drawnLines++;
+        });
+        
+        console.log(`✅ Drew ${drawnLines} connection lines, skipped ${skippedLines}`);
+        
+        // Check if any lines are in the DOM
+        setTimeout(() => {
+            const linesInDOM = svgElement.querySelectorAll('.connection-line').length;
+            console.log(`🔍 Lines in DOM after render: ${linesInDOM}`);
+            if (linesInDOM > 0) {
+                const firstLine = svgElement.querySelector('.connection-line');
+                console.log('🔍 First line attributes:', {
+                    x1: firstLine.getAttribute('x1'),
+                    y1: firstLine.getAttribute('y1'),
+                    x2: firstLine.getAttribute('x2'),
+                    y2: firstLine.getAttribute('y2'),
+                    class: firstLine.getAttribute('class'),
+                    stroke: window.getComputedStyle(firstLine).stroke,
+                    strokeWidth: window.getComputedStyle(firstLine).strokeWidth,
+                    opacity: window.getComputedStyle(firstLine).opacity
+                });
+            }
+        }, 100);
+    }
+    
+    // Draw device nodes with drag functionality
+    function drawNodes() {
+        networkData.nodes.forEach(node => {
+            const config = deviceConfig[node.type] || deviceConfig.unknown;
+            
+            // Create group
+            const group = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+            group.setAttribute('class', 'device-icon');
+            group.setAttribute('data-node-id', node.id);
+            
+            // Background circle
+            const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+            circle.setAttribute('cx', node.x);
+            circle.setAttribute('cy', node.y);
+            circle.setAttribute('r', 30);
+            circle.setAttribute('fill', 'white');
+            circle.setAttribute('stroke', config.color);
+            circle.setAttribute('stroke-width', 3);
+            group.appendChild(circle);
+            
+            // Device icon
+            const icon = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+            icon.setAttribute('x', node.x);
+            icon.setAttribute('y', node.y + 8);
+            icon.setAttribute('text-anchor', 'middle');
+            icon.setAttribute('font-size', '24');
+            icon.textContent = config.icon;
+            group.appendChild(icon);
+            
+            // Label
+            const label = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+            label.setAttribute('x', node.x);
+            label.setAttribute('y', node.y + 50);
+            label.setAttribute('class', 'device-label');
+            label.textContent = node.label.length > 12 ? node.label.substring(0, 12) + '...' : node.label;
+            group.appendChild(label);
+            
+            // Status indicator
+            const status = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+            status.setAttribute('cx', node.x + 20);
+            status.setAttribute('cy', node.y - 20);
+            status.setAttribute('r', 6);
+            status.setAttribute('fill', getStatusColor(node.status));
+            group.appendChild(status);
+            
+            // Event handlers
+            group.addEventListener('mouseenter', (e) => showTooltip(e, node));
+            group.addEventListener('mouseleave', hideTooltip);
+            group.addEventListener('click', () => selectNode(node));
+            
+            // Drag functionality
+            group.addEventListener('mousedown', (e) => startDrag(e, node, group));
+            
+            svgElement.appendChild(group);
+        });
+        
+        // Add global mouse events for dragging
+        svgElement.addEventListener('mousemove', handleMouseMove);
+        svgElement.addEventListener('mouseup', handleMouseUp);
+        svgElement.addEventListener('mouseleave', handleMouseUp);
+    }
+    
+    // Drag functionality
+    function startDrag(e, node, group) {
+        if (!editMode) return;
+        
+        e.preventDefault();
+        isDragging = true;
+        dragElement = { node, group };
+        
+        const rect = svgElement.getBoundingClientRect();
+        const svgX = e.clientX - rect.left;
+        const svgY = e.clientY - rect.top;
+        
+        dragOffset = {
+            x: svgX - node.x,
+            y: svgY - node.y
+        };
+        
+        group.classList.add('dragging');
+        document.body.style.userSelect = 'none';
+        
+        hideTooltip();
+    }
+    
+    function handleMouseMove(e) {
+        if (!isDragging || !dragElement) return;
+        
+        const rect = svgElement.getBoundingClientRect();
+        const svgX = e.clientX - rect.left;
+        const svgY = e.clientY - rect.top;
+        
+        const newX = svgX - dragOffset.x;
+        const newY = svgY - dragOffset.y;
+        
+        // Update node position
+        dragElement.node.x = newX;
+        dragElement.node.y = newY;
+        
+        // Update visual elements
+        updateNodePosition(dragElement.group, newX, newY);
+        updateConnectedLines(dragElement.node.id, newX, newY);
+    }
+    
+    function handleMouseUp(e) {
+        if (isDragging && dragElement) {
+            dragElement.group.classList.remove('dragging');
+            isDragging = false;
+            dragElement = null;
+            document.body.style.userSelect = '';
+            
+            // Auto-save position during edit mode
+            if (editMode) {
+                console.log('📍 Position updated, auto-saving...');
+                saveCurrentPositions();
+            }
+        }
+    }
+    
+    // Update node visual position
+    function updateNodePosition(group, x, y) {
+        const circle = group.querySelector('circle');
+        const icon = group.querySelector('text');
+        const label = group.querySelector('.device-label');
+        const status = group.querySelectorAll('circle')[1]; // Second circle is status
+        
+        circle.setAttribute('cx', x);
+        circle.setAttribute('cy', y);
+        icon.setAttribute('x', x);
+        icon.setAttribute('y', y + 8);
+        label.setAttribute('x', x);
+        label.setAttribute('y', y + 50);
+        status.setAttribute('cx', x + 20);
+        status.setAttribute('cy', y - 20);
+    }
+    
+    // Update connected lines when node moves
+    function updateConnectedLines(nodeId, x, y) {
+        const lines = svgElement.querySelectorAll('.connection-line');
+        let updatedLines = 0;
+        
+        lines.forEach(line => {
+            const from = line.getAttribute('data-from');
+            const to = line.getAttribute('data-to');
+            
+            // Use strict equality to ensure exact ID matching
+            if (from === nodeId.toString()) {
+                line.setAttribute('x1', x);
+                line.setAttribute('y1', y);
+                updatedLines++;
+            }
+            if (to === nodeId.toString()) {
+                line.setAttribute('x2', x);
+                line.setAttribute('y2', y);
+                updatedLines++;
+            }
+        });
+        
+        console.log(`🔄 Updated ${updatedLines} line endpoints for node ${nodeId}`);
+    }
+    
+    // Toggle edit mode
+    function toggleEditMode() {
+        editMode = !editMode;
+        const editText = document.getElementById('edit-mode-text');
+        const layoutMode = document.getElementById('layout-mode');
+        const resetBtn = document.getElementById('reset-btn');
+        const saveBtn = document.getElementById('save-btn');
+        
+        if (editMode) {
+            editText.textContent = 'Exit Edit Mode';
+            layoutMode.style.display = 'block';
+            layoutMode.classList.add('edit-mode');
+            resetBtn.style.display = 'inline-block';
+            saveBtn.style.display = 'inline-block';
+            
+            // Change cursor for all device icons
+            document.querySelectorAll('.device-icon').forEach(el => {
+                el.style.cursor = 'move';
+            });
+            
+            console.log('✏️ Edit mode enabled - drag devices to reposition');
+        } else {
+            editText.textContent = 'Edit Layout';
+            layoutMode.style.display = 'none';
+            layoutMode.classList.remove('edit-mode');
+            resetBtn.style.display = 'none';
+            saveBtn.style.display = 'none';
+            
+            // Reset cursor
+            document.querySelectorAll('.device-icon').forEach(el => {
+                el.style.cursor = 'pointer';
+            });
+            
+            console.log('👁️ Edit mode disabled');
+        }
+    }
+    
+    // Save current layout
+    function saveLayout() {
+        saveCurrentPositions();
+        
+        // Send to server
+        fetch('/api/diagram_layout', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                layout_name: 'default',
+                layout_data: {
+                    devices: savedPositions,
+                    timestamp: new Date().toISOString()
+                },
+                created_by: 'user'
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                console.log('💾 Layout saved successfully');
+                showNotification('Layout saved successfully!', 'success');
+            } else {
+                console.error('Failed to save layout:', data.error);
+                showNotification('Failed to save layout: ' + data.error, 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Error saving layout:', error);
+            showNotification('Error saving layout', 'error');
+        });
+    }
+    
+    // Reset layout to original positions
+    function resetLayout() {
+        if (confirm('Reset all device positions to default layout?')) {
+            // Clear saved positions
+            savedPositions = {};
+            localStorage.removeItem('networkmap_device_positions');
+            
+            // Reposition nodes to original locations
+            networkData.nodes.forEach(node => {
+                if (originalPositions[node.id]) {
+                    node.x = originalPositions[node.id].x;
+                    node.y = originalPositions[node.id].y;
+                    
+                    const group = svgElement.querySelector(`[data-node-id="${node.id}"]`);
+                    if (group) {
+                        updateNodePosition(group, node.x, node.y);
+                        updateConnectedLines(node.id, node.x, node.y);
+                    }
+                }
+            });
+            
+            // Delete layout from server
+            fetch('/api/diagram_layout/default', {
+                method: 'DELETE'
+            })
+            .then(response => response.json())
+            .then(data => {
+                console.log('🔄 Layout reset to default');
+                showNotification('Layout reset to default', 'success');
+            })
+            .catch(error => {
+                console.error('Error deleting layout:', error);
+            });
+        }
+    }
+    
+    // Save current positions to localStorage and memory
+    function saveCurrentPositions() {
+        networkData.nodes.forEach(node => {
+            savedPositions[node.id] = { x: node.x, y: node.y };
+        });
+        localStorage.setItem('networkmap_device_positions', JSON.stringify(savedPositions));
+    }
+    
+    // Load saved positions from server and localStorage
+    function loadSavedPositions() {
+        // First try to load from server
+        fetch('/api/diagram_layout?name=default')
+            .then(response => response.json())
+            .then(data => {
+                if (data.success && data.layout && data.layout.layout_data && data.layout.layout_data.devices) {
+                    savedPositions = data.layout.layout_data.devices;
+                    console.log('📥 Loaded saved layout from server');
+                } else {
+                    // Fallback to localStorage
+                    loadFromLocalStorage();
+                }
+            })
+            .catch(error => {
+                console.log('No saved layout on server, checking localStorage...');
+                loadFromLocalStorage();
+            });
+    }
+    
+    function loadFromLocalStorage() {
+        const stored = localStorage.getItem('networkmap_device_positions');
+        if (stored) {
+            try {
+                savedPositions = JSON.parse(stored);
+                console.log('📥 Loaded saved positions from localStorage');
+            } catch (e) {
+                console.log('Error parsing stored positions');
+                savedPositions = {};
+            }
+        }
+    }
+    
+    // Show notification
+    function showNotification(message, type = 'info') {
+        // Create a simple notification
+        const notification = document.createElement('div');
+        notification.className = `pf-c-alert pf-m-${type === 'success' ? 'success' : 'danger'} pf-m-inline`;
+        notification.style.position = 'fixed';
+        notification.style.top = '20px';
+        notification.style.right = '20px';
+        notification.style.zIndex = '9999';
+        notification.innerHTML = `
+            <div class="pf-c-alert__icon">
+                <i class="fas fa-${type === 'success' ? 'check-circle' : 'exclamation-circle'}"></i>
+            </div>
+            <div class="pf-c-alert__title">${message}</div>
+        `;
+        
+        document.body.appendChild(notification);
+        
+        setTimeout(() => {
+            notification.remove();
+        }, 3000);
+    }
+    
+    // Get status color
+    function getStatusColor(status) {
+        switch (status) {
+            case 'online': return '#28a745';
+            case 'offline': return '#dc3545';  
+            case 'warning': return '#ffc107';
+            default: return '#6c757d';
+        }
+    }
+    
+    // Show tooltip - stable, no flicker
+    function showTooltip(event, node) {
+        if (isDragging) return;
+        
+        tooltip.innerHTML = `
+            <strong>${node.label}</strong><br>
+            ID: ${node.id}<br>
+            IP: ${node.ip || 'Unknown'}<br>
+            Type: ${node.type}<br>
+            Status: ${node.status}
+        `;
+        tooltip.style.display = 'block';
+        tooltip.style.left = event.pageX + 15 + 'px';
+        tooltip.style.top = event.pageY + 15 + 'px';
+    }
+    
+    // Hide tooltip
+    function hideTooltip() {
+        tooltip.style.display = 'none';
+    }
+    
+    // Select node
+    function selectNode(node) {
+        
+        
+        // Remove previous selection
+        document.querySelectorAll('.device-icon.selected').forEach(el => {
+            el.classList.remove('selected');
+        });
+        
+        // Add selection to current node
+        const group = svgElement.querySelector(`[data-node-id="${node.id}"]`);
+        if (group) {
+            group.classList.add('selected');
+        showDeviceDetails(node);
+        }
+    }
+    
+    // Refresh diagram
+    function refreshDiagram() {
+        console.log('🔄 Refreshing diagram...');
+        loadNetworkData();
+    }
+    
+    // Export SVG
+    function exportSVG() {
+        if (!svgElement) {
+            alert('No diagram to export');
+            return;
+        }
+        
+        const svgData = new XMLSerializer().serializeToString(svgElement);
+        const blob = new Blob([svgData], { type: 'image/svg+xml' });
+        const url = URL.createObjectURL(blob);
+        
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `network-diagram-${new Date().toISOString().slice(0, 10)}.svg`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+    }
+    
+
+    // Zoom functionality
+    function zoomIn() {
+        if (!svgElement) {
+            console.log("No SVG element available for zoom");
+            return;
+        }
+        
+        // Get current viewBox
+        const viewBox = svgElement.getAttribute("viewBox");
+        if (!viewBox) {
+            console.log("No viewBox found, setting default");
+            const rect = svgElement.getBoundingClientRect();
+            svgElement.setAttribute("viewBox", `0 0 ${rect.width} ${rect.height}`);
+            return;
+        }
+        
+        const [x, y, width, height] = viewBox.split(" ").map(Number);
+        
+        // Zoom in by 20% (reduce viewBox size)
+        const zoomFactor = 0.8;
+        const centerX = x + width / 2;
+        const centerY = y + height / 2;
+        
+        const newWidth = width * zoomFactor;
+        const newHeight = height * zoomFactor;
+        
+        const newX = centerX - newWidth / 2;
+        const newY = centerY - newHeight / 2;
+        
+        svgElement.setAttribute("viewBox", `${newX} ${newY} ${newWidth} ${newHeight}`);
+        
+        // Show feedback
+        showMessage("Zoomed in", "success");
+    }
+    
+    function zoomOut() {
+        if (!svgElement) {
+            console.log("No SVG element available for zoom");
+            return;
+        }
+        
+        // Get current viewBox
+        const viewBox = svgElement.getAttribute("viewBox");
+        if (!viewBox) {
+            console.log("No viewBox found, setting default");
+            const rect = svgElement.getBoundingClientRect();
+            svgElement.setAttribute("viewBox", `0 0 ${rect.width} ${rect.height}`);
+            return;
+        }
+        
+        const [x, y, width, height] = viewBox.split(" ").map(Number);
+        
+        // Zoom out by 25% (increase viewBox size)
+        const zoomFactor = 1.25;
+        const centerX = x + width / 2;
+        const centerY = y + height / 2;
+        
+        const newWidth = width * zoomFactor;
+        const newHeight = height * zoomFactor;
+        
+        const newX = centerX - newWidth / 2;
+        const newY = centerY - newHeight / 2;
+        
+        svgElement.setAttribute("viewBox", `${newX} ${newY} ${newWidth} ${newHeight}`);
+        
+        // Show feedback
+        showMessage("Zoomed out", "success");
+    }
+    
+    // Helper function to show messages
+    function showMessage(message, type) {
+        // Create a temporary message div
+        const messageDiv = document.createElement("div");
+        messageDiv.className = `pf-c-alert pf-m-${type} pf-m-inline`;
+        messageDiv.style.cssText = "position: fixed; top: 20px; right: 20px; z-index: 1000; max-width: 300px;";
+        messageDiv.innerHTML = `
+            <div class="pf-c-alert__icon">
+                <i class="fas fa-${type === success ? check-circle : info-circle}" aria-hidden="true"></i>
+            </div>
+            <div class="pf-c-alert__title">
+                <span class="pf-screen-reader">Success alert:</span>
+                ${message}
+            </div>
+        `;
+        
+        document.body.appendChild(messageDiv);
+        
+        // Auto-remove after 2 seconds
+        setTimeout(() => {
+            if (messageDiv.parentNode) {
+                document.body.removeChild(messageDiv);
+            }
+        }, 2000);
+    }
+
+        // Show error
+    function showError(message) {
+        document.getElementById('network-canvas').innerHTML = `
+            <div style="display: flex; justify-content: center; align-items: center; height: 100%; color: #dc3545;">
+                <div style="text-align: center;">
+                    <i class="fas fa-exclamation-triangle" style="font-size: 48px; margin-bottom: 20px;"></i>
+                    <h3>Error Loading Diagram</h3>
+                    <p>${message}</p>
+                    <button class="pf-c-button pf-m-primary" onclick="refreshDiagram()">
+                        <i class="fas fa-sync pf-u-mr-sm"></i>Retry
+                    </button>
+                </div>
+            </div>
+        `;
+    }
+
+// Pan functionality
+let isPanMode = false;
+let panState = { isDragging: false, startX: 0, startY: 0, viewBoxX: 0, viewBoxY: 0 };
+
+function togglePanMode() {
+    isPanMode = !isPanMode;
+    const panBtn = document.getElementById("pan-btn");
+    const panText = document.getElementById("pan-mode-text");
+    const canvas = document.getElementById("network-canvas");
+
+    if (isPanMode) {
+        panBtn.classList.remove("pf-m-secondary");
+        panBtn.classList.add("pf-m-primary");
+        panText.textContent = "Disable Pan";
+        canvas.style.cursor = "grab";
+        enablePanEvents();
+        showMessage("Pan mode enabled - drag to navigate", "info");
+    } else {
+        panBtn.classList.remove("pf-m-primary");
+        panBtn.classList.add("pf-m-secondary");
+        panText.textContent = "Enable Pan";
+        canvas.style.cursor = "default";
+        disablePanEvents();
+        showMessage("Pan mode disabled", "info");
+    }
+}
+
+var selectedDevice = null;
+
+function editDevice() {
+    if (selectedDevice) {
+        document.getElementById("edit-device-name").value = selectedDevice.label || "";
+        document.getElementById("edit-device-type").value = selectedDevice.type || "server";
+        document.getElementById("edit-device-notes").value = selectedDevice.notes || "";
+        document.getElementById("device-edit-modal").style.display = "flex";
+    }
+}
+
+function closeEditModal() {
+    document.getElementById("device-edit-modal").style.display = "none";
+}
+
+function saveDeviceChanges() {
+    if (!selectedDevice) return;
+    var name = document.getElementById("edit-device-name").value;
+    var type = document.getElementById("edit-device-type").value;
+    var notes = document.getElementById("edit-device-notes").value;
+    if (!name) { alert("Name is required"); return; }
+    var data = { id: selectedDevice.id, label: name, type: type, notes: notes };
+    fetch("/api/update_device", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(data) })
+    .then(function(response) { return response.json(); })
+    .then(function(result) {
+        if (result.success) {
+            selectedDevice.label = name; selectedDevice.type = type; selectedDevice.notes = notes;
+            showDeviceDetails(selectedDevice); closeEditModal(); alert("Device updated!");
+        } else { alert("Error: " + (result.error || "Unknown error")); }
+    }).catch(function() { alert("Network error"); });
+}
+
+function enablePanEvents() {
+    const canvas = document.getElementById("network-canvas");
+    canvas.addEventListener("mousedown", startPan);
+    document.addEventListener("mousemove", doPan);
+    document.addEventListener("mouseup", endPan);
+}
+
+var selectedDevice = null;
+
+function editDevice() {
+    if (selectedDevice) {
+        document.getElementById("edit-device-name").value = selectedDevice.label || "";
+        document.getElementById("edit-device-type").value = selectedDevice.type || "server";
+        document.getElementById("edit-device-notes").value = selectedDevice.notes || "";
+        document.getElementById("device-edit-modal").style.display = "flex";
+    }
+}
+
+function closeEditModal() {
+    document.getElementById("device-edit-modal").style.display = "none";
+}
+
+function saveDeviceChanges() {
+    if (!selectedDevice) return;
+    var name = document.getElementById("edit-device-name").value;
+    var type = document.getElementById("edit-device-type").value;
+    var notes = document.getElementById("edit-device-notes").value;
+    if (!name) { alert("Name is required"); return; }
+    var data = { id: selectedDevice.id, label: name, type: type, notes: notes };
+    fetch("/api/update_device", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(data) })
+    .then(function(response) { return response.json(); })
+    .then(function(result) {
+        if (result.success) {
+            selectedDevice.label = name; selectedDevice.type = type; selectedDevice.notes = notes;
+            showDeviceDetails(selectedDevice); closeEditModal(); alert("Device updated!");
+        } else { alert("Error: " + (result.error || "Unknown error")); }
+    }).catch(function() { alert("Network error"); });
+}
+
+function disablePanEvents() {
+    const canvas = document.getElementById("network-canvas");
+    canvas.removeEventListener("mousedown", startPan);
+    document.removeEventListener("mousemove", doPan);
+    document.removeEventListener("mouseup", endPan);
+}
+
+var selectedDevice = null;
+
+function editDevice() {
+    if (selectedDevice) {
+        document.getElementById("edit-device-name").value = selectedDevice.label || "";
+        document.getElementById("edit-device-type").value = selectedDevice.type || "server";
+        document.getElementById("edit-device-notes").value = selectedDevice.notes || "";
+        document.getElementById("device-edit-modal").style.display = "flex";
+    }
+}
+
+function closeEditModal() {
+    document.getElementById("device-edit-modal").style.display = "none";
+}
+
+function saveDeviceChanges() {
+    if (!selectedDevice) return;
+    var name = document.getElementById("edit-device-name").value;
+    var type = document.getElementById("edit-device-type").value;
+    var notes = document.getElementById("edit-device-notes").value;
+    if (!name) { alert("Name is required"); return; }
+    var data = { id: selectedDevice.id, label: name, type: type, notes: notes };
+    fetch("/api/update_device", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(data) })
+    .then(function(response) { return response.json(); })
+    .then(function(result) {
+        if (result.success) {
+            selectedDevice.label = name; selectedDevice.type = type; selectedDevice.notes = notes;
+            showDeviceDetails(selectedDevice); closeEditModal(); alert("Device updated!");
+        } else { alert("Error: " + (result.error || "Unknown error")); }
+    }).catch(function() { alert("Network error"); });
+}
+
+function startPan(event) {
+    if (!isPanMode || !svgElement) return;
+    if (event.target.closest(".device-icon")) return;
+    event.preventDefault();
+    panState.isDragging = true;
+    document.getElementById("network-canvas").style.cursor = "grabbing";
+    panState.startX = event.clientX;
+    panState.startY = event.clientY;
+    const viewBox = svgElement.getAttribute("viewBox");
+    if (viewBox) {
+        const [x, y] = viewBox.split(" ").map(Number);
+        panState.viewBoxX = x; panState.viewBoxY = y;
+    }
+}
+
+var selectedDevice = null;
+
+function editDevice() {
+    if (selectedDevice) {
+        document.getElementById("edit-device-name").value = selectedDevice.label || "";
+        document.getElementById("edit-device-type").value = selectedDevice.type || "server";
+        document.getElementById("edit-device-notes").value = selectedDevice.notes || "";
+        document.getElementById("device-edit-modal").style.display = "flex";
+    }
+}
+
+function closeEditModal() {
+    document.getElementById("device-edit-modal").style.display = "none";
+}
+
+function saveDeviceChanges() {
+    if (!selectedDevice) return;
+    var name = document.getElementById("edit-device-name").value;
+    var type = document.getElementById("edit-device-type").value;
+    var notes = document.getElementById("edit-device-notes").value;
+    if (!name) { alert("Name is required"); return; }
+    var data = { id: selectedDevice.id, label: name, type: type, notes: notes };
+    fetch("/api/update_device", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(data) })
+    .then(function(response) { return response.json(); })
+    .then(function(result) {
+        if (result.success) {
+            selectedDevice.label = name; selectedDevice.type = type; selectedDevice.notes = notes;
+            showDeviceDetails(selectedDevice); closeEditModal(); alert("Device updated!");
+        } else { alert("Error: " + (result.error || "Unknown error")); }
+    }).catch(function() { alert("Network error"); });
+}
+
+function doPan(event) {
+    if (!panState.isDragging || !isPanMode || !svgElement) return;
+    event.preventDefault();
+    const deltaX = event.clientX - panState.startX;
+    const deltaY = event.clientY - panState.startY;
+    const viewBox = svgElement.getAttribute("viewBox");
+    if (!viewBox) return;
+    const [, , width, height] = viewBox.split(" ").map(Number);
+    const rect = svgElement.getBoundingClientRect();
+    const scaleX = width / rect.width; const scaleY = height / rect.height;
+    const newX = panState.viewBoxX - (deltaX * scaleX);
+    const newY = panState.viewBoxY - (deltaY * scaleY);
+    svgElement.setAttribute("viewBox", `${newX} ${newY} ${width} ${height}`);
+}
+
+var selectedDevice = null;
+
+function editDevice() {
+    if (selectedDevice) {
+        document.getElementById("edit-device-name").value = selectedDevice.label || "";
+        document.getElementById("edit-device-type").value = selectedDevice.type || "server";
+        document.getElementById("edit-device-notes").value = selectedDevice.notes || "";
+        document.getElementById("device-edit-modal").style.display = "flex";
+    }
+}
+
+function closeEditModal() {
+    document.getElementById("device-edit-modal").style.display = "none";
+}
+
+function saveDeviceChanges() {
+    if (!selectedDevice) return;
+    var name = document.getElementById("edit-device-name").value;
+    var type = document.getElementById("edit-device-type").value;
+    var notes = document.getElementById("edit-device-notes").value;
+    if (!name) { alert("Name is required"); return; }
+    var data = { id: selectedDevice.id, label: name, type: type, notes: notes };
+    fetch("/api/update_device", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(data) })
+    .then(function(response) { return response.json(); })
+    .then(function(result) {
+        if (result.success) {
+            selectedDevice.label = name; selectedDevice.type = type; selectedDevice.notes = notes;
+            showDeviceDetails(selectedDevice); closeEditModal(); alert("Device updated!");
+        } else { alert("Error: " + (result.error || "Unknown error")); }
+    }).catch(function() { alert("Network error"); });
+}
+
+function endPan() {
+    if (!panState.isDragging) return;
+    panState.isDragging = false;
+    if (isPanMode) document.getElementById("network-canvas").style.cursor = "grab";
+}
+
+var selectedDevice = null;
+
+function editDevice() {
+    if (selectedDevice) {
+        document.getElementById("edit-device-name").value = selectedDevice.label || "";
+        document.getElementById("edit-device-type").value = selectedDevice.type || "server";
+        document.getElementById("edit-device-notes").value = selectedDevice.notes || "";
+        document.getElementById("device-edit-modal").style.display = "flex";
+    }
+}
+
+function closeEditModal() {
+    document.getElementById("device-edit-modal").style.display = "none";
+}
+
+function saveDeviceChanges() {
+    if (!selectedDevice) return;
+    var name = document.getElementById("edit-device-name").value;
+    var type = document.getElementById("edit-device-type").value;
+    var notes = document.getElementById("edit-device-notes").value;
+    if (!name) { alert("Name is required"); return; }
+    var data = { id: selectedDevice.id, label: name, type: type, notes: notes };
+    fetch("/api/update_device", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(data) })
+    .then(function(response) { return response.json(); })
+    .then(function(result) {
+        if (result.success) {
+            selectedDevice.label = name; selectedDevice.type = type; selectedDevice.notes = notes;
+            showDeviceDetails(selectedDevice); closeEditModal(); alert("Device updated!");
+        } else { alert("Error: " + (result.error || "Unknown error")); }
+    }).catch(function() { alert("Network error"); });
+}
+
+</script>
+{% endblock %}

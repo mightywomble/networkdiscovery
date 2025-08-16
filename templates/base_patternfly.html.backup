@@ -16,7 +16,7 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     
     <!-- Vis.js for network visualization -->
-    {% if not disable_visjs %}<script src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>{% endif %}
+    <script src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
     
     <style>
         /* Custom styles for Home Lab with PatternFly */
@@ -396,6 +396,11 @@
                                 <li class="nm-nav-item">
                                     <a href="{{ url_for('network_diagram') }}" class="nm-nav-link {% if request.endpoint == 'network_diagram' %}active{% endif %}">
                                         <span>Network Diagram</span>
+                                    </a>
+                                </li>
+                                <li class="nm-nav-item">
+                                    <a href="{{ url_for('d3_topology') }}" class="nm-nav-link {% if request.endpoint == 'd3_topology' %}active{% endif %}">
+                                        <span>Enhanced Topology</span>
                                     </a>
                                 </li>
                             </ul>

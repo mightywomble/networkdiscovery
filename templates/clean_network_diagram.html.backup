@@ -44,7 +44,7 @@
                         </button>
                     </div>
                 </div>
-                <div class="pf-c-card__body"><div style="background: #28a745; color: white; padding: 10px; text-align: center; margin-bottom: 10px;">✅ SVG Clean Diagram Loaded (NOT vis.js)</div>
+                <div class="pf-c-card__body">
                     <div id="network-canvas" style="height: 600px; background: #f5f5f5; border: 1px solid #d2d2d2; border-radius: 3px; position: relative; overflow: hidden;">
                         <div id="loading-indicator" class="pf-l-flex pf-m-justify-content-center pf-m-align-items-center" style="height: 100%; display: none;">
                             <div class="pf-c-spinner pf-m-lg" role="progressbar">
@@ -227,7 +227,7 @@ function classifyConnectionType(edge) {
     return 'lan';
 }
 
-function renderDiagram() { console.log("🎨 renderDiagram() called with SVG");
+function renderDiagram() {
     if (!networkData) return;
     
     const canvas = document.getElementById('network-canvas');
@@ -404,7 +404,7 @@ function showDeviceDetails(device) {
                     ${deviceConfig.icon} ${device.label}
                 </h4>
             </div>
-            <div class="pf-c-card__body"><div style="background: #28a745; color: white; padding: 10px; text-align: center; margin-bottom: 10px;">✅ SVG Clean Diagram Loaded (NOT vis.js)</div>
+            <div class="pf-c-card__body">
                 <dl class="pf-c-description-list pf-m-horizontal">
                     <dt class="pf-c-description-list__term">
                         <span class="pf-c-description-list__text">IP Address</span>
@@ -445,7 +445,7 @@ function showDeviceDetails(device) {
                     <i class="fas fa-network-wired pf-u-mr-sm"></i>Connections (${connections.length})
                 </h4>
             </div>
-            <div class="pf-c-card__body"><div style="background: #28a745; color: white; padding: 10px; text-align: center; margin-bottom: 10px;">✅ SVG Clean Diagram Loaded (NOT vis.js)</div>
+            <div class="pf-c-card__body">
                 ${connections.map(conn => `
                     <div class="pf-u-mb-sm pf-u-p-sm" style="border: 1px solid #d2d2d2; border-radius: 3px;">
                         <div class="pf-l-flex pf-m-align-items-center">
