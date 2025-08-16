@@ -1795,7 +1795,7 @@ function displayAgentSummary(data) {
                         <i class="fas fa-network-wired fa-2x pf-u-color-100"></i>
                     </div>
                     <h6 class="pf-c-card__title pf-u-mb-xs">Hosts Discovered</h6>
-                    <div class="pf-u-font-size-2xl pf-u-font-weight-bold">${data.hosts_count || 0}</div>
+                    <div class="pf-u-font-size-2xl pf-u-font-weight-bold">${data.network_data ? data.network_data.length : 0}</div>
                 </div>
             </div>
             <div class="pf-c-card pf-m-compact">
@@ -1803,8 +1803,8 @@ function displayAgentSummary(data) {
                     <div class="pf-u-mb-sm">
                         <i class="fas fa-globe fa-2x pf-u-color-100"></i>
                     </div>
-                    <h6 class="pf-c-card__title pf-u-mb-xs">Services Found</h6>
-                    <div class="pf-u-font-size-2xl pf-u-font-weight-bold">${data.services_count || 0}</div>
+                    <h6 class="pf-c-card__title pf-u-mb-xs">Listening Ports</h6>
+                    <div class="pf-u-font-size-2xl pf-u-font-weight-bold">${data.listening_ports ? data.listening_ports.length : 0}</div>
                 </div>
             </div>
             <div class="pf-c-card pf-m-compact">
@@ -1813,7 +1813,7 @@ function displayAgentSummary(data) {
                         <i class="fas fa-shield-alt fa-2x pf-u-color-100"></i>
                     </div>
                     <h6 class="pf-c-card__title pf-u-mb-xs">Tests Run</h6>
-                    <div class="pf-u-font-size-2xl pf-u-font-weight-bold">${data.tests_count || 0}</div>
+                    <div class="pf-u-font-size-2xl pf-u-font-weight-bold">${data.test_results ? Object.keys(data.test_results).length : 0}</div>
                 </div>
             </div>
             <div class="pf-c-card pf-m-compact">
@@ -1831,13 +1831,13 @@ function displayAgentSummary(data) {
             <div class="pf-c-description-list__group">
                 <dt class="pf-c-description-list__term">Agent Version</dt>
                 <dd class="pf-c-description-list__description">
-                    <div class="pf-c-description-list__text">${data.agent_version || 'Unknown'}</div>
+                    <div class="pf-c-description-list__text">${data.agent_info?.agent_version || data.system_info?.agent_version || 'Unknown'}</div>
                 </dd>
             </div>
             <div class="pf-c-description-list__group">
                 <dt class="pf-c-description-list__term">Platform</dt>
                 <dd class="pf-c-description-list__description">
-                    <div class="pf-c-description-list__text">${data.platform || 'Unknown'}</div>
+                    <div class="pf-c-description-list__text">${data.system_info?.platform || data.system_info?.os_type || 'Unknown'}</div>
                 </dd>
             </div>
             <div class="pf-c-description-list__group">
@@ -1909,11 +1909,30 @@ function displayTestResults(testResults) {
     if (Array.isArray(testResults)) {
         testArray = testResults;
     } else if (typeof testResults === 'object') {
-        // Convert object to array of test results
-        testArray = Object.keys(testResults).map(key => ({
-            test_name: key,
-            ...testResults[key]
-        }));
+        // Handle nested test results structure (category -> tests)
+        Object.keys(testResults).forEach(categoryKey => {
+            const category = testResults[categoryKey];
+            if (typeof category === 'object' && !Array.isArray(category)) {
+                // If it's a nested structure like { "System Monitoring": { "Network Interfaces": {...} } }
+                Object.keys(category).forEach(testKey => {
+                    const test = category[testKey];
+                    if (typeof test === 'object') {
+                        testArray.push({
+                            test_name: `${categoryKey} - ${testKey}`,
+                            status: test.success ? 'pass' : 'fail',
+                            description: test.description || 'No description available',
+                            result_details: test.details || test.result_details || null
+                        });
+                    }
+                });
+            } else {
+                // Simple structure
+                testArray.push({
+                    test_name: categoryKey,
+                    ...category
+                });
+            }
+        });
     }
     
     if (testArray.length === 0) {
