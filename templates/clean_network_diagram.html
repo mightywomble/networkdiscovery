@@ -1,0 +1,569 @@
+{% extends "base_patternfly.html" %}
+
+{% block title %}Network Diagram - Home Lab{% endblock %}
+
+{% block breadcrumb %}
+<li class="pf-c-breadcrumb__item">
+    <a href="{{ url_for('index') }}" class="pf-c-breadcrumb__link">Home</a>
+</li>
+<li class="pf-c-breadcrumb__item pf-m-current" aria-current="page">
+    <span class="pf-c-breadcrumb__item-divider">
+        <i class="fas fa-angle-right" aria-hidden="true"></i>
+    </span>
+    Network Diagram
+</li>
+{% endblock %}
+
+{% block content %}
+<!-- Page Header -->
+<div class="pf-c-page__main-section pf-m-light">
+    <div class="pf-c-content">
+        <h1><i class="fas fa-project-diagram pf-u-mr-sm"></i>Network Infrastructure Diagram</h1>
+        <p class="pf-u-color-200">Interactive network topology visualization with device icons and connections</p>
+    </div>
+</div>
+
+<!-- Main Content -->
+<div class="pf-c-page__main-section">
+    <div class="pf-l-grid pf-m-gutter">
+        <!-- Diagram Panel -->
+        <div class="pf-l-grid__item pf-m-8-col pf-m-12-col-on-md">
+            <div class="pf-c-card">
+                <div class="pf-c-card__header">
+                    <div class="pf-c-card__header-main">
+                        <h2 class="pf-c-card__title">
+                            <i class="fas fa-network-wired pf-u-mr-sm"></i>Network Topology
+                        </h2>
+                    </div>
+                    <div class="pf-c-card__actions">
+                        <button class="pf-c-button pf-m-primary" id="refresh-btn" onclick="refreshDiagram()">
+                            <i class="fas fa-sync pf-u-mr-sm"></i>Refresh
+                        </button>
+                        <button class="pf-c-button pf-m-secondary" onclick="exportDiagram()">
+                            <i class="fas fa-download pf-u-mr-sm"></i>Export
+                        </button>
+                    </div>
+                </div>
+                <div class="pf-c-card__body">
+                    <div id="network-canvas" style="height: 600px; background: #f5f5f5; border: 1px solid #d2d2d2; border-radius: 3px; position: relative; overflow: hidden;">
+                        <div id="loading-indicator" class="pf-l-flex pf-m-justify-content-center pf-m-align-items-center" style="height: 100%; display: none;">
+                            <div class="pf-c-spinner pf-m-lg" role="progressbar">
+                                <span class="pf-c-spinner__clipper"></span>
+                                <span class="pf-c-spinner__lead-ball"></span>
+                                <span class="pf-c-spinner__tail-ball"></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Device Details Panel -->
+        <div class="pf-l-grid__item pf-m-4-col pf-m-12-col-on-md">
+            <div class="pf-c-card" style="height: 684px;">
+                <div class="pf-c-card__header">
+                    <h3 class="pf-c-card__title">
+                        <i class="fas fa-info-circle pf-u-mr-sm"></i>Device Information
+                    </h3>
+                </div>
+                <div class="pf-c-card__body" style="overflow-y: auto;">
+                    <div id="device-details">
+                        <div class="pf-l-flex pf-m-column pf-m-justify-content-center pf-m-align-items-center pf-u-text-align-center" style="height: 200px;">
+                            <i class="fas fa-mouse-pointer pf-u-color-200" style="font-size: 3rem; margin-bottom: 1rem;"></i>
+                            <p class="pf-u-color-200">Click on a device to view details</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.device-icon {
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.device-icon:hover {
+    transform: scale(1.1);
+    filter: drop-shadow(2px 2px 4px rgba(0,0,0,0.3));
+}
+
+.device-icon.selected {
+    filter: drop-shadow(0 0 8px #007bff);
+}
+
+.device-label {
+    font-family: "Red Hat Text", "Overpass", overpass, helvetica, arial, sans-serif;
+    font-size: 12px;
+    font-weight: 500;
+    text-anchor: middle;
+    fill: #151515;
+    pointer-events: none;
+    user-select: none;
+}
+
+.connection-line {
+    stroke: #007bff;
+    stroke-width: 2;
+    fill: none;
+    opacity: 0.7;
+}
+
+.connection-line.internet {
+    stroke: #ee0000;
+    stroke-dasharray: 5,5;
+}
+
+.connection-line.lan {
+    stroke: #28a745;
+}
+
+.tooltip {
+    position: absolute;
+    background: rgba(0, 0, 0, 0.8);
+    color: white;
+    padding: 8px 12px;
+    border-radius: 4px;
+    font-size: 12px;
+    pointer-events: none;
+    z-index: 1000;
+    white-space: nowrap;
+}
+</style>
+
+<script>
+// Global state
+let networkData = null;
+let selectedDevice = null;
+let svgElement = null;
+
+// Device type icons and colors
+const deviceTypes = {
+    server: { icon: '🖥️', color: '#007bff', label: 'Server' },
+    router: { icon: '📡', color: '#fd7e14', label: 'Router' },
+    switch: { icon: '🔗', color: '#17a2b8', label: 'Switch' },
+    workstation: { icon: '💻', color: '#28a745', label: 'Workstation' },
+    cloud: { icon: '☁️', color: '#6c757d', label: 'Cloud' },
+    internet: { icon: '🌐', color: '#dc3545', label: 'Internet' },
+    unknown: { icon: '📟', color: '#6c757d', label: 'Device' }
+};
+
+// Initialize diagram on page load
+document.addEventListener('DOMContentLoaded', function() {
+    initializeDiagram();
+});
+
+function initializeDiagram() {
+    console.log('Initializing clean network diagram...');
+    refreshDiagram();
+}
+
+function refreshDiagram() {
+    showLoading(true);
+    
+    // Fetch network data
+    fetch('/api/network_data')
+        .then(response => response.json())
+        .then(data => {
+            if (data.nodes && data.edges) {
+                networkData = processNetworkData(data);
+                renderDiagram();
+            } else {
+                throw new Error('Invalid network data format');
+            }
+        })
+        .catch(error => {
+            console.error('Error loading network data:', error);
+            showError('Failed to load network data: ' + error.message);
+        })
+        .finally(() => {
+            showLoading(false);
+        });
+}
+
+function processNetworkData(rawData) {
+    // Process and classify the raw network data
+    const nodes = rawData.nodes.map(node => ({
+        id: node.id,
+        label: node.label || node.ip || 'Unknown',
+        ip: node.ip,
+        type: classifyDeviceType(node),
+        status: node.status || 'unknown',
+        x: 0,
+        y: 0
+    }));
+    
+    const edges = rawData.edges.map(edge => ({
+        from: edge.from,
+        to: edge.to,
+        type: classifyConnectionType(edge),
+        label: edge.label || ''
+    }));
+    
+    return { nodes, edges };
+}
+
+function classifyDeviceType(node) {
+    const label = (node.label || '').toLowerCase();
+    const ip = node.ip || '';
+    
+    if (label.includes('router') || label.includes('gateway')) return 'router';
+    if (label.includes('switch')) return 'switch';
+    if (label.includes('workstation') || label.includes('desktop')) return 'workstation';
+    if (label.includes('cloud') || label.includes('aws') || label.includes('azure')) return 'cloud';
+    if (!ip.match(/^(192\.168\.|10\.|172\.(1[6-9]|2[0-9]|3[01])\.)/)) return 'internet';
+    
+    return 'server'; // Default
+}
+
+function classifyConnectionType(edge) {
+    const label = (edge.label || '').toLowerCase();
+    if (label.includes('internet') || label.includes('wan')) return 'internet';
+    return 'lan';
+}
+
+function renderDiagram() {
+    if (!networkData) return;
+    
+    const canvas = document.getElementById('network-canvas');
+    const rect = canvas.getBoundingClientRect();
+    const width = rect.width;
+    const height = rect.height;
+    
+    // Clear existing content
+    canvas.innerHTML = '';
+    
+    // Create SVG
+    svgElement = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    svgElement.setAttribute('width', width);
+    svgElement.setAttribute('height', height);
+    svgElement.setAttribute('viewBox', `0 0 ${width} ${height}`);
+    svgElement.style.width = '100%';
+    svgElement.style.height = '100%';
+    
+    // Layout nodes in a clean grid
+    layoutNodes(networkData.nodes, width, height);
+    
+    // Draw connections first (so they appear behind nodes)
+    drawConnections(svgElement, networkData.edges, networkData.nodes);
+    
+    // Draw nodes
+    drawNodes(svgElement, networkData.nodes);
+    
+    // Add to canvas
+    canvas.appendChild(svgElement);
+    
+    console.log(`Rendered ${networkData.nodes.length} devices and ${networkData.edges.length} connections`);
+}
+
+function layoutNodes(nodes, width, height) {
+    const margin = 80;
+    const nodeSpacing = 120;
+    
+    // Group nodes by type for better organization
+    const nodesByType = {};
+    nodes.forEach(node => {
+        const type = node.type;
+        if (!nodesByType[type]) nodesByType[type] = [];
+        nodesByType[type].push(node);
+    });
+    
+    let currentY = margin;
+    const centerX = width / 2;
+    
+    // Layout each type group
+    Object.entries(nodesByType).forEach(([type, typeNodes]) => {
+        const nodesPerRow = Math.min(6, Math.ceil(Math.sqrt(typeNodes.length)));
+        const rows = Math.ceil(typeNodes.length / nodesPerRow);
+        
+        for (let row = 0; row < rows; row++) {
+            const rowNodes = typeNodes.slice(row * nodesPerRow, (row + 1) * nodesPerRow);
+            const rowWidth = (rowNodes.length - 1) * nodeSpacing;
+            const startX = centerX - rowWidth / 2;
+            
+            rowNodes.forEach((node, col) => {
+                node.x = startX + col * nodeSpacing;
+                node.y = currentY;
+            });
+            
+            currentY += nodeSpacing;
+        }
+        
+        currentY += 20; // Extra space between type groups
+    });
+}
+
+function drawConnections(svg, edges, nodes) {
+    const nodeMap = new Map(nodes.map(node => [node.id, node]));
+    
+    edges.forEach(edge => {
+        const fromNode = nodeMap.get(edge.from);
+        const toNode = nodeMap.get(edge.to);
+        
+        if (!fromNode || !toNode) return;
+        
+        const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+        line.setAttribute('x1', fromNode.x);
+        line.setAttribute('y1', fromNode.y);
+        line.setAttribute('x2', toNode.x);
+        line.setAttribute('y2', toNode.y);
+        line.setAttribute('class', `connection-line ${edge.type}`);
+        
+        svg.appendChild(line);
+    });
+}
+
+function drawNodes(svg, nodes) {
+    nodes.forEach(node => {
+        const deviceConfig = deviceTypes[node.type] || deviceTypes.unknown;
+        
+        // Create group for the device
+        const group = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+        group.setAttribute('class', 'device-icon');
+        group.setAttribute('data-device-id', node.id);
+        group.style.cursor = 'pointer';
+        
+        // Background circle
+        const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+        circle.setAttribute('cx', node.x);
+        circle.setAttribute('cy', node.y);
+        circle.setAttribute('r', 25);
+        circle.setAttribute('fill', 'white');
+        circle.setAttribute('stroke', deviceConfig.color);
+        circle.setAttribute('stroke-width', 3);
+        group.appendChild(circle);
+        
+        // Device icon (using Unicode emoji)
+        const iconText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+        iconText.setAttribute('x', node.x);
+        iconText.setAttribute('y', node.y + 6);
+        iconText.setAttribute('text-anchor', 'middle');
+        iconText.setAttribute('font-size', '20');
+        iconText.setAttribute('pointer-events', 'none');
+        iconText.textContent = deviceConfig.icon;
+        group.appendChild(iconText);
+        
+        // Device label
+        const label = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+        label.setAttribute('x', node.x);
+        label.setAttribute('y', node.y + 45);
+        label.setAttribute('class', 'device-label');
+        label.textContent = truncateText(node.label, 15);
+        group.appendChild(label);
+        
+        // Status indicator
+        const statusCircle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+        statusCircle.setAttribute('cx', node.x + 18);
+        statusCircle.setAttribute('cy', node.y - 18);
+        statusCircle.setAttribute('r', 4);
+        statusCircle.setAttribute('fill', getStatusColor(node.status));
+        statusCircle.setAttribute('stroke', 'white');
+        statusCircle.setAttribute('stroke-width', 1);
+        group.appendChild(statusCircle);
+        
+        // Event handlers
+        group.addEventListener('click', () => selectDevice(node));
+        group.addEventListener('mouseenter', (e) => showTooltip(e, node));
+        group.addEventListener('mouseleave', hideTooltip);
+        
+        svg.appendChild(group);
+    });
+}
+
+function selectDevice(device) {
+    selectedDevice = device;
+    
+    // Update visual selection
+    document.querySelectorAll('.device-icon').forEach(el => {
+        el.classList.remove('selected');
+    });
+    document.querySelector(`[data-device-id="${device.id}"]`).classList.add('selected');
+    
+    // Show device details
+    showDeviceDetails(device);
+}
+
+function showDeviceDetails(device) {
+    const deviceConfig = deviceTypes[device.type] || deviceTypes.unknown;
+    const connections = getDeviceConnections(device.id);
+    
+    const detailsHtml = `
+        <div class="pf-c-card">
+            <div class="pf-c-card__header" style="background-color: ${deviceConfig.color}; color: white;">
+                <h4 class="pf-c-card__title">
+                    ${deviceConfig.icon} ${device.label}
+                </h4>
+            </div>
+            <div class="pf-c-card__body">
+                <dl class="pf-c-description-list pf-m-horizontal">
+                    <dt class="pf-c-description-list__term">
+                        <span class="pf-c-description-list__text">IP Address</span>
+                    </dt>
+                    <dd class="pf-c-description-list__description">
+                        <div class="pf-c-description-list__text">
+                            <code>${device.ip || 'N/A'}</code>
+                        </div>
+                    </dd>
+                    
+                    <dt class="pf-c-description-list__term">
+                        <span class="pf-c-description-list__text">Type</span>
+                    </dt>
+                    <dd class="pf-c-description-list__description">
+                        <div class="pf-c-description-list__text">
+                            ${deviceConfig.label}
+                        </div>
+                    </dd>
+                    
+                    <dt class="pf-c-description-list__term">
+                        <span class="pf-c-description-list__text">Status</span>
+                    </dt>
+                    <dd class="pf-c-description-list__description">
+                        <div class="pf-c-description-list__text">
+                            <span class="pf-c-label" style="background-color: ${getStatusColor(device.status)}; color: white;">
+                                ${device.status}
+                            </span>
+                        </div>
+                    </dd>
+                </dl>
+            </div>
+        </div>
+        
+        ${connections.length > 0 ? `
+        <div class="pf-c-card pf-u-mt-md">
+            <div class="pf-c-card__header">
+                <h4 class="pf-c-card__title">
+                    <i class="fas fa-network-wired pf-u-mr-sm"></i>Connections (${connections.length})
+                </h4>
+            </div>
+            <div class="pf-c-card__body">
+                ${connections.map(conn => `
+                    <div class="pf-u-mb-sm pf-u-p-sm" style="border: 1px solid #d2d2d2; border-radius: 3px;">
+                        <div class="pf-l-flex pf-m-align-items-center">
+                            <div class="pf-u-mr-sm">
+                                ${deviceTypes[conn.device.type]?.icon || '📟'}
+                            </div>
+                            <div class="pf-l-flex pf-m-column">
+                                <strong>${conn.device.label}</strong>
+                                <small class="pf-u-color-200">${conn.device.ip}</small>
+                            </div>
+                        </div>
+                    </div>
+                `).join('')}
+            </div>
+        </div>
+        ` : ''}
+    `;
+    
+    document.getElementById('device-details').innerHTML = detailsHtml;
+}
+
+function getDeviceConnections(deviceId) {
+    if (!networkData) return [];
+    
+    const connections = [];
+    const nodeMap = new Map(networkData.nodes.map(node => [node.id, node]));
+    
+    networkData.edges.forEach(edge => {
+        if (edge.from === deviceId) {
+            const connectedDevice = nodeMap.get(edge.to);
+            if (connectedDevice) connections.push({ device: connectedDevice, type: edge.type });
+        } else if (edge.to === deviceId) {
+            const connectedDevice = nodeMap.get(edge.from);
+            if (connectedDevice) connections.push({ device: connectedDevice, type: edge.type });
+        }
+    });
+    
+    return connections;
+}
+
+function showTooltip(event, device) {
+    const tooltip = document.createElement('div');
+    tooltip.className = 'tooltip';
+    tooltip.innerHTML = `
+        <strong>${device.label}</strong><br>
+        ${device.ip}<br>
+        Status: ${device.status}
+    `;
+    
+    tooltip.style.left = (event.pageX + 10) + 'px';
+    tooltip.style.top = (event.pageY - 10) + 'px';
+    
+    document.body.appendChild(tooltip);
+    event.target._tooltip = tooltip;
+}
+
+function hideTooltip(event) {
+    if (event.target._tooltip) {
+        document.body.removeChild(event.target._tooltip);
+        event.target._tooltip = null;
+    }
+}
+
+function exportDiagram() {
+    if (!svgElement) {
+        alert('No diagram to export');
+        return;
+    }
+    
+    const svgData = new XMLSerializer().serializeToString(svgElement);
+    const svgBlob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' });
+    const svgUrl = URL.createObjectURL(svgBlob);
+    
+    const link = document.createElement('a');
+    link.href = svgUrl;
+    link.download = `network-diagram-${new Date().toISOString().slice(0, 10)}.svg`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(svgUrl);
+}
+
+function showLoading(show) {
+    const indicator = document.getElementById('loading-indicator');
+    indicator.style.display = show ? 'flex' : 'none';
+}
+
+function showError(message) {
+    const canvas = document.getElementById('network-canvas');
+    canvas.innerHTML = `
+        <div class="pf-l-flex pf-m-justify-content-center pf-m-align-items-center" style="height: 100%;">
+            <div class="pf-c-empty-state pf-m-sm">
+                <div class="pf-c-empty-state__content">
+                    <i class="fas fa-exclamation-triangle pf-c-empty-state__icon" style="color: #f0ab00;"></i>
+                    <h2 class="pf-c-title pf-m-lg">Error Loading Diagram</h2>
+                    <div class="pf-c-empty-state__body">${message}</div>
+                    <button class="pf-c-button pf-m-primary" onclick="refreshDiagram()">
+                        <i class="fas fa-retry pf-u-mr-sm"></i>Retry
+                    </button>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+// Utility functions
+function truncateText(text, maxLength) {
+    if (!text || text.length <= maxLength) return text;
+    return text.substring(0, maxLength - 3) + '...';
+}
+
+function getStatusColor(status) {
+    const colors = {
+        online: '#28a745',
+        offline: '#dc3545',
+        unknown: '#6c757d',
+        warning: '#ffc107'
+    };
+    return colors[status] || colors.unknown;
+}
+
+// Handle window resize
+window.addEventListener('resize', function() {
+    if (networkData) {
+        setTimeout(renderDiagram, 100);
+    }
+});
+</script>
+{% endblock %}

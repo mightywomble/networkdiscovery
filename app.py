@@ -122,8 +122,8 @@ def d3_topology():
 
 @app.route('/network_diagram')
 def network_diagram():
-    """Traditional network diagram with device icons and structured layout"""
-    return render_template('network_diagram.html')
+    """Clean draw.io style network diagram with PatternFly components"""
+    return render_template('clean_network_diagram.html')
 
 @app.route('/build_topology', methods=['POST'])
 def build_topology():
