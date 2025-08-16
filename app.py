@@ -1223,7 +1223,7 @@ def network_data():
         # Fallback to basic topology using hosts and agents
         hosts = host_manager.get_all_hosts()
         agents = db.get_all_agents()
-        connections = db.get_recent_connections(hours=24)
+        connections = db.get_recent_connections(hours=72)
         
         # Format data for visualization
         nodes = []
@@ -1271,13 +1271,19 @@ def network_data():
         external_nodes = {}  # Track external nodes by IP
         host_id_map = {host['id']: host for host in hosts}  # Map host ID to host data
         
-        for conn in connections:
+        print(f"DEBUG: Processing {len(connections)} connections")
+        print(f"DEBUG: Host ID map: {list(host_id_map.keys())}")
+        
+        for i, conn in enumerate(connections):
             source_host_id = conn['source_host_id']
             dest_host_id = conn.get('dest_host_id')
             dest_ip = conn.get('dest_ip')
             
+            print(f"DEBUG: Connection {i+1}: source_host_id={source_host_id}, dest_host_id={dest_host_id}, dest_ip={dest_ip}")
+            
             # Only create edges for connections between known hosts or to external IPs
             if dest_host_id is not None and dest_host_id in host_id_map:
+                print(f"DEBUG: Creating internal edge from {source_host_id} to {dest_host_id}")
                 # Internal connection between managed hosts
                 edges.append({
                     'id': f"{source_host_id}-{dest_host_id}-{conn.get('dest_port', 'unknown')}",
