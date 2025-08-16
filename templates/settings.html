@@ -264,10 +264,10 @@ function loadProviderStatus(provider) {
             const statusIcon = setting.enabled ? 'check-circle' : 'exclamation-triangle';
             
             html = `
-                <div style="color: #e74c3c; font-weight: 500; margin-bottom: 8px;">Model</div>
+                <div style="color: #000; font-weight: bold; margin-bottom: 8px;">Model</div>
                 <div style="margin-bottom: 12px;">${setting.model_name || 'Not configured'}</div>
                 
-                <div style="color: #e74c3c; font-weight: 500; margin-bottom: 8px;">Enabled/Disabled</div>
+                <div style="color: #000; font-weight: bold; margin-bottom: 8px;">Enabled/Disabled</div>
                 <div style="margin-bottom: 12px;">
                     <span class="pf-c-label pf-m-${statusColor}">
                         <span class="pf-c-label__content">
@@ -276,16 +276,16 @@ function loadProviderStatus(provider) {
                     </span>
                 </div>
                 
-                <div style="color: #e74c3c; font-weight: 500; margin-bottom: 8px;">API Key</div>
+                <div style="color: #000; font-weight: bold; margin-bottom: 8px;">API Key</div>
                 <div>${setting.api_key_masked || 'Not set'}</div>
             `;
         } else {
             // Not configured
             html = `
-                <div style="color: #e74c3c; font-weight: 500; margin-bottom: 8px;">Model</div>
+                <div style="color: #000; font-weight: bold; margin-bottom: 8px;">Model</div>
                 <div style="margin-bottom: 12px;">Not configured</div>
                 
-                <div style="color: #e74c3c; font-weight: 500; margin-bottom: 8px;">Enabled/Disabled</div>
+                <div style="color: #000; font-weight: bold; margin-bottom: 8px;">Enabled/Disabled</div>
                 <div style="margin-bottom: 12px;">
                     <span class="pf-c-label pf-m-grey">
                         <span class="pf-c-label__content">
@@ -294,7 +294,7 @@ function loadProviderStatus(provider) {
                     </span>
                 </div>
                 
-                <div style="color: #e74c3c; font-weight: 500; margin-bottom: 8px;">API Key</div>
+                <div style="color: #000; font-weight: bold; margin-bottom: 8px;">API Key</div>
                 <div>Not set</div>
             `;
         }
