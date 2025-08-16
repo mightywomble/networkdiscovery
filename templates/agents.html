@@ -1725,63 +1725,124 @@ function closeCleanupToolsModal() {
 }
 
 async function loadCleanupTools() {
-    // Since the cleanup tools don't need to be loaded from an endpoint, 
-    // we'll just display them directly
-    displayCleanupTools();
+    try {
+        // Load cleanup statistics
+        const [hostsResponse, agentsResponse, logsResponse] = await Promise.all([
+            fetch('/api/hosts'),
+            fetch('/api/agents'),
+            fetch('/api/agent/cleanup/logs/info')
+        ]);
+        
+        const hostsData = await hostsResponse.json();
+        const agentsData = await agentsResponse.json();
+        let logsData = { log_files: 0, total_size: '0 MB' };
+        
+        // Handle logs info response (may not exist)
+        if (logsResponse.ok) {
+            const logsResult = await logsResponse.json();
+            if (logsResult.success) {
+                logsData = logsResult;
+            }
+        }
+        
+        const stats = {
+            hosts: hostsData.success ? (hostsData.hosts || []).length : 0,
+            agents: agentsData.success ? (agentsData.agents || []).length : 0,
+            logFiles: logsData.log_files || 0,
+            logSize: logsData.total_size || '0 MB'
+        };
+        
+        displayCleanupTools(stats);
+        
+    } catch (error) {
+        console.error('Error loading cleanup stats:', error);
+        // Display with default stats if loading fails
+        displayCleanupTools({
+            hosts: 0,
+            agents: 0,
+            logFiles: 0,
+            logSize: '0 MB'
+        });
+    }
 }
 
-function displayCleanupTools(tools) {
+function displayCleanupTools(stats) {
     const toolsHtml = `
-        <div class="pf-l-flex pf-m-column pf-m-gutter-md">
-            <div class="pf-l-flex__item">
-                <div class="pf-c-card">
-                    <div class="pf-c-card__header">
-                        <div class="pf-c-card__title">
-                            <i class="fas fa-copy pf-u-mr-sm"></i>
-                            Remove Duplicate Agents
-                        </div>
-                    </div>
-                    <div class="pf-c-card__body">
-                        <p class="pf-u-mb-md">Remove duplicate agent entries from the database</p>
-                        <button class="pf-c-button pf-m-danger" onclick="cleanupInactiveAgents()">
-                            <i class="fas fa-broom pf-u-mr-sm"></i>
-                            Remove Duplicates
-                        </button>
-                    </div>
+        <!-- Statistics Section -->
+        <div class="pf-l-gallery pf-m-gutter pf-u-mb-lg" style="grid-template-columns: repeat(3, 1fr);">
+            <div class="pf-c-card nm-stat-card">
+                <div class="pf-c-card__body pf-u-text-align-center">
+                    <div class="nm-stat-value" style="color: var(--pf-global--primary-color--100)" id="cleanup-total-hosts">${stats.hosts}</div>
+                    <div class="nm-stat-label">Total Hosts</div>
                 </div>
             </div>
-            <div class="pf-l-flex__item">
-                <div class="pf-c-card">
-                    <div class="pf-c-card__header">
-                        <div class="pf-c-card__title">
-                            <i class="fas fa-database pf-u-mr-sm"></i>
-                            Remove Stale Data
-                        </div>
-                    </div>
-                    <div class="pf-c-card__body">
-                        <p class="pf-u-mb-md">Remove stale agent data from the database</p>
-                        <button class="pf-c-button pf-m-warning" onclick="cleanupOldData()">
-                            <i class="fas fa-calendar-times pf-u-mr-sm"></i>
-                            Remove Stale Data
-                        </button>
-                    </div>
+            <div class="pf-c-card nm-stat-card">
+                <div class="pf-c-card__body pf-u-text-align-center">
+                    <div class="nm-stat-value" style="color: var(--pf-global--success-color--100)" id="cleanup-total-agents">${stats.agents}</div>
+                    <div class="nm-stat-label">Total Agents</div>
                 </div>
             </div>
-            <div class="pf-l-flex__item">
-                <div class="pf-c-card">
-                    <div class="pf-c-card__header">
-                        <div class="pf-c-card__title">
-                            <i class="fas fa-file-alt pf-u-mr-sm"></i>
-                            Clear Log Files
-                        </div>
+            <div class="pf-c-card nm-stat-card">
+                <div class="pf-c-card__body pf-u-text-align-center">
+                    <div class="nm-stat-value" style="color: var(--pf-global--info-color--100)" id="cleanup-log-files">${stats.logFiles}</div>
+                    <div class="nm-stat-label">Log Files (${stats.logSize})</div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Refresh Button -->
+        <div class="pf-u-text-align-center pf-u-mb-lg">
+            <button class="pf-c-button pf-m-secondary" onclick="refreshCleanupStats()">
+                <i class="fas fa-sync-alt pf-u-mr-sm"></i>
+                Refresh Statistics
+            </button>
+        </div>
+        
+        <!-- Cleanup Tools Cards -->
+        <div class="pf-l-gallery pf-m-gutter" style="grid-template-columns: repeat(3, 1fr);">
+            <div class="pf-c-card">
+                <div class="pf-c-card__header">
+                    <div class="pf-c-card__title">
+                        <i class="fas fa-copy pf-u-mr-sm"></i>
+                        Remove Duplicate Agents
                     </div>
-                    <div class="pf-c-card__body">
-                        <p class="pf-u-mb-md">Clear agent log files to free up disk space</p>
-                        <button class="pf-c-button pf-m-secondary" onclick="cleanupLogFiles()">
-                            <i class="fas fa-file-times pf-u-mr-sm"></i>
-                            Clear Log Files
-                        </button>
+                </div>
+                <div class="pf-c-card__body">
+                    <p class="pf-u-mb-md">Remove duplicate agent entries from the database</p>
+                    <button class="pf-c-button pf-m-danger pf-m-block" onclick="cleanupInactiveAgents()">
+                        <i class="fas fa-broom pf-u-mr-sm"></i>
+                        Remove Duplicates
+                    </button>
+                </div>
+            </div>
+            <div class="pf-c-card">
+                <div class="pf-c-card__header">
+                    <div class="pf-c-card__title">
+                        <i class="fas fa-database pf-u-mr-sm"></i>
+                        Remove Stale Data
                     </div>
+                </div>
+                <div class="pf-c-card__body">
+                    <p class="pf-u-mb-md">Remove stale agent data from the database</p>
+                    <button class="pf-c-button pf-m-warning pf-m-block" onclick="cleanupOldData()">
+                        <i class="fas fa-calendar-times pf-u-mr-sm"></i>
+                        Remove Stale Data
+                    </button>
+                </div>
+            </div>
+            <div class="pf-c-card">
+                <div class="pf-c-card__header">
+                    <div class="pf-c-card__title">
+                        <i class="fas fa-file-alt pf-u-mr-sm"></i>
+                        Clear Log Files
+                    </div>
+                </div>
+                <div class="pf-c-card__body">
+                    <p class="pf-u-mb-md">Clear agent log files to free up disk space</p>
+                    <button class="pf-c-button pf-m-secondary pf-m-block" onclick="cleanupLogFiles()">
+                        <i class="fas fa-file-times pf-u-mr-sm"></i>
+                        Clear Log Files
+                    </button>
                 </div>
             </div>
         </div>
@@ -1851,6 +1912,31 @@ async function cleanupLogFiles() {
         }
     } catch (error) {
         showAlert('danger', 'Error cleaning up log files: ' + error.message);
+    }
+}
+
+// Refresh cleanup statistics
+async function refreshCleanupStats() {
+    try {
+        // Show loading state on refresh button
+        const refreshBtn = event.target;
+        const originalText = refreshBtn.innerHTML;
+        refreshBtn.innerHTML = '<i class="fas fa-spinner fa-spin pf-u-mr-sm"></i>Refreshing...';
+        refreshBtn.disabled = true;
+        
+        // Reload cleanup statistics
+        await loadCleanupTools();
+        
+        // Also refresh the main data after cleanup operations
+        await refreshData();
+        
+        // Restore button
+        refreshBtn.innerHTML = originalText;
+        refreshBtn.disabled = false;
+        
+    } catch (error) {
+        console.error('Error refreshing cleanup stats:', error);
+        showAlert('danger', 'Error refreshing statistics: ' + error.message);
     }
 }
 
