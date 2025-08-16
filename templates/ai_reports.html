@@ -449,20 +449,29 @@ function loadDataStats() {
         if (data.success) {
             const stats = data.stats;
             
-            // All data stats
-            document.getElementById('all-data-hosts').textContent = stats.all_data.hosts;
-            document.getElementById('all-data-connections').textContent = stats.all_data.connections;
-            document.getElementById('all-data-logs').textContent = stats.all_data.log_entries;
+            // All data stats (Complete Network Dataset)
+            document.getElementById('all-data-hosts').textContent = stats.hosts.total || 0;
+            document.getElementById('all-data-connections').textContent = stats.connections.total || 0;
+            document.getElementById('all-data-logs').textContent = stats.logs.total || 0;
             
-            // Latest capture stats
-            document.getElementById('latest-data-hosts').textContent = stats.latest_capture.active_hosts;
-            document.getElementById('latest-data-connections').textContent = stats.latest_capture.recent_connections;
-            document.getElementById('latest-data-time').textContent = stats.latest_capture.hours_since_last_scan;
+            // Latest capture stats (Latest Data Snapshot)
+            document.getElementById('latest-data-hosts').textContent = stats.hosts.online || 0;
+            document.getElementById('latest-data-connections').textContent = stats.connections.last_24h || 0;
+            // Calculate hours ago from time_range if available
+            let hoursAgo = 0;
+            if (stats.connections.time_range && stats.connections.time_range.latest) {
+                const latestTime = new Date(stats.connections.time_range.latest);
+                const now = new Date();
+                hoursAgo = Math.floor((now - latestTime) / (1000 * 60 * 60));
+            }
+            document.getElementById('latest-data-time').textContent = hoursAgo;
             
-            // Latest logs stats
-            document.getElementById('logs-data-hosts').textContent = stats.latest_logs.log_sources;
-            document.getElementById('logs-data-files').textContent = stats.latest_logs.log_files;
-            document.getElementById('logs-data-size').textContent = stats.latest_logs.total_size_mb;
+            // Latest logs stats (Latest System Logs)
+            document.getElementById('logs-data-hosts').textContent = stats.agents.active || 0;
+            document.getElementById('logs-data-files').textContent = stats.scan_data.agent_scans || 0;
+            // Convert log count to approximate MB size (assuming ~100 bytes per log entry)
+            const logSizeMB = Math.round((stats.logs.recent * 100) / (1024 * 1024) * 100) / 100;
+            document.getElementById('logs-data-size').textContent = logSizeMB;
         }
     })
     .catch(error => {
