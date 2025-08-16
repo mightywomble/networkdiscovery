@@ -1,21 +1,39 @@
-{% extends "base.html" %}
+{% extends "base_patternfly.html" %}
 
-{% block title %}Network Diagram - Traditional Network Map{% endblock %}
+{% block title %}Network Diagram - Home Lab{% endblock %}
+
+{% block breadcrumb %}
+<li class="pf-c-breadcrumb__item">
+    <a href="{{ url_for('index') }}" class="pf-c-breadcrumb__link">Home</a>
+</li>
+<li class="pf-c-breadcrumb__item pf-m-current" aria-current="page">
+    <span class="pf-c-breadcrumb__item-divider">
+        <i class="fas fa-angle-right" aria-hidden="true"></i>
+    </span>
+    Network Diagram
+</li>
+{% endblock %}
 
 {% block content %}
-<div class="row mb-4">
-    <div class="col-12">
-        <h1><i class="fas fa-project-diagram me-2"></i>Network Diagram</h1>
-        <p class="text-muted">Traditional network diagram with device icons and structured layout</p>
+<!-- Page Header -->
+<section class="pf-c-page__main-section pf-m-light">
+    <div class="pf-c-content">
+        <h1><i class="fas fa-project-diagram pf-u-mr-sm"></i>Network Diagram</h1>
+        <p class="pf-c-content pf-u-color-200">Interactive network topology with device management and connection analysis</p>
     </div>
-</div>
+</section>
 
-<div class="row mb-3">
+<section class="pf-c-page__main-section pf-m-no-padding">
+
+<div class="pf-l-gallery pf-m-gutter">
     <!-- Main Network Diagram -->
-    <div class="col-lg-8">
-        <div class="card">
-            <div class="card-header d-flex justify-content-between align-items-center">
-                <h5 class="mb-0"><i class="fas fa-network-wired me-2"></i>Network Infrastructure Diagram</h5>
+    <div class="pf-l-gallery__item">
+        <div class="pf-c-card">
+            <div class="pf-c-card__header">
+                <div class="pf-c-card__header-main">
+                    <h2 class="pf-c-card__title"><i class="fas fa-network-wired pf-u-mr-sm"></i>Network Infrastructure Diagram</h2>
+                </div>
+                <div class="pf-c-card__actions">
                 <div class="btn-toolbar" role="toolbar">
                     <!-- Primary Actions -->
                     <div class="btn-group btn-group-sm me-2" role="group">
@@ -79,19 +97,21 @@
     </div>
     
     <!-- Device Details Panel (right side) -->
-    <div class="col-lg-4">
-        <div class="card" style="height: 784px;"> <!-- Match diagram height + header -->
-            <div class="card-header">
-                <h6 class="mb-0">
-                    <i class="fas fa-info-circle me-2"></i>Device Details
-                </h6>
+    <div class="pf-l-gallery__item">
+        <div class="pf-c-card" style="height: 784px; width: 350px;"> <!-- Match diagram height + header -->
+            <div class="pf-c-card__header">
+                <div class="pf-c-card__header-main">
+                    <h3 class="pf-c-card__title">
+                        <i class="fas fa-info-circle pf-u-mr-sm"></i>Device Details
+                    </h3>
+                </div>
             </div>
-            <div class="card-body" style="overflow-y: auto;">
+            <div class="pf-c-card__body" style="overflow-y: auto; padding: var(--pf-global--spacer--md);">
                 <div id="device-info-cards">
-                    <div class="text-center text-muted">
-                        <i class="fas fa-mouse-pointer fa-3x mb-3 text-secondary"></i>
-                        <p>Click on a device in the diagram to view details</p>
-                        <small class="text-muted">Device information will appear here when selected</small>
+                    <div class="pf-u-text-align-center pf-u-color-200">
+                        <i class="fas fa-mouse-pointer fa-3x pf-u-mb-md pf-u-color-200"></i>
+                        <p class="pf-c-content">Click on a device in the diagram to view details</p>
+                        <small class="pf-u-color-200">Device information will appear here when selected</small>
                     </div>
                 </div>
             </div>
