@@ -10,7 +10,7 @@
     <span class="pf-c-breadcrumb__item-divider">
         <i class="fas fa-angle-right" aria-hidden="true"></i>
     </span>
-    Network Diagram
+    <span class="pf-c-breadcrumb__link">Network Diagram</span>
 </li>
 {% endblock %}
 
@@ -53,6 +53,10 @@
                         <ul class="dropdown-menu">
                             <li><a class="dropdown-item" href="#" onclick="toggleDragMode()"><i class="fas fa-arrows-alt me-2"></i><span id="drag-mode-text-dropdown">Enable Drag Mode</span></a></li>
                             <li><a class="dropdown-item" href="#" onclick="togglePanMode()"><i class="fas fa-hand-paper me-2"></i><span id="pan-mode-text-dropdown">Enable Pan Mode</span></a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item" href="#" onclick="zoomIn()"><i class="fas fa-search-plus me-2"></i>Zoom In</a></li>
+                            <li><a class="dropdown-item" href="#" onclick="zoomOut()"><i class="fas fa-search-minus me-2"></i>Zoom Out</a></li>
+                            <li><a class="dropdown-item" href="#" onclick="resetZoom()"><i class="fas fa-expand-arrows-alt me-2"></i>Reset Zoom</a></li>
                             <li><hr class="dropdown-divider"></li>
                             <li><a class="dropdown-item" href="#" onclick="resetView()"><i class="fas fa-expand-arrows-alt me-2"></i>Reset View</a></li>
                         </ul>
@@ -1464,6 +1468,69 @@ function handleWheel(event) {
         
         svg.setAttribute('viewBox', `${newX} ${newY} ${width} ${height}`);
     }
+}
+
+// ============================================
+// ZOOM FUNCTIONALITY
+// ============================================
+
+// Zoom in
+function zoomIn() {
+    const svg = document.querySelector('#network-diagram-container svg');
+    if (!svg) return;
+    
+    const viewBox = svg.getAttribute('viewBox').split(' ').map(Number);
+    let [x, y, width, height] = viewBox;
+    
+    // Zoom in by 20% towards the center
+    const zoomFactor = 0.8;
+    const centerX = x + width / 2;
+    const centerY = y + height / 2;
+    
+    const newWidth = width * zoomFactor;
+    const newHeight = height * zoomFactor;
+    
+    const newX = centerX - newWidth / 2;
+    const newY = centerY - newHeight / 2;
+    
+    svg.setAttribute('viewBox', `${newX} ${newY} ${newWidth} ${newHeight}`);
+    showMessage('Zoomed in', 'info');
+}
+
+// Zoom out
+function zoomOut() {
+    const svg = document.querySelector('#network-diagram-container svg');
+    if (!svg) return;
+    
+    const viewBox = svg.getAttribute('viewBox').split(' ').map(Number);
+    let [x, y, width, height] = viewBox;
+    
+    // Zoom out by 20% from the center
+    const zoomFactor = 1.25;
+    const centerX = x + width / 2;
+    const centerY = y + height / 2;
+    
+    const newWidth = width * zoomFactor;
+    const newHeight = height * zoomFactor;
+    
+    const newX = centerX - newWidth / 2;
+    const newY = centerY - newHeight / 2;
+    
+    svg.setAttribute('viewBox', `${newX} ${newY} ${newWidth} ${newHeight}`);
+    showMessage('Zoomed out', 'info');
+}
+
+// Reset zoom to original viewBox
+function resetZoom() {
+    const svg = document.querySelector('#network-diagram-container svg');
+    if (!svg) return;
+    
+    const container = document.getElementById('network-diagram-container');
+    const width = container.clientWidth;
+    const height = container.clientHeight || 700;
+    
+    svg.setAttribute('viewBox', `0 0 ${width} ${height}`);
+    showMessage('Zoom reset to default', 'info');
 }
 
 // Reset view to fit all devices
