@@ -4135,15 +4135,15 @@ def run_agent_with_progress(agent, host):
             },
             {
                 'name': 'Network Discovery',
-                'cmd': '''
+                'cmd': r'''
                 # Get local network range
-                LOCAL_NET=$(ip route | grep -E "^192\\.|^10\\.|^172\\." | grep -v default | head -1 | awk '{print $1}' | head -1)
+                LOCAL_NET=$(ip route | grep -E "^192\.|^10\.|^172\." | grep -v default | head -1 | awk '{print $1}' | head -1)
                 if [ -n "$LOCAL_NET" ]; then
                     echo "Scanning network: $LOCAL_NET"
                     # Quick ping sweep of first 20 IPs
                     for i in {1..20}; do
                         IP=$(echo $LOCAL_NET | sed 's/\/.*//').${i}
-                        timeout 1 ping -c 1 $IP >/dev/null 2>&amp;1 && echo "$IP is up" &
+                        timeout 1 ping -c 1 $IP >/dev/null 2>&1 && echo "$IP is up" &
                     done
                     wait
                 else
