@@ -169,71 +169,34 @@ function loadAISettingsOverview() {
             
             if (settings.length === 0) {
                 html = `
-                    <div class="pf-c-alert pf-m-warning pf-m-inline" aria-label="Warning alert">
+                    <div class="pf-c-alert pf-m-info pf-m-inline" aria-label="Info alert">
                         <div class="pf-c-alert__icon">
-                            <i class="fas fa-exclamation-triangle" aria-hidden="true"></i>
+                            <i class="fas fa-info-circle" aria-hidden="true"></i>
                         </div>
                         <p class="pf-c-alert__title">
-                            No AI API configurations found. Click the buttons below to configure AI services.
+                            No AI services configured yet. Use the cards below to set up your AI integrations.
                         </p>
                     </div>
                 `;
             } else {
-                html = '<div class="pf-l-grid pf-m-gutter">';
+                // Show summary of configured services
+                const enabledCount = settings.filter(s => s.enabled).length;
+                const totalCount = settings.length;
+                const configuredServices = settings.map(s => s.provider === 'gemini' ? 'Google Gemini' : 'OpenAI ChatGPT').join(', ');
                 
-                settings.forEach(setting => {
-                    const statusLabel = setting.enabled 
-                        ? '<span class="pf-c-label pf-m-green"><span class="pf-c-label__content">Enabled</span></span>' 
-                        : '<span class="pf-c-label pf-m-grey"><span class="pf-c-label__content">Disabled</span></span>';
-                    
-                    const providerIcon = setting.provider === 'gemini' 
-                        ? 'fas fa-brain' 
-                        : 'fas fa-comments';
-                    
-                    const providerName = setting.provider === 'gemini' 
-                        ? 'Google Gemini' 
-                        : 'OpenAI ChatGPT';
-                    
-                    html += `
-                        <div class="pf-l-grid__item pf-m-12-col">
-                            <div class="pf-c-card pf-m-compact">
-                                <div class="pf-c-card__header">
-                                    <div class="pf-c-card__header-main">
-                                        <h3 class="pf-c-card__title">
-                                            <i class="${providerIcon} pf-u-mr-sm"></i>${providerName}
-                                        </h3>
-                                    </div>
-                                    <div class="pf-c-card__actions">
-                                        ${statusLabel}
-                                    </div>
-                                </div>
-                                <div class="pf-c-card__body">
-                                    <dl class="pf-c-description-list pf-m-horizontal pf-m-1-col-on-sm">
-                                        <dt class="pf-c-description-list__term">
-                                            <span class="pf-c-description-list__text">Model:</span>
-                                        </dt>
-                                        <dd class="pf-c-description-list__description">
-                                            <div class="pf-c-description-list__text">${setting.model_name || 'Not configured'}</div>
-                                        </dd>
-                                        <dt class="pf-c-description-list__term">
-                                            <span class="pf-c-description-list__text">API Key:</span>
-                                        </dt>
-                                        <dd class="pf-c-description-list__description">
-                                            <div class="pf-c-description-list__text">${setting.api_key_masked || 'Not set'}</div>
-                                        </dd>
-                                    </dl>
-                                </div>
-                                <div class="pf-c-card__footer">
-                                    <button class="pf-c-button pf-m-link pf-m-inline" type="button" onclick="openAIModal('${setting.provider}')">
-                                        <i class="fas fa-edit pf-u-mr-sm"></i>Configure
-                                    </button>
-                                </div>
-                            </div>
+                html = `
+                    <div class="pf-c-alert pf-m-success pf-m-inline" aria-label="Success alert">
+                        <div class="pf-c-alert__icon">
+                            <i class="fas fa-check-circle" aria-hidden="true"></i>
                         </div>
-                    `;
-                });
-                
-                html += '</div>';
+                        <p class="pf-c-alert__title">
+                            ${enabledCount} of ${totalCount} AI services enabled: ${configuredServices}
+                        </p>
+                        <p class="pf-c-alert__description">
+                            Use the configuration cards below to modify settings or enable/disable services.
+                        </p>
+                    </div>
+                `;
             }
             
             overviewContainer.innerHTML = html;
@@ -253,12 +216,12 @@ function loadAISettingsOverview() {
     .catch(error => {
         console.error('Error loading AI settings:', error);
         overviewContainer.innerHTML = `
-            <div class="pf-c-alert pf-m-danger pf-m-inline" aria-label="Danger alert">
+            <div class="pf-c-alert pf-m-warning pf-m-inline" aria-label="Warning alert">
                 <div class="pf-c-alert__icon">
-                    <i class="fas fa-exclamation-circle" aria-hidden="true"></i>
+                    <i class="fas fa-exclamation-triangle" aria-hidden="true"></i>
                 </div>
                 <p class="pf-c-alert__title">
-                    Failed to load AI settings. Please check your network connection.
+                    Unable to load AI settings status. Use the configuration cards below to set up your services.
                 </p>
             </div>
         `;
