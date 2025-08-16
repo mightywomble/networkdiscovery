@@ -2188,14 +2188,6 @@ function displayVersionSummary(versions) {
                         </div>
                         ` : ''}
                         
-                        <!-- Agent Status -->
-                        <div class="pf-u-mb-sm">
-                            <span class="pf-u-font-weight-bold">Status:</span>
-                            <span class="pf-c-label pf-m-${agent.heartbeat_status === 'online' ? 'green' : agent.heartbeat_status === 'warning' ? 'orange' : 'red'} pf-u-ml-sm">
-                                ${agent.heartbeat_status || 'offline'}
-                            </span>
-                        </div>
-                        
                         <!-- Last Communication -->
                         <div class="pf-u-mb-sm">
                             <span class="pf-u-font-weight-bold pf-u-font-size-sm">Last Heartbeat:</span>
