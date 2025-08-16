@@ -767,9 +767,9 @@
             }
 
             container.innerHTML = protocols.map(protocol => `
-                <div class="metric-row">
-                    <span class="metric-label">${protocol.protocol.toUpperCase()}</span>
-                    <span class="metric-value">${protocol.connection_count}</span>
+                <div class="nm-metric-row">
+                    <span class="nm-metric-label">${protocol.protocol.toUpperCase()}</span>
+                    <span class="nm-metric-value">${protocol.connection_count}</span>
                 </div>
             `).join('');
         }
@@ -834,5 +834,4 @@
             });
         });
     </script>
-</body>
-</html>
+{% endblock %}
