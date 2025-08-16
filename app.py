@@ -123,12 +123,12 @@ def d3_topology():
 @app.route('/network_diagram')
 def network_diagram():
     """Pure SVG network diagram - no vis.js, no physics, no flickering"""
-    return render_template("svg_with_sidebar.html", disable_visjs=True)
+    return render_template("enhanced_svg_diagram.html", disable_visjs=True)
 
 @app.route("/pure_svg")
 def pure_svg():
     """Pure SVG network diagram - completely standalone"""
-    return render_template("svg_with_sidebar.html", disable_visjs=True)
+    return render_template("enhanced_svg_diagram.html", disable_visjs=True)
 
 @app.route('/build_topology', methods=['POST'])
 def build_topology():
