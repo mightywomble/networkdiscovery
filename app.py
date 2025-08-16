@@ -115,10 +115,6 @@ def enhanced_topology():
     """Enhanced network topology visualization with comprehensive interconnections"""
     return render_template('enhanced_network_topology.html')
 
-@app.route('/d3_topology')
-def d3_topology():
-    """D3.js-based network topology visualization with better control"""
-    return render_template('d3_network_topology.html')
 
 @app.route('/network_diagram')
 def network_diagram():
