@@ -415,20 +415,8 @@
                             </a>
                             <ul class="nm-nav-submenu">
                                 <li class="nm-nav-item">
-                                    <a href="#" class="nm-nav-link" onclick="openAIModal('gemini')">
-                                        <i class="fas fa-brain"></i>
-                                        <span>Gemini API</span>
-                                    </a>
-                                </li>
-                                <li class="nm-nav-item">
-                                    <a href="#" class="nm-nav-link" onclick="openAIModal('chatgpt')">
-                                        <i class="fas fa-comments"></i>
-                                        <span>ChatGPT API</span>
-                                    </a>
-                                </li>
-                                <li class="nm-nav-item">
                                     <a href="{{ url_for('settings') }}" class="nm-nav-link {% if request.endpoint == 'settings' %}active{% endif %}">
-                                        <span>All Settings</span>
+                                        <span>AI Settings</span>
                                     </a>
                                 </li>
                             </ul>
