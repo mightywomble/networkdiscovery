@@ -619,6 +619,9 @@ function generateReport() {
     generateBtn.innerHTML = '<i class="fas fa-spinner fa-spin pf-u-mr-sm"></i>Generating Report...';
     
     reportActions.style.display = 'none';
+    
+    // Show progress message with timeout information
+    const modelName = currentAIModel === 'gemini' ? 'Google Gemini' : 'OpenAI ChatGPT';
     reportOutput.innerHTML = `
         <div class="nm-report-loading">
             <div class="pf-c-spinner pf-m-lg" role="progressbar">
@@ -627,11 +630,25 @@ function generateReport() {
                 <span class="pf-c-spinner__tail-ball"></span>
             </div>
             <p class="pf-u-mt-md"><strong>AI is analyzing your network data...</strong></p>
-            <p>This may take a few minutes depending on the amount of data.</p>
+            <p>This may take up to 2 minutes with ${modelName}. Please be patient.</p>
+            <p><small>Complex data analysis with many hosts and connections takes longer.</small></p>
         </div>
     `;
     
-    // Generate the report
+    // Create a timeout for the request (3 minutes = 180000ms)
+    const TIMEOUT_MS = 180000;
+    let timeoutId;
+    
+    // Create an AbortController for fetch request
+    const controller = new AbortController();
+    const signal = controller.signal;
+    
+    // Set timeout to abort the fetch after TIMEOUT_MS
+    timeoutId = setTimeout(() => {
+        controller.abort();
+    }, TIMEOUT_MS);
+    
+    // Generate the report with timeout handling
     fetch('/api/ai_reports/generate', {
         method: 'POST',
         headers: {
@@ -640,9 +657,24 @@ function generateReport() {
         body: JSON.stringify({
             ai_model: currentAIModel,
             data_type: selectedDataType
-        })
+        }),
+        signal: signal
     })
-    .then(response => response.json())
+    .then(response => {
+        // Clear the timeout as we got a response
+        clearTimeout(timeoutId);
+        
+        // Check if response is ok
+        if (!response.ok) {
+            throw new Error(`Server returned ${response.status}: ${response.statusText}`);
+        }
+        
+        // Try to parse the response as JSON
+        return response.json().catch(e => {
+            console.error('JSON parse error:', e);
+            throw new Error('The server returned an invalid response format. Please try again.');
+        });
+    })
     .then(data => {
         if (data.success) {
             // Display the report
@@ -656,16 +688,23 @@ function generateReport() {
     })
     .catch(error => {
         console.error('Error generating report:', error);
+        
+        // Check if this was an abort error (timeout)
+        let errorMessage = error.message;
+        if (error.name === 'AbortError') {
+            errorMessage = `Request timed out after ${TIMEOUT_MS/1000} seconds. The AI service may be overloaded or unresponsive.`;
+        }
+        
         reportOutput.innerHTML = `
             <div class="nm-report-loading">
                 <i class="fas fa-exclamation-triangle fa-3x pf-u-mb-md" style="color: var(--pf-global--danger-color--100);"></i>
                 <p><strong>Error Generating Report</strong></p>
-                <p>Failed to generate AI report: ${error.message}</p>
-                <p class="pf-u-mt-md"><small>Please check your AI model configuration and try again.</small></p>
+                <p>Failed to generate AI report: ${errorMessage}</p>
+                <p class="pf-u-mt-md"><small>Check your AI model configuration or try using a different data source or model.</small></p>
             </div>
         `;
         
-        showAlert('error', 'Generation Failed', error.message);
+        showAlert('error', 'Generation Failed', errorMessage);
     })
     .finally(() => {
         // Restore generate button
