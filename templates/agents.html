@@ -699,6 +699,47 @@
     </div>
 </div>
 
+<!-- Agent Run Progress Modal -->
+<div class="pf-c-backdrop" id="agent-run-progress-backdrop" hidden>
+    <div class="pf-l-bullseye">
+        <div class="pf-c-modal-box pf-m-lg" role="dialog" aria-modal="true" aria-labelledby="agent-run-progress-title">
+            <button class="pf-c-button pf-m-plain" type="button" aria-label="Close" onclick="closeAgentRunModal()" id="close-agent-run-btn" disabled>
+                <i class="fas fa-times" aria-hidden="true"></i>
+            </button>
+            <header class="pf-c-modal-box__header">
+                <h1 class="pf-c-modal-box__title" id="agent-run-progress-title">
+                    <i class="fas fa-play pf-u-mr-sm"></i>
+                    Agent Scan Progress
+                </h1>
+                <p class="pf-c-modal-box__description">
+                    <strong id="run-agent-name"></strong> - Triggering immediate network scan
+                </p>
+            </header>
+            <div class="pf-c-modal-box__body">
+                <div class="pf-u-mb-md">
+                    <div class="pf-c-progress" id="agent-run-progress-container">
+                        <div class="pf-c-progress__description">
+                            <span id="agent-run-status">Initializing scan...</span>
+                        </div>
+                        <div class="pf-c-progress__status">
+                            <span class="pf-c-progress__measure" id="agent-run-progress-text">0%</span>
+                        </div>
+                        <div class="pf-c-progress__bar">
+                            <div class="pf-c-progress__indicator" style="width: 0%;" id="agent-run-progress">
+                                <span class="pf-c-progress__measure">0%</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="nm-code-block" id="agent-run-logs"></div>
+            </div>
+            <footer class="pf-c-modal-box__footer">
+                <button class="pf-c-button pf-m-primary" onclick="closeAgentRunModal()" id="agent-run-ok-btn" disabled>OK</button>
+            </footer>
+        </div>
+    </div>
+</div>
+
 <!-- Agent Cleanup Tools Modal -->
 <div class="pf-c-backdrop" id="cleanup-tools-backdrop" hidden>
     <div class="pf-l-bullseye">
@@ -1457,31 +1498,117 @@ async function refreshAgentStatus() {
     }
 }
 
-function runAgentNow(hostname, ipAddress) {
-    // Implementation for running agent now
-    showAlert('info', `Triggering immediate scan on ${hostname}...`);
+async function runAgentNow(hostname, ipAddress) {
+    // Set agent name in modal
+    document.getElementById('run-agent-name').textContent = `${hostname} (${ipAddress})`;
     
-    fetch('/api/run_agent_now', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-            hostname: hostname,
-            ip_address: ipAddress
-        })
-    })
-    .then(response => response.json())
-    .then(data => {
+    // Show the progress modal
+    document.getElementById('agent-run-progress-backdrop').hidden = false;
+    
+    // Reset modal state
+    const progressIndicator = document.getElementById('agent-run-progress');
+    const progressText = document.getElementById('agent-run-progress-text');
+    const statusElement = document.getElementById('agent-run-status');
+    const logsElement = document.getElementById('agent-run-logs');
+    const closeBtn = document.getElementById('close-agent-run-btn');
+    const okBtn = document.getElementById('agent-run-ok-btn');
+    
+    progressIndicator.style.width = '0%';
+    progressText.textContent = '0%';
+    statusElement.textContent = 'Initializing scan...';
+    logsElement.textContent = '';
+    closeBtn.disabled = true;
+    okBtn.disabled = true;
+    
+    try {
+        // Step 1: Initialize (10%)
+        progressIndicator.style.width = '10%';
+        progressText.textContent = '10%';
+        statusElement.textContent = 'Connecting to agent...';
+        logsElement.textContent += `[${new Date().toLocaleTimeString()}] Connecting to ${hostname}\n`;
+        
+        // Step 2: Send run command (30%)
+        progressIndicator.style.width = '30%';
+        progressText.textContent = '30%';
+        statusElement.textContent = 'Sending scan command...';
+        logsElement.textContent += `[${new Date().toLocaleTimeString()}] Sending immediate scan command\n`;
+        logsElement.scrollTop = logsElement.scrollHeight;
+        
+        const response = await fetch('/api/run_agent_now', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                hostname: hostname,
+                ip_address: ipAddress
+            })
+        });
+        
+        const data = await response.json();
+        
+        // Step 3: Processing response (60%)
+        progressIndicator.style.width = '60%';
+        progressText.textContent = '60%';
+        statusElement.textContent = 'Processing response...';
+        
         if (data.success) {
-            showAlert('success', `Agent scan triggered successfully on ${hostname}`);
+            logsElement.textContent += `[${new Date().toLocaleTimeString()}] ✓ Scan command sent successfully\n`;
+            
+            // Step 4: Waiting for scan to start (80%)
+            progressIndicator.style.width = '80%';
+            progressText.textContent = '80%';
+            statusElement.textContent = 'Starting network scan...';
+            logsElement.textContent += `[${new Date().toLocaleTimeString()}] Agent is starting network scan\n`;
+            
+            // Simulate scan initialization delay
+            await new Promise(resolve => setTimeout(resolve, 2000));
+            
+            // Step 5: Complete (100%)
+            progressIndicator.style.width = '100%';
+            progressText.textContent = '100%';
+            statusElement.textContent = 'Scan initiated successfully';
+            logsElement.textContent += `[${new Date().toLocaleTimeString()}] ✓ Network scan has been triggered\n`;
+            logsElement.textContent += `[${new Date().toLocaleTimeString()}] Scan results will be available shortly\n`;
+            
+            // Change progress bar to success color
+            progressIndicator.parentElement.classList.add('pf-m-success');
+            
         } else {
-            showAlert('danger', `Failed to trigger agent scan: ${data.error}`);
+            throw new Error(data.error || 'Failed to trigger agent scan');
         }
-    })
-    .catch(error => {
-        showAlert('danger', `Error triggering agent scan: ${error.message}`);
-    });
+        
+    } catch (error) {
+        // Error state
+        progressIndicator.style.width = '100%';
+        progressText.textContent = '100%';
+        statusElement.textContent = 'Scan failed';
+        logsElement.textContent += `[${new Date().toLocaleTimeString()}] ✗ Error: ${error.message}\n`;
+        
+        // Change progress bar to error color
+        progressIndicator.parentElement.classList.add('pf-m-danger');
+    } finally {
+        // Enable close buttons
+        closeBtn.disabled = false;
+        okBtn.disabled = false;
+        logsElement.scrollTop = logsElement.scrollHeight;
+        
+        // Auto-refresh data after a short delay to show updated agent status
+        setTimeout(() => {
+            refreshData();
+        }, 3000);
+    }
+}
+
+function closeAgentRunModal() {
+    document.getElementById('agent-run-progress-backdrop').hidden = true;
+    
+    // Reset modal state for next use
+    const progressIndicator = document.getElementById('agent-run-progress');
+    const progressContainer = progressIndicator.parentElement;
+    
+    // Remove status classes
+    progressContainer.classList.remove('pf-m-success', 'pf-m-danger');
 }
 
 function viewHostAgentLogs(agentId) {
