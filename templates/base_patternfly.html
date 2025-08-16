@@ -1038,8 +1038,14 @@
                 return;
             }
             
-            // Show loading state
-            const saveBtn = form.querySelector('.pf-c-button.pf-m-primary');
+            // Show loading state - find the save button in the modal footer
+            const modal = document.getElementById(provider + 'Modal');
+            const saveBtn = modal.querySelector('footer .pf-c-button.pf-m-primary');
+            if (!saveBtn) {
+                console.error('Save button not found');
+                return;
+            }
+            
             const originalText = saveBtn.innerHTML;
             saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
             saveBtn.disabled = true;
@@ -1072,8 +1078,10 @@
             })
             .finally(() => {
                 // Restore save button
-                saveBtn.innerHTML = originalText;
-                saveBtn.disabled = false;
+                if (saveBtn) {
+                    saveBtn.innerHTML = originalText;
+                    saveBtn.disabled = false;
+                }
             });
         }
         
