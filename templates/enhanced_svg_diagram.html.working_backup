@@ -175,46 +175,20 @@
                     📝 Edit Mode: Drag devices to reposition them, then save your layout
                 </div>
                 
-                <!-- Main content container with 85/15 split -->
-                <div style="display: flex; gap: 15px; height: 600px;">
-                    <!-- Left side: Network diagram (85%) -->
-                    <div style="flex: 0 0 85%; height: 100%;">
-                        <div id="network-canvas" class="network-canvas" style="height: 100%; position: relative;">
-                            <div id="loading" style="display: flex; justify-content: center; align-items: center; height: 100%; font-size: 18px; color: #666;">
-                                <div class="pf-c-spinner pf-m-lg" role="progressbar">
-                                    <span class="pf-c-spinner__clipper"></span>
-                                    <span class="pf-c-spinner__lead-ball"></span>
-                                    <span class="pf-c-spinner__tail-ball"></span>
-                                </div>
-                                <span class="pf-u-ml-md">Loading network diagram...</span>
-                            </div>
+                <div id="network-canvas" class="network-canvas" style="height: 600px; position: relative;">
+                    <div id="loading" style="display: flex; justify-content: center; align-items: center; height: 100%; font-size: 18px; color: #666;">
+                        <div class="pf-c-spinner pf-m-lg" role="progressbar">
+                            <span class="pf-c-spinner__clipper"></span>
+                            <span class="pf-c-spinner__lead-ball"></span>
+                            <span class="pf-c-spinner__tail-ball"></span>
                         </div>
-                    </div>
-                    
-                    <!-- Right side: Device info panel (15%) -->
-                    <div style="flex: 0 0 15%; height: 100%;">
-                        <div id="device-info-panel" class="pf-c-card" style="height: 100%; display: flex; flex-direction: column;">
-                            <div class="pf-c-card__header">
-                                <div class="pf-c-card__header-main">
-                                    <h3 class="pf-c-card__title">
-                                        <i class="fas fa-info-circle pf-u-mr-sm"></i>
-                                        Device Info
-                                    </h3>
-                                </div>
-                            </div>
-                            <div class="pf-c-card__body" id="device-info-content" style="flex: 1; overflow-y: auto;">
-                                <div style="text-align: center; color: #666; padding: 20px; font-style: italic;">
-                                    Click on a device to see details
-                                </div>
-                            </div>
-                        </div>
+                        <span class="pf-u-ml-md">Loading network diagram...</span>
                     </div>
                 </div>
+            </div>
         </div>
     </div>
 </div>
-<div id="device-details-card" class="pf-c-card pf-u-mt-md" style="display: none;"><div class="pf-c-card__header"><div class="pf-c-card__header-main"><h3 class="pf-c-card__title"><i class="fas fa-info-circle pf-u-mr-sm"></i>Device Details</h3></div><div class="pf-c-card__actions"><button class="pf-c-button pf-m-secondary" onclick="editDevice()" id="edit-device-btn"><i class="fas fa-edit pf-u-mr-sm"></i>Edit</button></div></div><div class="pf-c-card__body" id="device-details-content"><!-- Content will be populated by JavaScript --></div></div>
-<div class="pf-c-backdrop" id="device-edit-modal" style="display: none;"><div class="pf-c-modal-box"><div class="pf-c-modal-box__header"><h1 class="pf-c-modal-box__title">Edit Device</h1><button class="pf-c-button pf-m-plain" onclick="closeEditModal()"><i class="fas fa-times"></i></button></div><div class="pf-c-modal-box__body"><div class="pf-c-form__group"><label class="pf-c-form__label"><span class="pf-c-form__label-text">Device Name</span></label><input class="pf-c-form-control" type="text" id="edit-device-name"></div><div class="pf-c-form__group"><label class="pf-c-form__label"><span class="pf-c-form__label-text">Device Type</span></label><select class="pf-c-form-control" id="edit-device-type"><option value="server">Server</option><option value="router">Router</option><option value="switch">Switch</option><option value="workstation">Workstation</option></select></div><div class="pf-c-form__group"><label class="pf-c-form__label"><span class="pf-c-form__label-text">Notes</span></label><textarea class="pf-c-form-control" id="edit-device-notes" rows="3"></textarea></div></div><div class="pf-c-modal-box__footer"><button class="pf-c-button pf-m-primary" onclick="saveDeviceChanges()">Save Changes</button><button class="pf-c-button pf-m-link" onclick="closeEditModal()">Cancel</button></div></div></div>
 
 <div id="tooltip" class="tooltip"></div>
 {% endblock %}
@@ -222,7 +196,6 @@
 {% block scripts %}
 <script>
     // Global state
-    let stickyTooltip = false;
     let networkData = null;
     let svgElement = null;
     let tooltip = null;
@@ -895,13 +868,13 @@
     }
     
     // Hide tooltip
-    function hideTooltip() {        if (stickyTooltip) return;
+    function hideTooltip() {
         tooltip.style.display = 'none';
     }
     
     // Select node
     function selectNode(node) {
-        
+        console.log('Selected node:', node);
         
         // Remove previous selection
         document.querySelectorAll('.device-icon.selected').forEach(el => {
@@ -912,97 +885,7 @@
         const group = svgElement.querySelector(`[data-node-id="${node.id}"]`);
         if (group) {
             group.classList.add('selected');
-        showDeviceDetails(node);
         }
-    }
-    function showDeviceDetails(node) {
-        selectedDevice = node;
-        
-        const panel = document.getElementById('device-info-content');
-        if (!panel) return;
-        
-        // Create visually appealing device info
-        let statusColor = '#28a745'; // green
-        let statusText = 'Online';
-        if (node.status === 'offline') {
-            statusColor = '#dc3545';
-            statusText = 'Offline';
-        } else if (node.status === 'unknown') {
-            statusColor = '#6c757d';
-            statusText = 'Unknown';
-        }
-        
-        let typeColor = '#007bff'; // blue
-        if (node.type === 'external') typeColor = '#dc3545';
-        if (node.type === 'router') typeColor = '#28a745';
-        if (node.type === 'switch') typeColor = '#fd7e14';
-        
-        panel.innerHTML = `
-            <div style="text-align: center; margin-bottom: 20px;">
-                <div style="font-size: 24px; margin-bottom: 8px;">
-                    ${node.type === 'server' ? '🖥️' : 
-                      node.type === 'router' ? '🔀' : 
-                      node.type === 'switch' ? '🔌' : 
-                      node.type === 'external' ? '🌐' : '💻'}
-                </div>
-                <h4 style="margin: 0; font-weight: bold; color: #333;">
-                    ${node.label || 'Unknown Device'}
-                </h4>
-            </div>
-            
-            <div style="margin-bottom: 15px;">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-                    <span style="font-weight: 500; color: #555;">Status:</span>
-                    <span style="background: ${statusColor}; color: white; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: bold;">
-                        ${statusText}
-                    </span>
-                </div>
-                
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-                    <span style="font-weight: 500; color: #555;">Type:</span>
-                    <span style="background: ${typeColor}; color: white; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: bold;">
-                        ${(node.type || 'unknown').charAt(0).toUpperCase() + (node.type || 'unknown').slice(1)}
-                    </span>
-                </div>
-                
-                <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
-                    <span style="font-weight: 500; color: #555;">IP Address:</span>
-                    <span style="font-family: monospace; font-size: 12px; background: #f8f9fa; padding: 2px 6px; border-radius: 3px;">
-                        ${node.ip || 'N/A'}
-                    </span>
-                </div>
-                
-                <div style="display: flex; justify-content: space-between; margin-bottom: 15px;">
-                    <span style="font-weight: 500; color: #555;">Device ID:</span>
-                    <span style="font-family: monospace; font-size: 11px; color: #666; background: #f8f9fa; padding: 2px 6px; border-radius: 3px;">
-                        ${node.id}
-                    </span>
-                </div>
-            </div>
-            
-            <div style="text-align: center;">
-                <button onclick="editDevice()" style="
-                    background: linear-gradient(135deg, #007bff, #0056b3);
-                    color: white;
-                    border: none;
-                    padding: 8px 16px;
-                    border-radius: 6px;
-                    cursor: pointer;
-                    font-weight: 500;
-                    font-size: 12px;
-                    box-shadow: 0 2px 4px rgba(0,123,255,0.3);
-                    transition: all 0.2s ease;
-                " onmouseover="this.style.transform='translateY(-1px)'; this.style.boxShadow='0 4px 8px rgba(0,123,255,0.4)'" 
-                   onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 2px 4px rgba(0,123,255,0.3)'">
-                    <i class="fas fa-edit" style="margin-right: 5px;"></i>
-                    Edit Device
-                </button>
-            </div>
-        `;
-    }
-    
-    function closeTooltip() {
-        // This function is no longer needed but keep for compatibility
     }
     
     // Refresh diagram
@@ -1170,38 +1053,6 @@ function togglePanMode() {
     }
 }
 
-var selectedDevice = null;
-
-function editDevice() {
-    if (selectedDevice) {
-        document.getElementById("edit-device-name").value = selectedDevice.label || "";
-        document.getElementById("edit-device-type").value = selectedDevice.type || "server";
-        document.getElementById("edit-device-notes").value = selectedDevice.notes || "";
-        document.getElementById("device-edit-modal").style.display = "flex";
-    }
-}
-
-function closeEditModal() {
-    document.getElementById("device-edit-modal").style.display = "none";
-}
-
-function saveDeviceChanges() {
-    if (!selectedDevice) return;
-    var name = document.getElementById("edit-device-name").value;
-    var type = document.getElementById("edit-device-type").value;
-    var notes = document.getElementById("edit-device-notes").value;
-    if (!name) { alert("Name is required"); return; }
-    var data = { id: selectedDevice.id, label: name, type: type, notes: notes };
-    fetch("/api/update_device", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(data) })
-    .then(function(response) { return response.json(); })
-    .then(function(result) {
-        if (result.success) {
-            selectedDevice.label = name; selectedDevice.type = type; selectedDevice.notes = notes;
-            showDeviceDetails(selectedDevice); closeEditModal(); alert("Device updated!");
-        } else { alert("Error: " + (result.error || "Unknown error")); }
-    }).catch(function() { alert("Network error"); });
-}
-
 function enablePanEvents() {
     const canvas = document.getElementById("network-canvas");
     canvas.addEventListener("mousedown", startPan);
@@ -1209,75 +1060,11 @@ function enablePanEvents() {
     document.addEventListener("mouseup", endPan);
 }
 
-var selectedDevice = null;
-
-function editDevice() {
-    if (selectedDevice) {
-        document.getElementById("edit-device-name").value = selectedDevice.label || "";
-        document.getElementById("edit-device-type").value = selectedDevice.type || "server";
-        document.getElementById("edit-device-notes").value = selectedDevice.notes || "";
-        document.getElementById("device-edit-modal").style.display = "flex";
-    }
-}
-
-function closeEditModal() {
-    document.getElementById("device-edit-modal").style.display = "none";
-}
-
-function saveDeviceChanges() {
-    if (!selectedDevice) return;
-    var name = document.getElementById("edit-device-name").value;
-    var type = document.getElementById("edit-device-type").value;
-    var notes = document.getElementById("edit-device-notes").value;
-    if (!name) { alert("Name is required"); return; }
-    var data = { id: selectedDevice.id, label: name, type: type, notes: notes };
-    fetch("/api/update_device", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(data) })
-    .then(function(response) { return response.json(); })
-    .then(function(result) {
-        if (result.success) {
-            selectedDevice.label = name; selectedDevice.type = type; selectedDevice.notes = notes;
-            showDeviceDetails(selectedDevice); closeEditModal(); alert("Device updated!");
-        } else { alert("Error: " + (result.error || "Unknown error")); }
-    }).catch(function() { alert("Network error"); });
-}
-
 function disablePanEvents() {
     const canvas = document.getElementById("network-canvas");
     canvas.removeEventListener("mousedown", startPan);
     document.removeEventListener("mousemove", doPan);
     document.removeEventListener("mouseup", endPan);
-}
-
-var selectedDevice = null;
-
-function editDevice() {
-    if (selectedDevice) {
-        document.getElementById("edit-device-name").value = selectedDevice.label || "";
-        document.getElementById("edit-device-type").value = selectedDevice.type || "server";
-        document.getElementById("edit-device-notes").value = selectedDevice.notes || "";
-        document.getElementById("device-edit-modal").style.display = "flex";
-    }
-}
-
-function closeEditModal() {
-    document.getElementById("device-edit-modal").style.display = "none";
-}
-
-function saveDeviceChanges() {
-    if (!selectedDevice) return;
-    var name = document.getElementById("edit-device-name").value;
-    var type = document.getElementById("edit-device-type").value;
-    var notes = document.getElementById("edit-device-notes").value;
-    if (!name) { alert("Name is required"); return; }
-    var data = { id: selectedDevice.id, label: name, type: type, notes: notes };
-    fetch("/api/update_device", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(data) })
-    .then(function(response) { return response.json(); })
-    .then(function(result) {
-        if (result.success) {
-            selectedDevice.label = name; selectedDevice.type = type; selectedDevice.notes = notes;
-            showDeviceDetails(selectedDevice); closeEditModal(); alert("Device updated!");
-        } else { alert("Error: " + (result.error || "Unknown error")); }
-    }).catch(function() { alert("Network error"); });
 }
 
 function startPan(event) {
@@ -1295,38 +1082,6 @@ function startPan(event) {
     }
 }
 
-var selectedDevice = null;
-
-function editDevice() {
-    if (selectedDevice) {
-        document.getElementById("edit-device-name").value = selectedDevice.label || "";
-        document.getElementById("edit-device-type").value = selectedDevice.type || "server";
-        document.getElementById("edit-device-notes").value = selectedDevice.notes || "";
-        document.getElementById("device-edit-modal").style.display = "flex";
-    }
-}
-
-function closeEditModal() {
-    document.getElementById("device-edit-modal").style.display = "none";
-}
-
-function saveDeviceChanges() {
-    if (!selectedDevice) return;
-    var name = document.getElementById("edit-device-name").value;
-    var type = document.getElementById("edit-device-type").value;
-    var notes = document.getElementById("edit-device-notes").value;
-    if (!name) { alert("Name is required"); return; }
-    var data = { id: selectedDevice.id, label: name, type: type, notes: notes };
-    fetch("/api/update_device", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(data) })
-    .then(function(response) { return response.json(); })
-    .then(function(result) {
-        if (result.success) {
-            selectedDevice.label = name; selectedDevice.type = type; selectedDevice.notes = notes;
-            showDeviceDetails(selectedDevice); closeEditModal(); alert("Device updated!");
-        } else { alert("Error: " + (result.error || "Unknown error")); }
-    }).catch(function() { alert("Network error"); });
-}
-
 function doPan(event) {
     if (!panState.isDragging || !isPanMode || !svgElement) return;
     event.preventDefault();
@@ -1342,74 +1097,10 @@ function doPan(event) {
     svgElement.setAttribute("viewBox", `${newX} ${newY} ${width} ${height}`);
 }
 
-var selectedDevice = null;
-
-function editDevice() {
-    if (selectedDevice) {
-        document.getElementById("edit-device-name").value = selectedDevice.label || "";
-        document.getElementById("edit-device-type").value = selectedDevice.type || "server";
-        document.getElementById("edit-device-notes").value = selectedDevice.notes || "";
-        document.getElementById("device-edit-modal").style.display = "flex";
-    }
-}
-
-function closeEditModal() {
-    document.getElementById("device-edit-modal").style.display = "none";
-}
-
-function saveDeviceChanges() {
-    if (!selectedDevice) return;
-    var name = document.getElementById("edit-device-name").value;
-    var type = document.getElementById("edit-device-type").value;
-    var notes = document.getElementById("edit-device-notes").value;
-    if (!name) { alert("Name is required"); return; }
-    var data = { id: selectedDevice.id, label: name, type: type, notes: notes };
-    fetch("/api/update_device", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(data) })
-    .then(function(response) { return response.json(); })
-    .then(function(result) {
-        if (result.success) {
-            selectedDevice.label = name; selectedDevice.type = type; selectedDevice.notes = notes;
-            showDeviceDetails(selectedDevice); closeEditModal(); alert("Device updated!");
-        } else { alert("Error: " + (result.error || "Unknown error")); }
-    }).catch(function() { alert("Network error"); });
-}
-
 function endPan() {
     if (!panState.isDragging) return;
     panState.isDragging = false;
     if (isPanMode) document.getElementById("network-canvas").style.cursor = "grab";
-}
-
-var selectedDevice = null;
-
-function editDevice() {
-    if (selectedDevice) {
-        document.getElementById("edit-device-name").value = selectedDevice.label || "";
-        document.getElementById("edit-device-type").value = selectedDevice.type || "server";
-        document.getElementById("edit-device-notes").value = selectedDevice.notes || "";
-        document.getElementById("device-edit-modal").style.display = "flex";
-    }
-}
-
-function closeEditModal() {
-    document.getElementById("device-edit-modal").style.display = "none";
-}
-
-function saveDeviceChanges() {
-    if (!selectedDevice) return;
-    var name = document.getElementById("edit-device-name").value;
-    var type = document.getElementById("edit-device-type").value;
-    var notes = document.getElementById("edit-device-notes").value;
-    if (!name) { alert("Name is required"); return; }
-    var data = { id: selectedDevice.id, label: name, type: type, notes: notes };
-    fetch("/api/update_device", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(data) })
-    .then(function(response) { return response.json(); })
-    .then(function(result) {
-        if (result.success) {
-            selectedDevice.label = name; selectedDevice.type = type; selectedDevice.notes = notes;
-            showDeviceDetails(selectedDevice); closeEditModal(); alert("Device updated!");
-        } else { alert("Error: " + (result.error || "Unknown error")); }
-    }).catch(function() { alert("Network error"); });
 }
 
 </script>

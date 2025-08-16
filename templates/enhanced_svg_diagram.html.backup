@@ -146,6 +146,15 @@
                         <button class="pf-c-button pf-m-secondary" onclick="exportSVG()">
                             <i class="fas fa-download pf-u-mr-sm"></i>Export SVG
                         </button>
+                        <button class="pf-c-button pf-m-secondary" onclick="zoomIn()" title="Zoom In">
+                            <i class="fas fa-search-plus pf-u-mr-sm"></i>Zoom In
+                        </button>
+                        <button class="pf-c-button pf-m-secondary" onclick="zoomOut()" title="Zoom Out">
+                            <i class="fas fa-search-minus pf-u-mr-sm"></i>Zoom Out
+                        </button>
+                        <button class="pf-c-button pf-m-secondary" onclick="togglePanMode()" title="Toggle Pan Mode" id="pan-btn">
+                            <i class="fas fa-hand-paper pf-u-mr-sm"></i><span id="pan-mode-text">Enable Pan</span>
+                        </button>
                         <button class="pf-c-button pf-m-tertiary" onclick="toggleEditMode()">
                             <i class="fas fa-edit pf-u-mr-sm"></i><span id="edit-mode-text">Edit Layout</span>
                         </button>
@@ -180,6 +189,8 @@
         </div>
     </div>
 </div>
+<div id="device-details-card" class="pf-c-card pf-u-mt-md" style="display: none;"><div class="pf-c-card__header"><div class="pf-c-card__header-main"><h3 class="pf-c-card__title"><i class="fas fa-info-circle pf-u-mr-sm"></i>Device Details</h3></div><div class="pf-c-card__actions"><button class="pf-c-button pf-m-secondary" onclick="editDevice()" id="edit-device-btn"><i class="fas fa-edit pf-u-mr-sm"></i>Edit</button></div></div><div class="pf-c-card__body" id="device-details-content"><!-- Content will be populated by JavaScript --></div></div>
+<div class="pf-c-backdrop" id="device-edit-modal" style="display: none;"><div class="pf-c-modal-box"><div class="pf-c-modal-box__header"><h1 class="pf-c-modal-box__title">Edit Device</h1><button class="pf-c-button pf-m-plain" onclick="closeEditModal()"><i class="fas fa-times"></i></button></div><div class="pf-c-modal-box__body"><div class="pf-c-form__group"><label class="pf-c-form__label"><span class="pf-c-form__label-text">Device Name</span></label><input class="pf-c-form-control" type="text" id="edit-device-name"></div><div class="pf-c-form__group"><label class="pf-c-form__label"><span class="pf-c-form__label-text">Device Type</span></label><select class="pf-c-form-control" id="edit-device-type"><option value="server">Server</option><option value="router">Router</option><option value="switch">Switch</option><option value="workstation">Workstation</option></select></div><div class="pf-c-form__group"><label class="pf-c-form__label"><span class="pf-c-form__label-text">Notes</span></label><textarea class="pf-c-form-control" id="edit-device-notes" rows="3"></textarea></div></div><div class="pf-c-modal-box__footer"><button class="pf-c-button pf-m-primary" onclick="saveDeviceChanges()">Save Changes</button><button class="pf-c-button pf-m-link" onclick="closeEditModal()">Cancel</button></div></div></div>
 
 <div id="tooltip" class="tooltip"></div>
 {% endblock %}
@@ -865,7 +876,7 @@
     
     // Select node
     function selectNode(node) {
-        console.log('Selected node:', node);
+        
         
         // Remove previous selection
         document.querySelectorAll('.device-icon.selected').forEach(el => {
@@ -876,6 +887,7 @@
         const group = svgElement.querySelector(`[data-node-id="${node.id}"]`);
         if (group) {
             group.classList.add('selected');
+        showDeviceDetails(node);
         }
     }
     
@@ -905,7 +917,103 @@
         URL.revokeObjectURL(url);
     }
     
-    // Show error
+
+    // Zoom functionality
+    function zoomIn() {
+        if (!svgElement) {
+            console.log("No SVG element available for zoom");
+            return;
+        }
+        
+        // Get current viewBox
+        const viewBox = svgElement.getAttribute("viewBox");
+        if (!viewBox) {
+            console.log("No viewBox found, setting default");
+            const rect = svgElement.getBoundingClientRect();
+            svgElement.setAttribute("viewBox", `0 0 ${rect.width} ${rect.height}`);
+            return;
+        }
+        
+        const [x, y, width, height] = viewBox.split(" ").map(Number);
+        
+        // Zoom in by 20% (reduce viewBox size)
+        const zoomFactor = 0.8;
+        const centerX = x + width / 2;
+        const centerY = y + height / 2;
+        
+        const newWidth = width * zoomFactor;
+        const newHeight = height * zoomFactor;
+        
+        const newX = centerX - newWidth / 2;
+        const newY = centerY - newHeight / 2;
+        
+        svgElement.setAttribute("viewBox", `${newX} ${newY} ${newWidth} ${newHeight}`);
+        
+        // Show feedback
+        showMessage("Zoomed in", "success");
+    }
+    
+    function zoomOut() {
+        if (!svgElement) {
+            console.log("No SVG element available for zoom");
+            return;
+        }
+        
+        // Get current viewBox
+        const viewBox = svgElement.getAttribute("viewBox");
+        if (!viewBox) {
+            console.log("No viewBox found, setting default");
+            const rect = svgElement.getBoundingClientRect();
+            svgElement.setAttribute("viewBox", `0 0 ${rect.width} ${rect.height}`);
+            return;
+        }
+        
+        const [x, y, width, height] = viewBox.split(" ").map(Number);
+        
+        // Zoom out by 25% (increase viewBox size)
+        const zoomFactor = 1.25;
+        const centerX = x + width / 2;
+        const centerY = y + height / 2;
+        
+        const newWidth = width * zoomFactor;
+        const newHeight = height * zoomFactor;
+        
+        const newX = centerX - newWidth / 2;
+        const newY = centerY - newHeight / 2;
+        
+        svgElement.setAttribute("viewBox", `${newX} ${newY} ${newWidth} ${newHeight}`);
+        
+        // Show feedback
+        showMessage("Zoomed out", "success");
+    }
+    
+    // Helper function to show messages
+    function showMessage(message, type) {
+        // Create a temporary message div
+        const messageDiv = document.createElement("div");
+        messageDiv.className = `pf-c-alert pf-m-${type} pf-m-inline`;
+        messageDiv.style.cssText = "position: fixed; top: 20px; right: 20px; z-index: 1000; max-width: 300px;";
+        messageDiv.innerHTML = `
+            <div class="pf-c-alert__icon">
+                <i class="fas fa-${type === success ? check-circle : info-circle}" aria-hidden="true"></i>
+            </div>
+            <div class="pf-c-alert__title">
+                <span class="pf-screen-reader">Success alert:</span>
+                ${message}
+            </div>
+        `;
+        
+        document.body.appendChild(messageDiv);
+        
+        // Auto-remove after 2 seconds
+        setTimeout(() => {
+            if (messageDiv.parentNode) {
+                document.body.removeChild(messageDiv);
+            }
+        }, 2000);
+    }
+
+        // Show error
     function showError(message) {
         document.getElementById('network-canvas').innerHTML = `
             <div style="display: flex; justify-content: center; align-items: center; height: 100%; color: #dc3545;">
@@ -920,5 +1028,275 @@
             </div>
         `;
     }
+
+// Pan functionality
+let isPanMode = false;
+let panState = { isDragging: false, startX: 0, startY: 0, viewBoxX: 0, viewBoxY: 0 };
+
+function togglePanMode() {
+    isPanMode = !isPanMode;
+    const panBtn = document.getElementById("pan-btn");
+    const panText = document.getElementById("pan-mode-text");
+    const canvas = document.getElementById("network-canvas");
+
+    if (isPanMode) {
+        panBtn.classList.remove("pf-m-secondary");
+        panBtn.classList.add("pf-m-primary");
+        panText.textContent = "Disable Pan";
+        canvas.style.cursor = "grab";
+        enablePanEvents();
+        showMessage("Pan mode enabled - drag to navigate", "info");
+    } else {
+        panBtn.classList.remove("pf-m-primary");
+        panBtn.classList.add("pf-m-secondary");
+        panText.textContent = "Enable Pan";
+        canvas.style.cursor = "default";
+        disablePanEvents();
+        showMessage("Pan mode disabled", "info");
+    }
+}
+
+var selectedDevice = null;
+
+function editDevice() {
+    if (selectedDevice) {
+        document.getElementById("edit-device-name").value = selectedDevice.label || "";
+        document.getElementById("edit-device-type").value = selectedDevice.type || "server";
+        document.getElementById("edit-device-notes").value = selectedDevice.notes || "";
+        document.getElementById("device-edit-modal").style.display = "flex";
+    }
+}
+
+function closeEditModal() {
+    document.getElementById("device-edit-modal").style.display = "none";
+}
+
+function saveDeviceChanges() {
+    if (!selectedDevice) return;
+    var name = document.getElementById("edit-device-name").value;
+    var type = document.getElementById("edit-device-type").value;
+    var notes = document.getElementById("edit-device-notes").value;
+    if (!name) { alert("Name is required"); return; }
+    var data = { id: selectedDevice.id, label: name, type: type, notes: notes };
+    fetch("/api/update_device", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(data) })
+    .then(function(response) { return response.json(); })
+    .then(function(result) {
+        if (result.success) {
+            selectedDevice.label = name; selectedDevice.type = type; selectedDevice.notes = notes;
+            showDeviceDetails(selectedDevice); closeEditModal(); alert("Device updated!");
+        } else { alert("Error: " + (result.error || "Unknown error")); }
+    }).catch(function() { alert("Network error"); });
+}
+
+function enablePanEvents() {
+    const canvas = document.getElementById("network-canvas");
+    canvas.addEventListener("mousedown", startPan);
+    document.addEventListener("mousemove", doPan);
+    document.addEventListener("mouseup", endPan);
+}
+
+var selectedDevice = null;
+
+function editDevice() {
+    if (selectedDevice) {
+        document.getElementById("edit-device-name").value = selectedDevice.label || "";
+        document.getElementById("edit-device-type").value = selectedDevice.type || "server";
+        document.getElementById("edit-device-notes").value = selectedDevice.notes || "";
+        document.getElementById("device-edit-modal").style.display = "flex";
+    }
+}
+
+function closeEditModal() {
+    document.getElementById("device-edit-modal").style.display = "none";
+}
+
+function saveDeviceChanges() {
+    if (!selectedDevice) return;
+    var name = document.getElementById("edit-device-name").value;
+    var type = document.getElementById("edit-device-type").value;
+    var notes = document.getElementById("edit-device-notes").value;
+    if (!name) { alert("Name is required"); return; }
+    var data = { id: selectedDevice.id, label: name, type: type, notes: notes };
+    fetch("/api/update_device", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(data) })
+    .then(function(response) { return response.json(); })
+    .then(function(result) {
+        if (result.success) {
+            selectedDevice.label = name; selectedDevice.type = type; selectedDevice.notes = notes;
+            showDeviceDetails(selectedDevice); closeEditModal(); alert("Device updated!");
+        } else { alert("Error: " + (result.error || "Unknown error")); }
+    }).catch(function() { alert("Network error"); });
+}
+
+function disablePanEvents() {
+    const canvas = document.getElementById("network-canvas");
+    canvas.removeEventListener("mousedown", startPan);
+    document.removeEventListener("mousemove", doPan);
+    document.removeEventListener("mouseup", endPan);
+}
+
+var selectedDevice = null;
+
+function editDevice() {
+    if (selectedDevice) {
+        document.getElementById("edit-device-name").value = selectedDevice.label || "";
+        document.getElementById("edit-device-type").value = selectedDevice.type || "server";
+        document.getElementById("edit-device-notes").value = selectedDevice.notes || "";
+        document.getElementById("device-edit-modal").style.display = "flex";
+    }
+}
+
+function closeEditModal() {
+    document.getElementById("device-edit-modal").style.display = "none";
+}
+
+function saveDeviceChanges() {
+    if (!selectedDevice) return;
+    var name = document.getElementById("edit-device-name").value;
+    var type = document.getElementById("edit-device-type").value;
+    var notes = document.getElementById("edit-device-notes").value;
+    if (!name) { alert("Name is required"); return; }
+    var data = { id: selectedDevice.id, label: name, type: type, notes: notes };
+    fetch("/api/update_device", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(data) })
+    .then(function(response) { return response.json(); })
+    .then(function(result) {
+        if (result.success) {
+            selectedDevice.label = name; selectedDevice.type = type; selectedDevice.notes = notes;
+            showDeviceDetails(selectedDevice); closeEditModal(); alert("Device updated!");
+        } else { alert("Error: " + (result.error || "Unknown error")); }
+    }).catch(function() { alert("Network error"); });
+}
+
+function startPan(event) {
+    if (!isPanMode || !svgElement) return;
+    if (event.target.closest(".device-icon")) return;
+    event.preventDefault();
+    panState.isDragging = true;
+    document.getElementById("network-canvas").style.cursor = "grabbing";
+    panState.startX = event.clientX;
+    panState.startY = event.clientY;
+    const viewBox = svgElement.getAttribute("viewBox");
+    if (viewBox) {
+        const [x, y] = viewBox.split(" ").map(Number);
+        panState.viewBoxX = x; panState.viewBoxY = y;
+    }
+}
+
+var selectedDevice = null;
+
+function editDevice() {
+    if (selectedDevice) {
+        document.getElementById("edit-device-name").value = selectedDevice.label || "";
+        document.getElementById("edit-device-type").value = selectedDevice.type || "server";
+        document.getElementById("edit-device-notes").value = selectedDevice.notes || "";
+        document.getElementById("device-edit-modal").style.display = "flex";
+    }
+}
+
+function closeEditModal() {
+    document.getElementById("device-edit-modal").style.display = "none";
+}
+
+function saveDeviceChanges() {
+    if (!selectedDevice) return;
+    var name = document.getElementById("edit-device-name").value;
+    var type = document.getElementById("edit-device-type").value;
+    var notes = document.getElementById("edit-device-notes").value;
+    if (!name) { alert("Name is required"); return; }
+    var data = { id: selectedDevice.id, label: name, type: type, notes: notes };
+    fetch("/api/update_device", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(data) })
+    .then(function(response) { return response.json(); })
+    .then(function(result) {
+        if (result.success) {
+            selectedDevice.label = name; selectedDevice.type = type; selectedDevice.notes = notes;
+            showDeviceDetails(selectedDevice); closeEditModal(); alert("Device updated!");
+        } else { alert("Error: " + (result.error || "Unknown error")); }
+    }).catch(function() { alert("Network error"); });
+}
+
+function doPan(event) {
+    if (!panState.isDragging || !isPanMode || !svgElement) return;
+    event.preventDefault();
+    const deltaX = event.clientX - panState.startX;
+    const deltaY = event.clientY - panState.startY;
+    const viewBox = svgElement.getAttribute("viewBox");
+    if (!viewBox) return;
+    const [, , width, height] = viewBox.split(" ").map(Number);
+    const rect = svgElement.getBoundingClientRect();
+    const scaleX = width / rect.width; const scaleY = height / rect.height;
+    const newX = panState.viewBoxX - (deltaX * scaleX);
+    const newY = panState.viewBoxY - (deltaY * scaleY);
+    svgElement.setAttribute("viewBox", `${newX} ${newY} ${width} ${height}`);
+}
+
+var selectedDevice = null;
+
+function editDevice() {
+    if (selectedDevice) {
+        document.getElementById("edit-device-name").value = selectedDevice.label || "";
+        document.getElementById("edit-device-type").value = selectedDevice.type || "server";
+        document.getElementById("edit-device-notes").value = selectedDevice.notes || "";
+        document.getElementById("device-edit-modal").style.display = "flex";
+    }
+}
+
+function closeEditModal() {
+    document.getElementById("device-edit-modal").style.display = "none";
+}
+
+function saveDeviceChanges() {
+    if (!selectedDevice) return;
+    var name = document.getElementById("edit-device-name").value;
+    var type = document.getElementById("edit-device-type").value;
+    var notes = document.getElementById("edit-device-notes").value;
+    if (!name) { alert("Name is required"); return; }
+    var data = { id: selectedDevice.id, label: name, type: type, notes: notes };
+    fetch("/api/update_device", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(data) })
+    .then(function(response) { return response.json(); })
+    .then(function(result) {
+        if (result.success) {
+            selectedDevice.label = name; selectedDevice.type = type; selectedDevice.notes = notes;
+            showDeviceDetails(selectedDevice); closeEditModal(); alert("Device updated!");
+        } else { alert("Error: " + (result.error || "Unknown error")); }
+    }).catch(function() { alert("Network error"); });
+}
+
+function endPan() {
+    if (!panState.isDragging) return;
+    panState.isDragging = false;
+    if (isPanMode) document.getElementById("network-canvas").style.cursor = "grab";
+}
+
+var selectedDevice = null;
+
+function editDevice() {
+    if (selectedDevice) {
+        document.getElementById("edit-device-name").value = selectedDevice.label || "";
+        document.getElementById("edit-device-type").value = selectedDevice.type || "server";
+        document.getElementById("edit-device-notes").value = selectedDevice.notes || "";
+        document.getElementById("device-edit-modal").style.display = "flex";
+    }
+}
+
+function closeEditModal() {
+    document.getElementById("device-edit-modal").style.display = "none";
+}
+
+function saveDeviceChanges() {
+    if (!selectedDevice) return;
+    var name = document.getElementById("edit-device-name").value;
+    var type = document.getElementById("edit-device-type").value;
+    var notes = document.getElementById("edit-device-notes").value;
+    if (!name) { alert("Name is required"); return; }
+    var data = { id: selectedDevice.id, label: name, type: type, notes: notes };
+    fetch("/api/update_device", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(data) })
+    .then(function(response) { return response.json(); })
+    .then(function(result) {
+        if (result.success) {
+            selectedDevice.label = name; selectedDevice.type = type; selectedDevice.notes = notes;
+            showDeviceDetails(selectedDevice); closeEditModal(); alert("Device updated!");
+        } else { alert("Error: " + (result.error || "Unknown error")); }
+    }).catch(function() { alert("Network error"); });
+}
+
 </script>
 {% endblock %}
