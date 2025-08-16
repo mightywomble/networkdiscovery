@@ -27,7 +27,7 @@
 <section class="pf-c-page__main-section">
     <div class="pf-l-gallery pf-m-gutter">
         
-        <!-- AI API Settings -->
+        <!-- Cards for AI Settings -->
         <div class="pf-l-gallery__item">
             <div class="pf-c-card" style="min-height: 400px;">
                 <div class="pf-c-card__header">
@@ -54,61 +54,49 @@
                         </div>
                     </div>
                 </div>
+            </div>
+        </div>
+
+        <!-- Google Gemini Settings Card -->
+        <div class="pf-l-gallery__item">
+            <div class="pf-c-card" style="min-height: 400px;">
+                <div class="pf-c-card__header">
+                    <div class="pf-c-card__header-main">
+                        <h2 class="pf-c-card__title">
+                            <i class="fas fa-brain pf-u-mr-sm"></i>Google Gemini
+                        </h2>
+                    </div>
+                </div>
+                <div class="pf-c-card__body">
+                    <p class="pf-u-color-200">Configure the Google Gemini API for advanced AI capabilities.</p>
+                    <p>Use Google's latest AI models including gemini-2.5-flash and gemini-2.5-pro for network analysis and insights.</p>
+                </div>
                 <div class="pf-c-card__footer">
                     <button class="pf-c-button pf-m-primary" type="button" onclick="openAIModal('gemini')">
-                        <i class="fas fa-brain pf-u-mr-sm"></i>Configure Gemini
-                    </button>
-                    <button class="pf-c-button pf-m-secondary pf-u-ml-sm" type="button" onclick="openAIModal('chatgpt')">
-                        <i class="fas fa-comments pf-u-mr-sm"></i>Configure ChatGPT
+                        <i class="fas fa-cog pf-u-mr-sm"></i>Configure Gemini
                     </button>
                 </div>
             </div>
         </div>
-
-        <!-- Network Settings -->
+        
+        <!-- OpenAI ChatGPT Settings Card -->
         <div class="pf-l-gallery__item">
-            <div class="pf-c-card">
+            <div class="pf-c-card" style="min-height: 400px;">
                 <div class="pf-c-card__header">
                     <div class="pf-c-card__header-main">
                         <h2 class="pf-c-card__title">
-                            <i class="fas fa-network-wired pf-u-mr-sm"></i>Network Settings
+                            <i class="fas fa-comments pf-u-mr-sm"></i>OpenAI ChatGPT
                         </h2>
                     </div>
                 </div>
                 <div class="pf-c-card__body">
-                    <p class="pf-u-color-200">Network scanning and monitoring configuration.</p>
-                    <div class="pf-c-alert pf-m-info pf-m-inline" aria-label="Info alert">
-                        <div class="pf-c-alert__icon">
-                            <i class="fas fa-info-circle" aria-hidden="true"></i>
-                        </div>
-                        <p class="pf-c-alert__title">
-                            Network settings configuration coming in future release.
-                        </p>
-                    </div>
+                    <p class="pf-u-color-200">Configure the OpenAI ChatGPT API for AI-powered assistance.</p>
+                    <p>Access OpenAI's powerful language models including GPT-4 and GPT-3.5 for enhanced network mapping capabilities.</p>
                 </div>
-            </div>
-        </div>
-
-        <!-- Security Settings -->
-        <div class="pf-l-gallery__item">
-            <div class="pf-c-card">
-                <div class="pf-c-card__header">
-                    <div class="pf-c-card__header-main">
-                        <h2 class="pf-c-card__title">
-                            <i class="fas fa-shield-alt pf-u-mr-sm"></i>Security Settings
-                        </h2>
-                    </div>
-                </div>
-                <div class="pf-c-card__body">
-                    <p class="pf-u-color-200">Authentication, access control, and security configuration.</p>
-                    <div class="pf-c-alert pf-m-info pf-m-inline" aria-label="Info alert">
-                        <div class="pf-c-alert__icon">
-                            <i class="fas fa-info-circle" aria-hidden="true"></i>
-                        </div>
-                        <p class="pf-c-alert__title">
-                            Security settings configuration coming in future release.
-                        </p>
-                    </div>
+                <div class="pf-c-card__footer">
+                    <button class="pf-c-button pf-m-primary" type="button" onclick="openAIModal('chatgpt')">
+                        <i class="fas fa-cog pf-u-mr-sm"></i>Configure ChatGPT
+                    </button>
                 </div>
             </div>
         </div>
