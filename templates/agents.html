@@ -803,7 +803,6 @@ function determineAgentStatus(agent) {
         // Determine status based on time since last heartbeat
         if (minutesSinceHeartbeat <= 5) {
             // Online: heartbeat within last 5 minutes
-            agent.heartbeat_status = 'online';
             return {
                 status: 'Online',
                 statusClass: 'success',
@@ -813,7 +812,6 @@ function determineAgentStatus(agent) {
             };
         } else if (minutesSinceHeartbeat <= 15) {
             // Warning: heartbeat between 5-15 minutes ago
-            agent.heartbeat_status = 'warning';
             return {
                 status: 'Warning',
                 statusClass: 'warning',
@@ -823,7 +821,6 @@ function determineAgentStatus(agent) {
             };
         } else {
             // Offline: heartbeat more than 15 minutes ago
-            agent.heartbeat_status = 'offline';
             return {
                 status: 'Offline',
                 statusClass: 'danger',
@@ -834,7 +831,6 @@ function determineAgentStatus(agent) {
         }
     } else {
         // No heartbeat data - check if agent exists but never connected
-        agent.heartbeat_status = 'offline';
         return {
             status: 'Never Connected',
             statusClass: 'danger',
@@ -871,6 +867,10 @@ function renderHosts() {
         
         // Determine agent status using the new robust logic
         const agentStatusInfo = determineAgentStatus(agent);
+        if (agent) {
+            // Update the agent object with the calculated status for consistency
+            agent.heartbeat_status = agentStatusInfo.heartbeatStatus;
+        }
         const agentStatus = agentStatusInfo.status;
         const agentStatusClass = agentStatusInfo.statusClass;
         const agentStatusIcon = agentStatusInfo.statusIcon;
@@ -1865,6 +1865,13 @@ function displayVersionSummary(versions) {
         return;
     }
     
+    // Update agent statuses first to ensure consistency
+    versions.forEach(agent => {
+        const statusInfo = determineAgentStatus(agent);
+        // Update the agent object with the calculated status
+        agent.heartbeat_status = statusInfo.heartbeatStatus;
+    });
+    
     // Create individual cards for each host
     const hostCards = versions.map(agent => {
         const isSelected = selectedVersionHosts.has(agent.agent_id);
@@ -1921,8 +1928,8 @@ function displayVersionSummary(versions) {
                         <!-- Agent Status -->
                         <div class="pf-u-mb-sm">
                             <span class="pf-u-font-weight-bold">Status:</span>
-                            <span class="pf-c-label pf-m-${determineAgentStatus(agent).heartbeatStatus === 'online' ? 'green' : determineAgentStatus(agent).heartbeatStatus === 'warning' ? 'orange' : 'red'} pf-u-ml-sm">
-                                ${determineAgentStatus(agent).heartbeatStatus || 'offline'}
+                            <span class="pf-c-label pf-m-${agent.heartbeat_status === 'online' ? 'green' : agent.heartbeat_status === 'warning' ? 'orange' : 'red'} pf-u-ml-sm">
+                                ${agent.heartbeat_status || 'offline'}
                             </span>
                         </div>
                         
