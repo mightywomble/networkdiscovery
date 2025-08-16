@@ -214,7 +214,209 @@
     </div>
 </div>
 <div id="device-details-card" class="pf-c-card pf-u-mt-md" style="display: none;"><div class="pf-c-card__header"><div class="pf-c-card__header-main"><h3 class="pf-c-card__title"><i class="fas fa-info-circle pf-u-mr-sm"></i>Device Details</h3></div><div class="pf-c-card__actions"><button class="pf-c-button pf-m-secondary" onclick="editDevice()" id="edit-device-btn"><i class="fas fa-edit pf-u-mr-sm"></i>Edit</button></div></div><div class="pf-c-card__body" id="device-details-content"><!-- Content will be populated by JavaScript --></div></div>
-<div class="pf-c-backdrop" id="device-edit-modal" style="display: none;"><div class="pf-c-modal-box"><div class="pf-c-modal-box__header"><h1 class="pf-c-modal-box__title">Edit Device</h1><button class="pf-c-button pf-m-plain" onclick="closeEditModal()"><i class="fas fa-times"></i></button></div><div class="pf-c-modal-box__body"><div class="pf-c-form__group"><label class="pf-c-form__label"><span class="pf-c-form__label-text">Device Name</span></label><input class="pf-c-form-control" type="text" id="edit-device-name"></div><div class="pf-c-form__group"><label class="pf-c-form__label"><span class="pf-c-form__label-text">Device Type</span></label><select class="pf-c-form-control" id="edit-device-type"><option value="server">Server</option><option value="router">Router</option><option value="switch">Switch</option><option value="workstation">Workstation</option></select></div><div class="pf-c-form__group"><label class="pf-c-form__label"><span class="pf-c-form__label-text">Notes</span></label><textarea class="pf-c-form-control" id="edit-device-notes" rows="3"></textarea></div></div><div class="pf-c-modal-box__footer"><button class="pf-c-button pf-m-primary" onclick="saveDeviceChanges()">Save Changes</button><button class="pf-c-button pf-m-link" onclick="closeEditModal()">Cancel</button></div></div></div>
+<!-- Enhanced Device Edit Modal -->
+<div class="pf-c-backdrop" id="device-edit-modal" style="display: none; animation: fadeIn 0.3s ease-in-out;">
+    <div class="pf-c-modal-box" style="
+        max-width: 500px;
+        background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+        border-radius: 12px;
+        box-shadow: 0 10px 40px rgba(0,0,0,0.15);
+        border: 1px solid #e9ecef;
+        animation: slideInDown 0.4s ease-out;
+        transform-origin: center top;
+    ">
+        <!-- Modal Header -->
+        <div class="pf-c-modal-box__header" style="
+            background: linear-gradient(135deg, #007bff, #0056b3);
+            color: white;
+            border-radius: 12px 12px 0 0;
+            padding: 20px 24px;
+            border-bottom: none;
+        ">
+            <div style="display: flex; align-items: center; justify-content: space-between;">
+                <div style="display: flex; align-items: center;">
+                    <div style="
+                        background: rgba(255,255,255,0.2);
+                        border-radius: 50%;
+                        width: 40px;
+                        height: 40px;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        margin-right: 12px;
+                    ">
+                        <i class="fas fa-edit" style="font-size: 16px;"></i>
+                    </div>
+                    <div>
+                        <h1 class="pf-c-modal-box__title" style="
+                            margin: 0;
+                            font-size: 18px;
+                            font-weight: 600;
+                        ">Edit Device</h1>
+                        <div style="font-size: 12px; opacity: 0.9; margin-top: 2px;" id="edit-device-subtitle">
+                            Configure device properties
+                        </div>
+                    </div>
+                </div>
+                <button class="pf-c-button pf-m-plain" onclick="closeEditModal()" style="
+                    color: white;
+                    padding: 8px;
+                    border-radius: 6px;
+                    transition: background-color 0.2s ease;
+                " onmouseover="this.style.backgroundColor='rgba(255,255,255,0.2)'" 
+                   onmouseout="this.style.backgroundColor='transparent'">
+                    <i class="fas fa-times" style="font-size: 14px;"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- Modal Body -->
+        <div class="pf-c-modal-box__body" style="padding: 24px;">
+            <!-- Device Name Field -->
+            <div class="pf-c-form__group" style="margin-bottom: 20px;">
+                <label class="pf-c-form__label" style="
+                    display: flex;
+                    align-items: center;
+                    margin-bottom: 8px;
+                    font-weight: 500;
+                    color: #333;
+                ">
+                    <i class="fas fa-tag" style="margin-right: 8px; color: #007bff; font-size: 14px;"></i>
+                    <span class="pf-c-form__label-text">Device Name</span>
+                    <span style="color: #dc3545; margin-left: 4px;">*</span>
+                </label>
+                <input class="pf-c-form-control" type="text" id="edit-device-name" style="
+                    border-radius: 8px;
+                    border: 2px solid #e9ecef;
+                    padding: 12px 16px;
+                    font-size: 14px;
+                    transition: all 0.2s ease;
+                " onfocus="this.style.borderColor='#007bff'; this.style.boxShadow='0 0 0 3px rgba(0,123,255,0.1)'"
+                   onblur="this.style.borderColor='#e9ecef'; this.style.boxShadow='none'"
+                   placeholder="Enter device name">
+            </div>
+
+            <!-- Device Type Field -->
+            <div class="pf-c-form__group" style="margin-bottom: 20px;">
+                <label class="pf-c-form__label" style="
+                    display: flex;
+                    align-items: center;
+                    margin-bottom: 8px;
+                    font-weight: 500;
+                    color: #333;
+                ">
+                    <i class="fas fa-server" style="margin-right: 8px; color: #28a745; font-size: 14px;"></i>
+                    <span class="pf-c-form__label-text">Device Type</span>
+                </label>
+                <select class="pf-c-form-control" id="edit-device-type" style="
+                    border-radius: 8px;
+                    border: 2px solid #e9ecef;
+                    padding: 12px 16px;
+                    font-size: 14px;
+                    transition: all 0.2s ease;
+                    background-color: white;
+                " onfocus="this.style.borderColor='#28a745'; this.style.boxShadow='0 0 0 3px rgba(40,167,69,0.1)'"
+                   onblur="this.style.borderColor='#e9ecef'; this.style.boxShadow='none'">
+                    <option value="server">🖥️ Server</option>
+                    <option value="router">🔀 Router</option>
+                    <option value="switch">🔌 Switch</option>
+                    <option value="workstation">💻 Workstation</option>
+                    <option value="external">🌐 External</option>
+                </select>
+            </div>
+
+            <!-- Notes Field -->
+            <div class="pf-c-form__group" style="margin-bottom: 0;">
+                <label class="pf-c-form__label" style="
+                    display: flex;
+                    align-items: center;
+                    margin-bottom: 8px;
+                    font-weight: 500;
+                    color: #333;
+                ">
+                    <i class="fas fa-sticky-note" style="margin-right: 8px; color: #ffc107; font-size: 14px;"></i>
+                    <span class="pf-c-form__label-text">Notes</span>
+                </label>
+                <textarea class="pf-c-form-control" id="edit-device-notes" rows="3" style="
+                    border-radius: 8px;
+                    border: 2px solid #e9ecef;
+                    padding: 12px 16px;
+                    font-size: 14px;
+                    transition: all 0.2s ease;
+                    resize: vertical;
+                    min-height: 80px;
+                " onfocus="this.style.borderColor='#ffc107'; this.style.boxShadow='0 0 0 3px rgba(255,193,7,0.1)'"
+                   onblur="this.style.borderColor='#e9ecef'; this.style.boxShadow='none'"
+                   placeholder="Add any notes or descriptions..."></textarea>
+            </div>
+        </div>
+
+        <!-- Modal Footer -->
+        <div class="pf-c-modal-box__footer" style="
+            padding: 20px 24px;
+            background-color: #f8f9fa;
+            border-radius: 0 0 12px 12px;
+            border-top: 1px solid #e9ecef;
+            display: flex;
+            justify-content: flex-end;
+            gap: 12px;
+        ">
+            <button class="pf-c-button pf-m-link" onclick="closeEditModal()" style="
+                color: #6c757d;
+                padding: 8px 16px;
+                border-radius: 6px;
+                font-weight: 500;
+                transition: all 0.2s ease;
+            " onmouseover="this.style.backgroundColor='#e9ecef'; this.style.color='#495057'"
+               onmouseout="this.style.backgroundColor='transparent'; this.style.color='#6c757d'">
+                Cancel
+            </button>
+            <button class="pf-c-button pf-m-primary" onclick="saveDeviceChanges()" style="
+                background: linear-gradient(135deg, #28a745, #1e7e34);
+                border: none;
+                padding: 10px 20px;
+                border-radius: 6px;
+                font-weight: 600;
+                font-size: 14px;
+                box-shadow: 0 2px 8px rgba(40,167,69,0.3);
+                transition: all 0.2s ease;
+            " onmouseover="this.style.transform='translateY(-1px)'; this.style.boxShadow='0 4px 12px rgba(40,167,69,0.4)'"
+               onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 2px 8px rgba(40,167,69,0.3)'">
+                <i class="fas fa-save" style="margin-right: 6px;"></i>
+                Save Changes
+            </button>
+        </div>
+    </div>
+</div>
+
+<style>
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes slideInDown {
+    from {
+        transform: translateY(-30px);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+/* Custom focus states */
+.pf-c-form-control:focus {
+    outline: none;
+}
+
+/* Modal backdrop styling */
+#device-edit-modal .pf-c-backdrop {
+    background-color: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(3px);
+}
+</style>
 
 <div id="tooltip" class="tooltip"></div>
 {% endblock %}
