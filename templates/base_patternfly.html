@@ -377,11 +377,6 @@
                                         <span>Version Summary</span>
                                     </a>
                                 </li>
-                                <li class="nm-nav-item">
-                                    <a href="#" class="nm-nav-link" onclick="updateAllAgentsFromSidebar(event)">
-                                        <span>Update All</span>
-                                    </a>
-                                </li>
                             </ul>
                         </li>
                     </ul>
@@ -887,19 +882,6 @@
             }
         }
         
-        function updateAllAgentsFromSidebar(event) {
-            event.preventDefault();
-            
-            if (typeof updateAllAgents === 'function') {
-                updateAllAgents();
-            } else {
-                if (window.location.pathname !== '/agents') {
-                    window.location.href = '/agents';
-                } else {
-                    showAlert('error', 'Update Agents', 'Agent update functionality is not available on this page');
-                }
-            }
-        }
         
         // Initialize on page load
         document.addEventListener('DOMContentLoaded', function() {

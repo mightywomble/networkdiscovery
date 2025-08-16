@@ -502,8 +502,170 @@
     </div>
 </div>
 
-<!-- Additional modals would continue here... -->
-<!-- For brevity, I'm including just the key ones. The full implementation would include all modals converted to PatternFly -->
+<!-- Agent Data Modal -->
+<div class="pf-c-backdrop" id="agent-data-backdrop" hidden>
+    <div class="pf-l-bullseye">
+        <div class="pf-c-modal-box pf-m-xl" role="dialog" aria-modal="true" aria-labelledby="agent-data-title">
+            <button class="pf-c-button pf-m-plain" type="button" aria-label="Close" onclick="closeAgentDataModal()">
+                <i class="fas fa-times" aria-hidden="true"></i>
+            </button>
+            <header class="pf-c-modal-box__header">
+                <h1 class="pf-c-modal-box__title" id="agent-data-title">
+                    <i class="fas fa-database pf-u-mr-sm"></i>
+                    Agent Data
+                </h1>
+                <p class="pf-c-modal-box__description">
+                    <strong id="data-agent-name"></strong> - Last scan data
+                </p>
+            </header>
+            <div class="pf-c-modal-box__body">
+                <!-- Tabs for different data sections -->
+                <div class="pf-c-tabs" id="agent-data-tabs">
+                    <ul class="pf-c-tabs__list" role="tablist">
+                        <li class="pf-c-tabs__item" role="presentation">
+                            <button class="pf-c-tabs__link pf-m-current" id="summary-tab" aria-controls="summary-tab-panel" role="tab">
+                                <span class="pf-c-tabs__item-text">Summary</span>
+                            </button>
+                        </li>
+                        <li class="pf-c-tabs__item" role="presentation">
+                            <button class="pf-c-tabs__link" id="network-scans-tab" aria-controls="network-scans-tab-panel" role="tab">
+                                <span class="pf-c-tabs__item-text">Network Scans</span>
+                            </button>
+                        </li>
+                        <li class="pf-c-tabs__item" role="presentation">
+                            <button class="pf-c-tabs__link" id="test-results-tab" aria-controls="test-results-tab-panel" role="tab">
+                                <span class="pf-c-tabs__item-text">Test Results</span>
+                            </button>
+                        </li>
+                        <li class="pf-c-tabs__item" role="presentation">
+                            <button class="pf-c-tabs__link" id="raw-data-tab" aria-controls="raw-data-tab-panel" role="tab">
+                                <span class="pf-c-tabs__item-text">Raw Data</span>
+                            </button>
+                        </li>
+                    </ul>
+                </div>
+                
+                <!-- Tab Panels -->
+                <div class="pf-c-tabs__content">
+                    <!-- Summary Panel -->
+                    <section class="pf-c-tabs__item-body" id="summary-tab-panel" role="tabpanel">
+                        <div id="agent-summary-content">
+                            <div class="pf-u-text-align-center pf-u-p-lg">
+                                <div class="pf-c-spinner" role="progressbar">
+                                    <span class="pf-c-spinner__clipper"></span>
+                                    <span class="pf-c-spinner__lead-ball"></span>
+                                    <span class="pf-c-spinner__tail-ball"></span>
+                                </div>
+                                <p class="pf-u-mt-md">Loading agent data...</p>
+                            </div>
+                        </div>
+                    </section>
+                    
+                    <!-- Network Scans Panel -->
+                    <section class="pf-c-tabs__item-body pf-m-hidden" id="network-scans-tab-panel" role="tabpanel">
+                        <div id="network-scans-content">
+                            <div class="pf-u-text-align-center pf-u-p-lg pf-u-color-200">
+                                Select Summary tab first to load data
+                            </div>
+                        </div>
+                    </section>
+                    
+                    <!-- Test Results Panel -->
+                    <section class="pf-c-tabs__item-body pf-m-hidden" id="test-results-tab-panel" role="tabpanel">
+                        <div id="test-results-content">
+                            <div class="pf-u-text-align-center pf-u-p-lg pf-u-color-200">
+                                Select Summary tab first to load data
+                            </div>
+                        </div>
+                    </section>
+                    
+                    <!-- Raw Data Panel -->
+                    <section class="pf-c-tabs__item-body pf-m-hidden" id="raw-data-tab-panel" role="tabpanel">
+                        <div id="raw-data-content">
+                            <div class="nm-code-block" style="max-height: 500px;" id="raw-data-display">
+                                <div class="pf-u-text-align-center pf-u-p-lg pf-u-color-light-200">
+                                    Select Summary tab first to load data
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Version Summary Modal -->
+<div class="pf-c-backdrop" id="version-summary-backdrop" hidden>
+    <div class="pf-l-bullseye">
+        <div class="pf-c-modal-box pf-m-lg" role="dialog" aria-modal="true" aria-labelledby="version-summary-title">
+            <button class="pf-c-button pf-m-plain" type="button" aria-label="Close" onclick="closeVersionSummaryModal()">
+                <i class="fas fa-times" aria-hidden="true"></i>
+            </button>
+            <header class="pf-c-modal-box__header">
+                <h1 class="pf-c-modal-box__title" id="version-summary-title">
+                    <i class="fas fa-code-branch pf-u-mr-sm"></i>
+                    Agent Version Summary
+                </h1>
+            </header>
+            <div class="pf-c-modal-box__body">
+                <div id="version-summary-content">
+                    <div class="pf-u-text-align-center pf-u-p-lg">
+                        <div class="pf-c-spinner" role="progressbar">
+                            <span class="pf-c-spinner__clipper"></span>
+                            <span class="pf-c-spinner__lead-ball"></span>
+                            <span class="pf-c-spinner__tail-ball"></span>
+                        </div>
+                        <p class="pf-u-mt-md">Loading version information...</p>
+                    </div>
+                </div>
+            </div>
+            <footer class="pf-c-modal-box__footer">
+                <button class="pf-c-button pf-m-primary" onclick="refreshVersionSummary()" id="refresh-versions-btn">
+                    <i class="fas fa-sync-alt pf-u-mr-sm"></i>
+                    Refresh
+                </button>
+                <button class="pf-c-button pf-m-link" onclick="closeVersionSummaryModal()">Close</button>
+            </footer>
+        </div>
+    </div>
+</div>
+
+<!-- Agent Cleanup Tools Modal -->
+<div class="pf-c-backdrop" id="cleanup-tools-backdrop" hidden>
+    <div class="pf-l-bullseye">
+        <div class="pf-c-modal-box pf-m-lg" role="dialog" aria-modal="true" aria-labelledby="cleanup-tools-title">
+            <button class="pf-c-button pf-m-plain" type="button" aria-label="Close" onclick="closeCleanupToolsModal()">
+                <i class="fas fa-times" aria-hidden="true"></i>
+            </button>
+            <header class="pf-c-modal-box__header">
+                <h1 class="pf-c-modal-box__title" id="cleanup-tools-title">
+                    <i class="fas fa-broom pf-u-mr-sm"></i>
+                    Agent Database Cleanup Tools
+                </h1>
+            </header>
+            <div class="pf-c-modal-box__body">
+                <div class="pf-c-alert pf-m-warning pf-m-inline pf-u-mb-md">
+                    <div class="pf-c-alert__icon">
+                        <i class="fas fa-exclamation-triangle"></i>
+                    </div>
+                    <p class="pf-c-alert__title">These tools permanently remove agent records from the database. Use with caution!</p>
+                </div>
+                
+                <div id="cleanup-tools-content">
+                    <div class="pf-u-text-align-center pf-u-p-lg">
+                        <div class="pf-c-spinner" role="progressbar">
+                            <span class="pf-c-spinner__clipper"></span>
+                            <span class="pf-c-spinner__lead-ball"></span>
+                            <span class="pf-c-spinner__tail-ball"></span>
+                        </div>
+                        <p class="pf-u-mt-md">Loading cleanup tools...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
 {% endblock %}
 
 {% block scripts %}
@@ -1195,8 +1357,23 @@ function viewHostAgentLogs(agentId) {
 }
 
 function viewLastAgentData(agentId) {
-    // Implementation for viewing last agent data
-    window.open(`/api/agent/last_data/${agentId}`, '_blank');
+    const agent = agents.find(a => a.agent_id === agentId);
+    if (!agent) {
+        showAlert('danger', 'Agent not found');
+        return;
+    }
+    
+    // Set agent name in the modal
+    document.getElementById('data-agent-name').textContent = `${agent.hostname} (${agent.ip_address})`;
+    
+    // Reset tab content
+    resetAgentDataTabs();
+    
+    // Show the modal
+    document.getElementById('agent-data-backdrop').hidden = false;
+    
+    // Load agent data
+    loadAgentData(agentId);
 }
 
 async function uninstallAgent(hostname, ipAddress) {
@@ -1235,6 +1412,456 @@ function closeDeploymentModal() {
 
 function closeAgentStatusModal() {
     document.getElementById('agent-status-backdrop').hidden = true;
+}
+
+// Agent Data Modal Functions
+function resetAgentDataTabs() {
+    // Reset all tab panels to hidden
+    const panels = document.querySelectorAll('#agent-data-tabs .pf-c-tabs__item-body');
+    panels.forEach(panel => {
+        panel.classList.add('pf-m-hidden');
+    });
+    
+    // Show summary panel and set active tab
+    document.getElementById('summary-tab-panel').classList.remove('pf-m-hidden');
+    
+    // Reset tab buttons
+    const tabButtons = document.querySelectorAll('#agent-data-tabs .pf-c-tabs__link');
+    tabButtons.forEach(btn => {
+        btn.classList.remove('pf-m-current');
+    });
+    document.getElementById('summary-tab').classList.add('pf-m-current');
+}
+
+async function loadAgentData(agentId) {
+    try {
+        const response = await fetch(`/api/agent/data/${agentId}`);
+        const data = await response.json();
+        
+        if (data.success) {
+            displayAgentSummary(data.data);
+            displayNetworkScans(data.data.network_scans || []);
+            displayTestResults(data.data.test_results || []);
+            displayRawData(data.data);
+        } else {
+            document.getElementById('agent-summary-content').innerHTML = 
+                `<div class="pf-c-alert pf-m-danger pf-m-inline"><div class="pf-c-alert__icon"><i class="fas fa-exclamation-circle"></i></div><p class="pf-c-alert__title">Failed to load agent data: ${data.error}</p></div>`;
+        }
+    } catch (error) {
+        document.getElementById('agent-summary-content').innerHTML = 
+            `<div class="pf-c-alert pf-m-danger pf-m-inline"><div class="pf-c-alert__icon"><i class="fas fa-exclamation-circle"></i></div><p class="pf-c-alert__title">Error loading agent data: ${error.message}</p></div>`;
+    }
+}
+
+function displayAgentSummary(data) {
+    const summaryHtml = `
+        <div class="pf-l-gallery pf-m-gutter pf-u-mb-md">
+            <div class="pf-c-card pf-m-compact">
+                <div class="pf-c-card__body pf-u-text-align-center">
+                    <div class="pf-u-mb-sm">
+                        <i class="fas fa-network-wired fa-2x pf-u-color-100"></i>
+                    </div>
+                    <h6 class="pf-c-card__title pf-u-mb-xs">Hosts Discovered</h6>
+                    <div class="pf-u-font-size-2xl pf-u-font-weight-bold">${data.hosts_count || 0}</div>
+                </div>
+            </div>
+            <div class="pf-c-card pf-m-compact">
+                <div class="pf-c-card__body pf-u-text-align-center">
+                    <div class="pf-u-mb-sm">
+                        <i class="fas fa-globe fa-2x pf-u-color-100"></i>
+                    </div>
+                    <h6 class="pf-c-card__title pf-u-mb-xs">Services Found</h6>
+                    <div class="pf-u-font-size-2xl pf-u-font-weight-bold">${data.services_count || 0}</div>
+                </div>
+            </div>
+            <div class="pf-c-card pf-m-compact">
+                <div class="pf-c-card__body pf-u-text-align-center">
+                    <div class="pf-u-mb-sm">
+                        <i class="fas fa-shield-alt fa-2x pf-u-color-100"></i>
+                    </div>
+                    <h6 class="pf-c-card__title pf-u-mb-xs">Tests Run</h6>
+                    <div class="pf-u-font-size-2xl pf-u-font-weight-bold">${data.tests_count || 0}</div>
+                </div>
+            </div>
+            <div class="pf-c-card pf-m-compact">
+                <div class="pf-c-card__body pf-u-text-align-center">
+                    <div class="pf-u-mb-sm">
+                        <i class="fas fa-clock fa-2x pf-u-color-100"></i>
+                    </div>
+                    <h6 class="pf-c-card__title pf-u-mb-xs">Last Scan</h6>
+                    <div class="pf-u-font-size-sm">${data.last_scan ? new Date(data.last_scan).toLocaleString() : 'Never'}</div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="pf-c-description-list pf-m-horizontal">
+            <div class="pf-c-description-list__group">
+                <dt class="pf-c-description-list__term">Agent Version</dt>
+                <dd class="pf-c-description-list__description">
+                    <div class="pf-c-description-list__text">${data.agent_version || 'Unknown'}</div>
+                </dd>
+            </div>
+            <div class="pf-c-description-list__group">
+                <dt class="pf-c-description-list__term">Platform</dt>
+                <dd class="pf-c-description-list__description">
+                    <div class="pf-c-description-list__text">${data.platform || 'Unknown'}</div>
+                </dd>
+            </div>
+            <div class="pf-c-description-list__group">
+                <dt class="pf-c-description-list__term">Scan Duration</dt>
+                <dd class="pf-c-description-list__description">
+                    <div class="pf-c-description-list__text">${data.scan_duration || 'Unknown'}</div>
+                </dd>
+            </div>
+        </div>
+    `;
+    
+    document.getElementById('agent-summary-content').innerHTML = summaryHtml;
+}
+
+function displayNetworkScans(networkScans) {
+    if (!networkScans || networkScans.length === 0) {
+        document.getElementById('network-scans-content').innerHTML = 
+            '<div class="pf-u-text-align-center pf-u-p-lg pf-u-color-200">No network scan data available</div>';
+        return;
+    }
+    
+    const scansHtml = networkScans.map(scan => `
+        <div class="pf-c-card pf-m-compact pf-u-mb-md">
+            <div class="pf-c-card__header">
+                <div class="pf-c-card__title">
+                    <i class="fas fa-server pf-u-mr-sm"></i>
+                    ${scan.ip_address} ${scan.hostname ? `(${scan.hostname})` : ''}
+                </div>
+            </div>
+            <div class="pf-c-card__body">
+                <div class="pf-l-flex pf-u-mb-sm">
+                    <div class="pf-l-flex__item">
+                        <strong>MAC Address:</strong> ${scan.mac_address || 'Unknown'}
+                    </div>
+                    <div class="pf-l-flex__item">
+                        <strong>Status:</strong> 
+                        <span class="pf-c-label pf-m-${scan.status === 'up' ? 'green' : 'red'}">
+                            ${scan.status || 'Unknown'}
+                        </span>
+                    </div>
+                </div>
+                ${scan.services && scan.services.length > 0 ? `
+                <div class="pf-u-mb-sm">
+                    <strong>Services:</strong>
+                    <div class="pf-u-mt-xs">
+                        ${scan.services.map(service => 
+                            `<span class="pf-c-label pf-m-outline pf-u-mr-xs">${service.port}/${service.protocol}</span>`
+                        ).join('')}
+                    </div>
+                </div>
+                ` : ''}
+            </div>
+        </div>
+    `).join('');
+    
+    document.getElementById('network-scans-content').innerHTML = scansHtml;
+}
+
+function displayTestResults(testResults) {
+    if (!testResults || testResults.length === 0) {
+        document.getElementById('test-results-content').innerHTML = 
+            '<div class="pf-u-text-align-center pf-u-p-lg pf-u-color-200">No test results available</div>';
+        return;
+    }
+    
+    const resultsHtml = testResults.map(test => `
+        <div class="pf-c-card pf-m-compact pf-u-mb-md">
+            <div class="pf-c-card__header">
+                <div class="pf-c-card__title">
+                    <i class="fas fa-${test.status === 'pass' ? 'check-circle' : test.status === 'fail' ? 'times-circle' : 'exclamation-circle'} pf-u-mr-sm"></i>
+                    ${test.test_name}
+                </div>
+                <div class="pf-c-card__actions">
+                    <span class="pf-c-label pf-m-${test.status === 'pass' ? 'green' : test.status === 'fail' ? 'red' : 'orange'}">
+                        ${(test.status || 'unknown').toUpperCase()}
+                    </span>
+                </div>
+            </div>
+            <div class="pf-c-card__body">
+                <p class="pf-u-mb-sm">${test.description || 'No description available'}</p>
+                ${test.result_details ? `<div class="nm-code-block" style="max-height: 150px;">${test.result_details}</div>` : ''}
+            </div>
+        </div>
+    `).join('');
+    
+    document.getElementById('test-results-content').innerHTML = resultsHtml;
+}
+
+function displayRawData(data) {
+    const rawDataString = JSON.stringify(data, null, 2);
+    document.getElementById('raw-data-display').textContent = rawDataString;
+}
+
+// Tab switching for agent data modal
+document.addEventListener('click', function(e) {
+    if (e.target.closest('#agent-data-tabs .pf-c-tabs__link')) {
+        const clickedTab = e.target.closest('.pf-c-tabs__link');
+        const tabId = clickedTab.id;
+        const panelId = clickedTab.getAttribute('aria-controls');
+        
+        // Remove current class from all tabs
+        document.querySelectorAll('#agent-data-tabs .pf-c-tabs__link').forEach(tab => {
+            tab.classList.remove('pf-m-current');
+        });
+        
+        // Hide all panels
+        document.querySelectorAll('#agent-data-tabs .pf-c-tabs__item-body').forEach(panel => {
+            panel.classList.add('pf-m-hidden');
+        });
+        
+        // Activate clicked tab and show corresponding panel
+        clickedTab.classList.add('pf-m-current');
+        document.getElementById(panelId).classList.remove('pf-m-hidden');
+    }
+});
+
+function closeAgentDataModal() {
+    document.getElementById('agent-data-backdrop').hidden = true;
+}
+
+// Version Summary Modal Functions
+function showVersionSummary() {
+    document.getElementById('version-summary-backdrop').hidden = false;
+    loadVersionSummary();
+}
+
+function closeVersionSummaryModal() {
+    document.getElementById('version-summary-backdrop').hidden = true;
+}
+
+async function loadVersionSummary() {
+    try {
+        const response = await fetch('/api/agent/versions');
+        const data = await response.json();
+        
+        if (data.success) {
+            displayVersionSummary(data.versions);
+        } else {
+            document.getElementById('version-summary-content').innerHTML = 
+                `<div class="pf-c-alert pf-m-danger pf-m-inline"><div class="pf-c-alert__icon"><i class="fas fa-exclamation-circle"></i></div><p class="pf-c-alert__title">Failed to load version data: ${data.error}</p></div>`;
+        }
+    } catch (error) {
+        document.getElementById('version-summary-content').innerHTML = 
+            `<div class="pf-c-alert pf-m-danger pf-m-inline"><div class="pf-c-alert__icon"><i class="fas fa-exclamation-circle"></i></div><p class="pf-c-alert__title">Error loading version data: ${error.message}</p></div>`;
+    }
+}
+
+function displayVersionSummary(versions) {
+    if (!versions || versions.length === 0) {
+        document.getElementById('version-summary-content').innerHTML = 
+            '<div class="pf-u-text-align-center pf-u-p-lg pf-u-color-200">No version data available</div>';
+        return;
+    }
+    
+    const versionGroups = versions.reduce((acc, agent) => {
+        const version = agent.agent_version || 'Unknown';
+        if (!acc[version]) {
+            acc[version] = [];
+        }
+        acc[version].push(agent);
+        return acc;
+    }, {});
+    
+    const versionsHtml = Object.entries(versionGroups).map(([version, agents]) => `
+        <div class="pf-c-card pf-m-compact pf-u-mb-md">
+            <div class="pf-c-card__header">
+                <div class="pf-c-card__title">
+                    <i class="fas fa-code-branch pf-u-mr-sm"></i>
+                    Version ${version}
+                </div>
+                <div class="pf-c-card__actions">
+                    <span class="pf-c-badge pf-m-read">${agents.length}</span>
+                </div>
+            </div>
+            <div class="pf-c-card__body">
+                <div class="pf-l-flex pf-m-column pf-m-gutter-sm">
+                    ${agents.map(agent => `
+                        <div class="pf-l-flex__item">
+                            <span class="pf-u-font-weight-bold">${agent.hostname}</span>
+                            <span class="pf-u-color-200">(${agent.ip_address})</span>
+                            <span class="pf-c-label pf-m-${agent.heartbeat_status === 'online' ? 'green' : agent.heartbeat_status === 'warning' ? 'orange' : 'red'} pf-u-ml-sm">
+                                ${agent.heartbeat_status || 'unknown'}
+                            </span>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+        </div>
+    `).join('');
+    
+    document.getElementById('version-summary-content').innerHTML = versionsHtml;
+}
+
+async function refreshVersionSummary() {
+    const refreshBtn = document.getElementById('refresh-versions-btn');
+    const originalText = refreshBtn.innerHTML;
+    
+    refreshBtn.innerHTML = '<i class="fas fa-spinner fa-spin pf-u-mr-sm"></i>Refreshing...';
+    refreshBtn.disabled = true;
+    
+    try {
+        await loadVersionSummary();
+    } finally {
+        refreshBtn.innerHTML = originalText;
+        refreshBtn.disabled = false;
+    }
+}
+
+// Cleanup Tools Modal Functions
+function showAgentCleanupTools() {
+    document.getElementById('cleanup-tools-backdrop').hidden = false;
+    loadCleanupTools();
+}
+
+function closeCleanupToolsModal() {
+    document.getElementById('cleanup-tools-backdrop').hidden = true;
+}
+
+async function loadCleanupTools() {
+    try {
+        const response = await fetch('/api/agent/cleanup_tools');
+        const data = await response.json();
+        
+        if (data.success) {
+            displayCleanupTools(data.tools);
+        } else {
+            document.getElementById('cleanup-tools-content').innerHTML = 
+                `<div class="pf-c-alert pf-m-danger pf-m-inline"><div class="pf-c-alert__icon"><i class="fas fa-exclamation-circle"></i></div><p class="pf-c-alert__title">Failed to load cleanup tools: ${data.error}</p></div>`;
+        }
+    } catch (error) {
+        document.getElementById('cleanup-tools-content').innerHTML = 
+            `<div class="pf-c-alert pf-m-danger pf-m-inline"><div class="pf-c-alert__icon"><i class="fas fa-exclamation-circle"></i></div><p class="pf-c-alert__title">Error loading cleanup tools: ${error.message}</p></div>`;
+    }
+}
+
+function displayCleanupTools(tools) {
+    const toolsHtml = `
+        <div class="pf-l-flex pf-m-column pf-m-gutter-md">
+            <div class="pf-l-flex__item">
+                <div class="pf-c-card">
+                    <div class="pf-c-card__header">
+                        <div class="pf-c-card__title">
+                            <i class="fas fa-trash-alt pf-u-mr-sm"></i>
+                            Remove Inactive Agents
+                        </div>
+                    </div>
+                    <div class="pf-c-card__body">
+                        <p class="pf-u-mb-md">Remove agents that haven't reported in for more than 7 days</p>
+                        <button class="pf-c-button pf-m-danger" onclick="cleanupInactiveAgents()">
+                            <i class="fas fa-broom pf-u-mr-sm"></i>
+                            Remove Inactive Agents
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <div class="pf-l-flex__item">
+                <div class="pf-c-card">
+                    <div class="pf-c-card__header">
+                        <div class="pf-c-card__title">
+                            <i class="fas fa-database pf-u-mr-sm"></i>
+                            Clear Old Data
+                        </div>
+                    </div>
+                    <div class="pf-c-card__body">
+                        <p class="pf-u-mb-md">Remove scan data older than 30 days</p>
+                        <button class="pf-c-button pf-m-warning" onclick="cleanupOldData()">
+                            <i class="fas fa-calendar-times pf-u-mr-sm"></i>
+                            Clear Old Data
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <div class="pf-l-flex__item">
+                <div class="pf-c-card">
+                    <div class="pf-c-card__header">
+                        <div class="pf-c-card__title">
+                            <i class="fas fa-file-alt pf-u-mr-sm"></i>
+                            Clear Log Files
+                        </div>
+                    </div>
+                    <div class="pf-c-card__body">
+                        <p class="pf-u-mb-md">Clear agent log files older than 14 days</p>
+                        <button class="pf-c-button pf-m-secondary" onclick="cleanupLogFiles()">
+                            <i class="fas fa-file-times pf-u-mr-sm"></i>
+                            Clear Log Files
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    document.getElementById('cleanup-tools-content').innerHTML = toolsHtml;
+}
+
+async function cleanupInactiveAgents() {
+    if (!confirm('Are you sure you want to remove all inactive agents? This action cannot be undone.')) {
+        return;
+    }
+    
+    try {
+        const response = await fetch('/api/agent/cleanup/inactive', {
+            method: 'POST'
+        });
+        const data = await response.json();
+        
+        if (data.success) {
+            showAlert('success', `Removed ${data.count} inactive agents`);
+            refreshData();
+        } else {
+            showAlert('danger', 'Failed to cleanup inactive agents: ' + data.error);
+        }
+    } catch (error) {
+        showAlert('danger', 'Error cleaning up inactive agents: ' + error.message);
+    }
+}
+
+async function cleanupOldData() {
+    if (!confirm('Are you sure you want to remove old scan data? This action cannot be undone.')) {
+        return;
+    }
+    
+    try {
+        const response = await fetch('/api/agent/cleanup/old_data', {
+            method: 'POST'
+        });
+        const data = await response.json();
+        
+        if (data.success) {
+            showAlert('success', `Removed old data (${data.count} records)`);
+        } else {
+            showAlert('danger', 'Failed to cleanup old data: ' + data.error);
+        }
+    } catch (error) {
+        showAlert('danger', 'Error cleaning up old data: ' + error.message);
+    }
+}
+
+async function cleanupLogFiles() {
+    if (!confirm('Are you sure you want to clear old log files? This action cannot be undone.')) {
+        return;
+    }
+    
+    try {
+        const response = await fetch('/api/agent/cleanup/logs', {
+            method: 'POST'
+        });
+        const data = await response.json();
+        
+        if (data.success) {
+            showAlert('success', `Cleared log files (${data.size} freed)`);
+        } else {
+            showAlert('danger', 'Failed to cleanup log files: ' + data.error);
+        }
+    } catch (error) {
+        showAlert('danger', 'Error cleaning up log files: ' + error.message);
+    }
 }
 
 // Initialize action buttons state
