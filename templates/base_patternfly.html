@@ -403,6 +403,27 @@
                     </ul>
                 </div>
                 
+                <!-- AI Tooling -->
+                <div class="nm-nav-section">
+                    <div class="nm-nav-section-title">AI Tooling</div>
+                    <ul class="nm-nav-list">
+                        <li class="nm-nav-item {% if 'ai_reports' in request.endpoint %}expanded{% endif %}">
+                            <a href="#" class="nm-nav-link" onclick="toggleSubmenu(event, this)">
+                                <i class="fas fa-brain"></i>
+                                <span>AI Reports</span>
+                                <i class="fas fa-chevron-right nm-nav-toggle"></i>
+                            </a>
+                            <ul class="nm-nav-submenu">
+                                <li class="nm-nav-item">
+                                    <a href="{{ url_for('ai_reports') }}" class="nm-nav-link {% if request.endpoint == 'ai_reports' %}active{% endif %}">
+                                        <span>Generate Reports</span>
+                                    </a>
+                                </li>
+                            </ul>
+                        </li>
+                    </ul>
+                </div>
+                
                 <!-- Settings -->
                 <div class="nm-nav-section">
                     <div class="nm-nav-section-title">Settings</div>

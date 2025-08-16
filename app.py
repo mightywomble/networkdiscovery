@@ -4690,6 +4690,86 @@ def toggle_ai_api(provider):
             'error': str(e)
         }), 500
 
+# AI Reports routes
+@app.route('/ai_reports')
+def ai_reports():
+    """Render the AI Reports page"""
+    return render_template('ai_reports.html')
+
+@app.route('/api/ai_reports/data_stats', methods=['GET'])
+def get_ai_reports_data_stats():
+    """Get statistics about available data for AI analysis"""
+    try:
+        from ai_data_collector import AIDataCollector
+        collector = AIDataCollector(db, host_manager)
+        stats = collector.get_data_statistics()
+        
+        return jsonify({
+            'success': True,
+            'stats': stats
+        })
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@app.route('/api/ai_reports/generate', methods=['POST'])
+def generate_ai_report():
+    """Generate an AI-powered network analysis report"""
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({
+                'success': False,
+                'error': 'No data provided'
+            }), 400
+        
+        ai_model = data.get('ai_model')
+        data_type = data.get('data_type')
+        
+        if not ai_model or not data_type:
+            return jsonify({
+                'success': False,
+                'error': 'AI model and data type are required'
+            }), 400
+        
+        if ai_model not in ['gemini', 'chatgpt']:
+            return jsonify({
+                'success': False,
+                'error': 'Invalid AI model. Must be gemini or chatgpt'
+            }), 400
+        
+        if data_type not in ['all_data', 'latest_capture', 'latest_logs']:
+            return jsonify({
+                'success': False,
+                'error': 'Invalid data type'
+            }), 400
+        
+        # Import the AI report generator
+        from ai_report_generator import AIReportGenerator
+        
+        # Initialize the report generator
+        generator = AIReportGenerator(db, host_manager)
+        
+        # Generate the report
+        report = generator.generate_report(ai_model, data_type)
+        
+        return jsonify({
+            'success': True,
+            'report': report,
+            'ai_model': ai_model,
+            'data_type': data_type,
+            'generated_at': datetime.now().isoformat()
+        })
+        
+    except Exception as e:
+        print(f"Error generating AI report: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
 # Statistics page route
 @app.route('/statistics')
 def statistics_dashboard():

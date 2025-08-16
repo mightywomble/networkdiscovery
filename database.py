@@ -26,9 +26,12 @@ class Database:
     
     def init_db(self):
         """Initialize database tables"""
-        with self.get_connection() as conn:
-            # Hosts table
-            conn.execute('''
+        print(f"DEBUG: Initializing database at {self.db_path}")
+        try:
+            with self.get_connection() as conn:
+                print("DEBUG: Got database connection")
+                # Hosts table
+                conn.execute('''
                 CREATE TABLE IF NOT EXISTS hosts (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     name TEXT UNIQUE NOT NULL,
@@ -41,215 +44,232 @@ class Database:
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 )
-            ''')
-            
-            # Network connections table
-            conn.execute('''
-                CREATE TABLE IF NOT EXISTS network_connections (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    source_host_id INTEGER,
-                    dest_host_id INTEGER,
-                    dest_ip TEXT,
-                    dest_port INTEGER,
-                    protocol TEXT,
-                    connection_count INTEGER DEFAULT 1,
-                    bytes_sent INTEGER DEFAULT 0,
-                    bytes_received INTEGER DEFAULT 0,
-                    first_seen TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    last_seen TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    FOREIGN KEY (source_host_id) REFERENCES hosts (id),
-                    FOREIGN KEY (dest_host_id) REFERENCES hosts (id)
-                )
-            ''')
-            
-            # Port scan results
-            conn.execute('''
-                CREATE TABLE IF NOT EXISTS port_scans (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    host_id INTEGER,
-                    port INTEGER,
-                    service TEXT,
-                    state TEXT,
-                    version TEXT,
-                    scan_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    FOREIGN KEY (host_id) REFERENCES hosts (id)
-                )
-            ''')
-            
-            # Network traffic statistics
-            conn.execute('''
-                CREATE TABLE IF NOT EXISTS traffic_stats (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    host_id INTEGER,
-                    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    bytes_in INTEGER DEFAULT 0,
-                    bytes_out INTEGER DEFAULT 0,
-                    packets_in INTEGER DEFAULT 0,
-                    packets_out INTEGER DEFAULT 0,
-                    connections_active INTEGER DEFAULT 0,
-                    FOREIGN KEY (host_id) REFERENCES hosts (id)
-                )
-            ''')
-            
-            # System information
-            conn.execute('''
-                CREATE TABLE IF NOT EXISTS host_info (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    host_id INTEGER,
-                    hostname TEXT,
-                    os_info TEXT,
-                    kernel_version TEXT,
-                    cpu_info TEXT,
-                    memory_total INTEGER,
-                    disk_info TEXT,
-                    network_interfaces TEXT,
-                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    FOREIGN KEY (host_id) REFERENCES hosts (id)
-                )
-            ''')
-            
-            # Network discovery data
-            conn.execute('''
-                CREATE TABLE IF NOT EXISTS network_discovery (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    host_id INTEGER,
-                    discovery_type TEXT,
-                    discovery_data TEXT,
-                    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    FOREIGN KEY (host_id) REFERENCES hosts (id)
-                )
-            ''')
-            
-            # Topology analysis results
-            conn.execute('''
-                CREATE TABLE IF NOT EXISTS topology_analysis (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    analysis_type TEXT,
-                    analysis_data TEXT,
-                    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-                )
-            ''')
-            
-            # Network diagram layouts
-            conn.execute('''
-                CREATE TABLE IF NOT EXISTS diagram_layouts (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    layout_name TEXT DEFAULT 'default',
-                    layout_data TEXT,
-                    created_by TEXT DEFAULT 'system',
-                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-                )
-            ''')
-            
-            # Agent management
-            conn.execute('''
-                CREATE TABLE IF NOT EXISTS agents (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    agent_id TEXT UNIQUE NOT NULL,
-                    host_id INTEGER,
-                    hostname TEXT NOT NULL,
-                    ip_address TEXT NOT NULL,
-                    username TEXT NOT NULL,
-                    agent_version TEXT,
-                    status TEXT DEFAULT 'inactive',
-                    last_heartbeat TIMESTAMP,
-                    last_scan TIMESTAMP,
-                    config_hash TEXT,
-                    error_message TEXT,
-                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    FOREIGN KEY (host_id) REFERENCES hosts (id)
-                )
-            ''')
-            
-            # Agent configuration
-            conn.execute('''
-                CREATE TABLE IF NOT EXISTS agent_configs (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    agent_id TEXT NOT NULL,
-                    server_url TEXT NOT NULL,
-                    scan_interval INTEGER DEFAULT 300,
-                    heartbeat_interval INTEGER DEFAULT 60,
-                    log_collection_enabled BOOLEAN DEFAULT 1,
-                    log_paths TEXT DEFAULT '/var/log',
-                    scan_enabled BOOLEAN DEFAULT 1,
-                    test_configuration TEXT DEFAULT NULL,
-                    config_version INTEGER DEFAULT 1,
-                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    FOREIGN KEY (agent_id) REFERENCES agents (agent_id)
-                )
-            ''')
-            
-            # Update existing agent_configs table to add test_configuration column if it doesn't exist
-            try:
-                conn.execute('ALTER TABLE agent_configs ADD COLUMN test_configuration TEXT DEFAULT NULL')
-            except:
-                pass  # Column already exists
-            
-            # Update agents table to add version tracking columns if they don't exist
-            try:
-                conn.execute('ALTER TABLE agents ADD COLUMN build_date TEXT DEFAULT NULL')
-            except:
-                pass  # Column already exists
-            
-            try:
-                conn.execute('ALTER TABLE agents ADD COLUMN last_update_date TIMESTAMP DEFAULT NULL')
-            except:
-                pass  # Column already exists
+                ''')
                 
-            try:
-                conn.execute('ALTER TABLE agents ADD COLUMN platform TEXT DEFAULT NULL')
-            except:
-                pass  # Column already exists
-            
-            # Agent logs collection
-            conn.execute('''
-                CREATE TABLE IF NOT EXISTS agent_logs (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    agent_id TEXT NOT NULL,
-                    log_source TEXT NOT NULL,
-                    log_level TEXT,
-                    message TEXT NOT NULL,
-                    timestamp TIMESTAMP,
-                    collected_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    FOREIGN KEY (agent_id) REFERENCES agents (agent_id)
-                )
-            ''')
-            
-            # Agent scan results
-            conn.execute('''
-                CREATE TABLE IF NOT EXISTS agent_scan_results (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    agent_id TEXT NOT NULL,
-                    scan_type TEXT NOT NULL,
-                    scan_data TEXT NOT NULL,
-                    scan_timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    processed BOOLEAN DEFAULT 0,
-                    FOREIGN KEY (agent_id) REFERENCES agents (agent_id)
-                )
-            ''')
-            
-            # AI API settings
-            conn.execute('''
-                CREATE TABLE IF NOT EXISTS ai_api_settings (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    provider TEXT UNIQUE NOT NULL,
-                    api_key TEXT,
-                    model_name TEXT,
-                    api_endpoint TEXT,
-                    temperature REAL DEFAULT 0.7,
-                    max_tokens INTEGER DEFAULT 1000,
-                    timeout INTEGER DEFAULT 30,
-                    enabled BOOLEAN DEFAULT 0,
-                    additional_config TEXT,
-                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-                )
-            ''')
-            
-            conn.commit()
+                # Network connections table
+                conn.execute('''
+                    CREATE TABLE IF NOT EXISTS network_connections (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        source_host_id INTEGER,
+                        dest_host_id INTEGER,
+                        dest_ip TEXT,
+                        dest_port INTEGER,
+                        protocol TEXT,
+                        connection_count INTEGER DEFAULT 1,
+                        bytes_sent INTEGER DEFAULT 0,
+                        bytes_received INTEGER DEFAULT 0,
+                        first_seen TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        last_seen TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        FOREIGN KEY (source_host_id) REFERENCES hosts (id),
+                        FOREIGN KEY (dest_host_id) REFERENCES hosts (id)
+                    )
+                ''')
+                
+                # Port scan results
+                conn.execute('''
+                    CREATE TABLE IF NOT EXISTS port_scans (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        host_id INTEGER,
+                        port INTEGER,
+                        service TEXT,
+                        state TEXT,
+                        version TEXT,
+                        scan_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        FOREIGN KEY (host_id) REFERENCES hosts (id)
+                    )
+                ''')
+                
+                # Network traffic statistics
+                conn.execute('''
+                    CREATE TABLE IF NOT EXISTS traffic_stats (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        host_id INTEGER,
+                        timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        bytes_in INTEGER DEFAULT 0,
+                        bytes_out INTEGER DEFAULT 0,
+                        packets_in INTEGER DEFAULT 0,
+                        packets_out INTEGER DEFAULT 0,
+                        connections_active INTEGER DEFAULT 0,
+                        FOREIGN KEY (host_id) REFERENCES hosts (id)
+                    )
+                ''')
+                
+                # System information
+                conn.execute('''
+                    CREATE TABLE IF NOT EXISTS host_info (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        host_id INTEGER,
+                        hostname TEXT,
+                        os_info TEXT,
+                        kernel_version TEXT,
+                        cpu_info TEXT,
+                        memory_total INTEGER,
+                        disk_info TEXT,
+                        network_interfaces TEXT,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        FOREIGN KEY (host_id) REFERENCES hosts (id)
+                    )
+                ''')
+                
+                # Network discovery data
+                conn.execute('''
+                    CREATE TABLE IF NOT EXISTS network_discovery (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        host_id INTEGER,
+                        discovery_type TEXT,
+                        discovery_data TEXT,
+                        timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        FOREIGN KEY (host_id) REFERENCES hosts (id)
+                    )
+                ''')
+                
+                # Topology analysis results
+                conn.execute('''
+                    CREATE TABLE IF NOT EXISTS topology_analysis (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        analysis_type TEXT,
+                        analysis_data TEXT,
+                        timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    )
+                ''')
+                
+                # Network diagram layouts
+                conn.execute('''
+                    CREATE TABLE IF NOT EXISTS diagram_layouts (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        layout_name TEXT DEFAULT 'default',
+                        layout_data TEXT,
+                        created_by TEXT DEFAULT 'system',
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    )
+                ''')
+                
+                # Agent management
+                conn.execute('''
+                    CREATE TABLE IF NOT EXISTS agents (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        agent_id TEXT UNIQUE NOT NULL,
+                        host_id INTEGER,
+                        hostname TEXT NOT NULL,
+                        ip_address TEXT NOT NULL,
+                        username TEXT NOT NULL,
+                        agent_version TEXT,
+                        status TEXT DEFAULT 'inactive',
+                        last_heartbeat TIMESTAMP,
+                        last_scan TIMESTAMP,
+                        config_hash TEXT,
+                        error_message TEXT,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        FOREIGN KEY (host_id) REFERENCES hosts (id)
+                    )
+                ''')
+                
+                # Agent configuration
+                conn.execute('''
+                    CREATE TABLE IF NOT EXISTS agent_configs (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        agent_id TEXT NOT NULL,
+                        server_url TEXT NOT NULL,
+                        scan_interval INTEGER DEFAULT 300,
+                        heartbeat_interval INTEGER DEFAULT 60,
+                        log_collection_enabled BOOLEAN DEFAULT 1,
+                        log_paths TEXT DEFAULT '/var/log',
+                        scan_enabled BOOLEAN DEFAULT 1,
+                        test_configuration TEXT DEFAULT NULL,
+                        config_version INTEGER DEFAULT 1,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        FOREIGN KEY (agent_id) REFERENCES agents (agent_id)
+                    )
+                ''')
+                
+                # Update existing agent_configs table to add test_configuration column if it doesn't exist
+                try:
+                    conn.execute('ALTER TABLE agent_configs ADD COLUMN test_configuration TEXT DEFAULT NULL')
+                except:
+                    pass  # Column already exists
+                
+                # Update agents table to add version tracking columns if they don't exist
+                try:
+                    conn.execute('ALTER TABLE agents ADD COLUMN build_date TEXT DEFAULT NULL')
+                except:
+                    pass  # Column already exists
+                
+                try:
+                    conn.execute('ALTER TABLE agents ADD COLUMN last_update_date TIMESTAMP DEFAULT NULL')
+                except:
+                    pass  # Column already exists
+                    
+                try:
+                    conn.execute('ALTER TABLE agents ADD COLUMN platform TEXT DEFAULT NULL')
+                except:
+                    pass  # Column already exists
+                
+                # Agent logs collection
+                conn.execute('''
+                    CREATE TABLE IF NOT EXISTS agent_logs (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        agent_id TEXT NOT NULL,
+                        log_source TEXT NOT NULL,
+                        log_level TEXT,
+                        message TEXT NOT NULL,
+                        timestamp TIMESTAMP,
+                        collected_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        FOREIGN KEY (agent_id) REFERENCES agents (agent_id)
+                    )
+                ''')
+                
+                # Agent scan results
+                conn.execute('''
+                    CREATE TABLE IF NOT EXISTS agent_scan_results (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        agent_id TEXT NOT NULL,
+                        scan_type TEXT NOT NULL,
+                        scan_data TEXT NOT NULL,
+                        scan_timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        processed BOOLEAN DEFAULT 0,
+                        FOREIGN KEY (agent_id) REFERENCES agents (agent_id)
+                    )
+                ''')
+                
+                # AI API settings
+                conn.execute('''
+                    CREATE TABLE IF NOT EXISTS ai_api_settings (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        provider TEXT UNIQUE NOT NULL,
+                        api_key TEXT,
+                        model_name TEXT,
+                        api_endpoint TEXT,
+                        temperature REAL DEFAULT 0.7,
+                        max_tokens INTEGER DEFAULT 1000,
+                        timeout INTEGER DEFAULT 30,
+                        enabled BOOLEAN DEFAULT 0,
+                        additional_config TEXT,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    )
+                ''')
+                
+                # Update existing ai_api_settings table structure if needed
+                try:
+                    conn.execute('ALTER TABLE ai_api_settings ADD COLUMN additional_config TEXT DEFAULT NULL')
+                except:
+                    pass  # Column already exists
+                    
+                try:
+                    conn.execute('ALTER TABLE ai_api_settings ADD COLUMN enabled BOOLEAN DEFAULT 0')
+                except:
+                    pass  # Column already exists
+                
+                conn.commit()
+                print("DEBUG: Database initialization completed successfully")
+        except Exception as e:
+            print(f"ERROR: Database initialization failed: {e}")
+            import traceback
+            traceback.print_exc()
+            raise
     
     # Host management
     def add_host(self, name, ip_address, username='root', ssh_port=22, description=''):
