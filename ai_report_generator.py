@@ -316,15 +316,20 @@ class AIReportGenerator:
         """Call Google Gemini API"""
         try:
             api_key = config.get('api_key')
-            model_name = config.get('model_name', 'gemini-pro')
-            api_endpoint = config.get('api_endpoint', 'https://generativelanguage.googleapis.com/v1/models/{model}:generateContent')
-            timeout = config.get('timeout', 30)
+            model_name = config.get('model_name', 'gemini-2.5-flash')
+            api_endpoint = config.get('api_endpoint', 'https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent')
+            timeout = config.get('timeout', 120)
             
             if not api_key:
                 raise ValueError("Gemini API key not configured")
             
-            # Format endpoint URL
-            endpoint_url = api_endpoint.format(model=model_name)
+            # Format endpoint URL - ensure we have the correct v1beta path
+            if '{model}' in api_endpoint:
+                endpoint_url = api_endpoint.format(model=model_name)
+            else:
+                # Fallback to construct correct URL if endpoint doesn't have placeholder
+                endpoint_url = f'https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent'
+            
             if '?' in endpoint_url:
                 endpoint_url += f'&key={api_key}'
             else:

@@ -988,10 +988,10 @@
                 gemini: {
                     provider: 'gemini',
                     model_name: 'gemini-2.5-flash',
-                    api_endpoint: 'https://generativelanguage.googleapis.com/v1beta',
+                    api_endpoint: 'https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent',
                     temperature: 0.7,
                     max_tokens: 1000,
-                    timeout: 30,
+                    timeout: 120,
                     enabled: false
                 },
                 chatgpt: {
@@ -1000,7 +1000,7 @@
                     api_endpoint: 'https://api.openai.com/v1/chat/completions',
                     temperature: 0.7,
                     max_tokens: 1000,
-                    timeout: 30,
+                    timeout: 120,
                     enabled: false
                 }
             };
@@ -1106,7 +1106,13 @@
                 return;
             }
             
-            const testBtn = form.querySelector('.pf-c-button[onclick*="testAIConnection"]');
+            const modal = document.getElementById(provider + 'Modal');
+            const testBtn = modal.querySelector('footer .pf-c-button[onclick*="testAIConnection"]');
+            if (!testBtn) {
+                console.error('Test button not found for provider:', provider);
+                return;
+            }
+            
             const originalText = testBtn.innerHTML;
             testBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Testing...';
             testBtn.disabled = true;

@@ -4714,6 +4714,93 @@ def get_ai_reports_data_stats():
             'error': str(e)
         }), 500
 
+def format_ai_report_to_html(report):
+    """Format AI report dictionary into readable HTML"""
+    if not report:
+        return "<p>No report data available.</p>"
+    
+    html = []
+    
+    # Add metadata header if available
+    metadata = report.get('metadata', {})
+    if metadata:
+        html.append('<div class="nm-report-section">')
+        html.append('<h2>Report Information</h2>')
+        html.append(f'<p><strong>Generated:</strong> {metadata.get("generated_at", "Unknown")}</p>')
+        html.append(f'<p><strong>AI Model:</strong> {metadata.get("ai_model", "Unknown").title()}</p>')
+        html.append(f'<p><strong>Data Source:</strong> {metadata.get("data_type", "Unknown").replace("_", " ").title()}</p>')
+        if metadata.get('generation_time'):
+            html.append(f'<p><strong>Generation Time:</strong> {metadata.get("generation_time")}</p>')
+        html.append('</div>')
+    
+    # Check if this is an error report
+    if 'error_details' in report:
+        html.append('<div class="nm-report-section">')
+        html.append('<h2 style="color: #c9190b;">Report Generation Failed</h2>')
+        html.append(f'<p>{report.get("error_details", "Unknown error occurred.")}</p>')
+        html.append('</div>')
+        return '\n'.join(html)
+    
+    # Format each section
+    sections = [
+        ('executive_summary', 'Executive Summary'),
+        ('network_overview', 'Network Overview'), 
+        ('security_analysis', 'Security Analysis'),
+        ('performance_insights', 'Performance Insights'),
+        ('infrastructure_analysis', 'Infrastructure Analysis'),
+        ('recommendations', 'Recommendations'),
+        ('detailed_findings', 'Detailed Findings')
+    ]
+    
+    for section_key, section_title in sections:
+        section = report.get(section_key, {})
+        if not section:
+            continue
+            
+        html.append('<div class="nm-report-section">')
+        html.append(f'<h2>{section_title}</h2>')
+        
+        # Handle different section formats
+        if 'summary' in section:
+            html.append(f'<p>{section["summary"]}</p>')
+        elif 'analysis' in section:
+            html.append(f'<p>{section["analysis"]}</p>')
+        
+        # Add key points if available
+        if 'key_points' in section and section['key_points']:
+            html.append('<h4>Key Points:</h4>')
+            html.append('<ul>')
+            for point in section['key_points']:
+                html.append(f'<li>{point}</li>')
+            html.append('</ul>')
+        
+        # Add recommendations if available
+        if 'recommendations' in section and section['recommendations']:
+            html.append('<h4>Recommendations:</h4>')
+            html.append('<ul>')
+            for rec in section['recommendations']:
+                html.append(f'<li>{rec}</li>')
+            html.append('</ul>')
+        
+        # Add threats if available (security section)
+        if 'threats_identified' in section and section['threats_identified']:
+            html.append('<h4>Threats Identified:</h4>')
+            html.append('<ul>')
+            for threat in section['threats_identified']:
+                html.append(f'<li>{threat}</li>')
+            html.append('</ul>')
+        
+        # Add error information if section failed
+        if 'error' in section:
+            html.append(f'<p style="color: #c9190b;"><em>Error generating this section: {section["error"]}</em></p>')
+        
+        html.append('</div>')
+    
+    if not html or len(html) == 0:
+        return "<p>Report generated but no displayable content found.</p>"
+    
+    return '\n'.join(html)
+
 @app.route('/api/ai_reports/generate', methods=['POST'])
 def generate_ai_report():
     """Generate an AI-powered network analysis report"""
@@ -4753,11 +4840,14 @@ def generate_ai_report():
         generator = AIReportGenerator(db, host_manager)
         
         # Generate the report
-        report = generator.generate_report(ai_model, data_type)
+        report_data = generator.generate_report(ai_model, data_type)
+        
+        # Format the report for display
+        formatted_report = format_ai_report_to_html(report_data)
         
         return jsonify({
             'success': True,
-            'report': report,
+            'report': formatted_report,
             'ai_model': ai_model,
             'data_type': data_type,
             'generated_at': datetime.now().isoformat()
