@@ -1,122 +1,166 @@
-{% extends "base.html" %}
+{% extends "base_patternfly.html" %}
 
-{% block title %}Settings - Network Map{% endblock %}
+{% block title %}Settings - Home Lab{% endblock %}
+
+{% block breadcrumb %}
+<li class="pf-c-breadcrumb__item">
+    <a href="{{ url_for('index') }}" class="pf-c-breadcrumb__link">Home</a>
+</li>
+<li class="pf-c-breadcrumb__item">
+    <span class="pf-c-breadcrumb__item-divider">></span>
+    <span class="pf-c-breadcrumb__link pf-m-current" aria-current="page">Settings</span>
+</li>
+{% endblock %}
 
 {% block content %}
-<div class="container-fluid">
-    <div class="row">
-        <div class="col-12">
-            <div class="d-flex justify-content-between align-items-center mb-4">
-                <h1 class="h3">
-                    <i class="fas fa-cog me-2"></i>System Settings
-                </h1>
-                <nav aria-label="breadcrumb">
-                    <ol class="breadcrumb mb-0">
-                        <li class="breadcrumb-item"><a href="{{ url_for('index') }}">Dashboard</a></li>
-                        <li class="breadcrumb-item active" aria-current="page">Settings</li>
-                    </ol>
-                </nav>
-            </div>
-        </div>
+<!-- Page header -->
+<section class="pf-c-page__main-section pf-m-light">
+    <div class="pf-c-content">
+        <h1>
+            <i class="fas fa-cog pf-u-mr-sm"></i>System Settings
+        </h1>
+        <p class="pf-c-content">Manage AI integrations, network configuration, and system preferences.</p>
     </div>
+</section>
 
-    <div class="row">
+<!-- Settings content -->
+<section class="pf-c-page__main-section">
+    <div class="pf-l-gallery pf-m-gutter">
+        
         <!-- AI API Settings -->
-        <div class="col-lg-6">
-            <div class="card shadow-sm mb-4">
-                <div class="card-header bg-primary text-white">
-                    <h5 class="card-title mb-0">
-                        <i class="fas fa-robot me-2"></i>AI API Configuration
-                    </h5>
+        <div class="pf-l-gallery__item">
+            <div class="pf-c-card" style="min-height: 400px;">
+                <div class="pf-c-card__header">
+                    <div class="pf-c-card__header-main">
+                        <h2 class="pf-c-card__title">
+                            <i class="fas fa-robot pf-u-mr-sm"></i>AI API Configuration
+                        </h2>
+                    </div>
                 </div>
-                <div class="card-body">
-                    <p class="text-muted mb-4">Configure AI service integrations for enhanced network analysis and insights.</p>
+                <div class="pf-c-card__body">
+                    <p class="pf-u-color-200">Configure AI service integrations for enhanced network analysis and insights.</p>
                     
-                    <div class="row" id="ai-settings-overview">
+                    <div id="ai-settings-overview">
                         <!-- AI settings will be loaded here -->
-                        <div class="col-12 text-center py-4">
-                            <div class="spinner-border text-primary" role="status">
-                                <span class="visually-hidden">Loading...</span>
+                        <div class="pf-c-empty-state pf-m-sm">
+                            <div class="pf-c-empty-state__content">
+                                <div class="pf-c-spinner pf-m-lg" role="progressbar">
+                                    <span class="pf-c-spinner__clipper"></span>
+                                    <span class="pf-c-spinner__lead-ball"></span>
+                                    <span class="pf-c-spinner__tail-ball"></span>
+                                </div>
+                                <h2 class="pf-c-title pf-m-lg">Loading AI settings...</h2>
                             </div>
                         </div>
                     </div>
-                    
-                    <hr>
-                    <div class="d-flex gap-2">
-                        <button type="button" class="btn btn-outline-primary" onclick="openAIModal('gemini')">
-                            <i class="fas fa-brain me-2"></i>Configure Gemini
-                        </button>
-                        <button type="button" class="btn btn-outline-primary" onclick="openAIModal('chatgpt')">
-                            <i class="fas fa-comments me-2"></i>Configure ChatGPT
-                        </button>
+                </div>
+                <div class="pf-c-card__footer">
+                    <button class="pf-c-button pf-m-primary" type="button" onclick="openAIModal('gemini')">
+                        <i class="fas fa-brain pf-u-mr-sm"></i>Configure Gemini
+                    </button>
+                    <button class="pf-c-button pf-m-secondary pf-u-ml-sm" type="button" onclick="openAIModal('chatgpt')">
+                        <i class="fas fa-comments pf-u-mr-sm"></i>Configure ChatGPT
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Network Settings -->
+        <div class="pf-l-gallery__item">
+            <div class="pf-c-card">
+                <div class="pf-c-card__header">
+                    <div class="pf-c-card__header-main">
+                        <h2 class="pf-c-card__title">
+                            <i class="fas fa-network-wired pf-u-mr-sm"></i>Network Settings
+                        </h2>
+                    </div>
+                </div>
+                <div class="pf-c-card__body">
+                    <p class="pf-u-color-200">Network scanning and monitoring configuration.</p>
+                    <div class="pf-c-alert pf-m-info pf-m-inline" aria-label="Info alert">
+                        <div class="pf-c-alert__icon">
+                            <i class="fas fa-info-circle" aria-hidden="true"></i>
+                        </div>
+                        <p class="pf-c-alert__title">
+                            Network settings configuration coming in future release.
+                        </p>
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- Future Settings Categories -->
-        <div class="col-lg-6">
-            <div class="card shadow-sm mb-4">
-                <div class="card-header bg-secondary text-white">
-                    <h5 class="card-title mb-0">
-                        <i class="fas fa-network-wired me-2"></i>Network Settings
-                    </h5>
+        <!-- Security Settings -->
+        <div class="pf-l-gallery__item">
+            <div class="pf-c-card">
+                <div class="pf-c-card__header">
+                    <div class="pf-c-card__header-main">
+                        <h2 class="pf-c-card__title">
+                            <i class="fas fa-shield-alt pf-u-mr-sm"></i>Security Settings
+                        </h2>
+                    </div>
                 </div>
-                <div class="card-body">
-                    <p class="text-muted mb-3">Network scanning and monitoring configuration.</p>
-                    <div class="alert alert-info">
-                        <i class="fas fa-info-circle me-2"></i>
-                        Network settings configuration coming in future release.
+                <div class="pf-c-card__body">
+                    <p class="pf-u-color-200">Authentication, access control, and security configuration.</p>
+                    <div class="pf-c-alert pf-m-info pf-m-inline" aria-label="Info alert">
+                        <div class="pf-c-alert__icon">
+                            <i class="fas fa-info-circle" aria-hidden="true"></i>
+                        </div>
+                        <p class="pf-c-alert__title">
+                            Security settings configuration coming in future release.
+                        </p>
                     </div>
                 </div>
             </div>
+        </div>
 
-            <div class="card shadow-sm mb-4">
-                <div class="card-header bg-success text-white">
-                    <h5 class="card-title mb-0">
-                        <i class="fas fa-shield-alt me-2"></i>Security Settings
-                    </h5>
+        <!-- System Information -->
+        <div class="pf-l-gallery__item" style="grid-column: 1 / -1;">
+            <div class="pf-c-card">
+                <div class="pf-c-card__header">
+                    <div class="pf-c-card__header-main">
+                        <h2 class="pf-c-card__title">
+                            <i class="fas fa-info-circle pf-u-mr-sm"></i>System Information
+                        </h2>
+                    </div>
                 </div>
-                <div class="card-body">
-                    <p class="text-muted mb-3">Authentication, access control, and security configuration.</p>
-                    <div class="alert alert-info">
-                        <i class="fas fa-info-circle me-2"></i>
-                        Security settings configuration coming in future release.
+                <div class="pf-c-card__body">
+                    <div class="pf-l-grid pf-m-all-6-col-on-md pf-m-all-4-col-on-lg pf-m-gutter">
+                        <div class="pf-l-grid__item">
+                            <dl class="pf-c-description-list pf-m-horizontal">
+                                <dt class="pf-c-description-list__term">
+                                    <span class="pf-c-description-list__text">Application Version</span>
+                                </dt>
+                                <dd class="pf-c-description-list__description">
+                                    <div class="pf-c-description-list__text">NetworkMap v1.4.0</div>
+                                </dd>
+                            </dl>
+                        </div>
+                        <div class="pf-l-grid__item">
+                            <dl class="pf-c-description-list pf-m-horizontal">
+                                <dt class="pf-c-description-list__term">
+                                    <span class="pf-c-description-list__text">Database</span>
+                                </dt>
+                                <dd class="pf-c-description-list__description">
+                                    <div class="pf-c-description-list__text">SQLite</div>
+                                </dd>
+                            </dl>
+                        </div>
+                        <div class="pf-l-grid__item">
+                            <dl class="pf-c-description-list pf-m-horizontal">
+                                <dt class="pf-c-description-list__term">
+                                    <span class="pf-c-description-list__text">Server</span>
+                                </dt>
+                                <dd class="pf-c-description-list__description">
+                                    <div class="pf-c-description-list__text">Flask Development Server</div>
+                                </dd>
+                            </dl>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
     </div>
-
-    <!-- System Information -->
-    <div class="row">
-        <div class="col-12">
-            <div class="card shadow-sm">
-                <div class="card-header bg-info text-white">
-                    <h5 class="card-title mb-0">
-                        <i class="fas fa-info-circle me-2"></i>System Information
-                    </h5>
-                </div>
-                <div class="card-body">
-                    <div class="row">
-                        <div class="col-md-4">
-                            <strong>Application Version:</strong><br>
-                            <span class="text-muted">NetworkMap v1.4.0</span>
-                        </div>
-                        <div class="col-md-4">
-                            <strong>Database:</strong><br>
-                            <span class="text-muted">SQLite</span>
-                        </div>
-                        <div class="col-md-4">
-                            <strong>Server:</strong><br>
-                            <span class="text-muted">Flask Development Server</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
+</section>
 {% endblock %}
 
 {% block scripts %}
@@ -137,18 +181,22 @@ function loadAISettingsOverview() {
             
             if (settings.length === 0) {
                 html = `
-                    <div class="col-12">
-                        <div class="alert alert-warning">
-                            <i class="fas fa-exclamation-triangle me-2"></i>
-                            No AI API configurations found. Click the buttons below to configure AI services.
+                    <div class="pf-c-alert pf-m-warning pf-m-inline" aria-label="Warning alert">
+                        <div class="pf-c-alert__icon">
+                            <i class="fas fa-exclamation-triangle" aria-hidden="true"></i>
                         </div>
+                        <p class="pf-c-alert__title">
+                            No AI API configurations found. Click the buttons below to configure AI services.
+                        </p>
                     </div>
                 `;
             } else {
+                html = '<div class="pf-l-grid pf-m-gutter">';
+                
                 settings.forEach(setting => {
-                    const statusBadge = setting.enabled 
-                        ? '<span class="badge bg-success">Enabled</span>' 
-                        : '<span class="badge bg-secondary">Disabled</span>';
+                    const statusLabel = setting.enabled 
+                        ? '<span class="pf-c-label pf-m-green"><span class="pf-c-label__content">Enabled</span></span>' 
+                        : '<span class="pf-c-label pf-m-grey"><span class="pf-c-label__content">Disabled</span></span>';
                     
                     const providerIcon = setting.provider === 'gemini' 
                         ? 'fas fa-brain' 
@@ -159,37 +207,57 @@ function loadAISettingsOverview() {
                         : 'OpenAI ChatGPT';
                     
                     html += `
-                        <div class="col-md-6 mb-3">
-                            <div class="border rounded p-3">
-                                <div class="d-flex justify-content-between align-items-start mb-2">
-                                    <h6 class="mb-0">
-                                        <i class="${providerIcon} me-2"></i>${providerName}
-                                    </h6>
-                                    ${statusBadge}
+                        <div class="pf-l-grid__item pf-m-12-col">
+                            <div class="pf-c-card pf-m-compact">
+                                <div class="pf-c-card__header">
+                                    <div class="pf-c-card__header-main">
+                                        <h3 class="pf-c-card__title">
+                                            <i class="${providerIcon} pf-u-mr-sm"></i>${providerName}
+                                        </h3>
+                                    </div>
+                                    <div class="pf-c-card__actions">
+                                        ${statusLabel}
+                                    </div>
                                 </div>
-                                <small class="text-muted">
-                                    Model: ${setting.model_name || 'Not configured'}<br>
-                                    API Key: ${setting.api_key_masked || 'Not set'}
-                                </small>
-                                <div class="mt-2">
-                                    <button class="btn btn-sm btn-outline-primary" onclick="openAIModal('${setting.provider}')">
-                                        <i class="fas fa-edit me-1"></i>Configure
+                                <div class="pf-c-card__body">
+                                    <dl class="pf-c-description-list pf-m-horizontal pf-m-1-col-on-sm">
+                                        <dt class="pf-c-description-list__term">
+                                            <span class="pf-c-description-list__text">Model:</span>
+                                        </dt>
+                                        <dd class="pf-c-description-list__description">
+                                            <div class="pf-c-description-list__text">${setting.model_name || 'Not configured'}</div>
+                                        </dd>
+                                        <dt class="pf-c-description-list__term">
+                                            <span class="pf-c-description-list__text">API Key:</span>
+                                        </dt>
+                                        <dd class="pf-c-description-list__description">
+                                            <div class="pf-c-description-list__text">${setting.api_key_masked || 'Not set'}</div>
+                                        </dd>
+                                    </dl>
+                                </div>
+                                <div class="pf-c-card__footer">
+                                    <button class="pf-c-button pf-m-link pf-m-inline" type="button" onclick="openAIModal('${setting.provider}')">
+                                        <i class="fas fa-edit pf-u-mr-sm"></i>Configure
                                     </button>
                                 </div>
                             </div>
                         </div>
                     `;
                 });
+                
+                html += '</div>';
             }
             
             overviewContainer.innerHTML = html;
         } else {
             overviewContainer.innerHTML = `
-                <div class="col-12">
-                    <div class="alert alert-danger">
-                        <i class="fas fa-exclamation-triangle me-2"></i>
-                        Error loading AI settings: ${data.error}
+                <div class="pf-c-alert pf-m-danger pf-m-inline" aria-label="Danger alert">
+                    <div class="pf-c-alert__icon">
+                        <i class="fas fa-exclamation-circle" aria-hidden="true"></i>
                     </div>
+                    <p class="pf-c-alert__title">
+                        Error loading AI settings: ${data.error}
+                    </p>
                 </div>
             `;
         }
@@ -197,11 +265,13 @@ function loadAISettingsOverview() {
     .catch(error => {
         console.error('Error loading AI settings:', error);
         overviewContainer.innerHTML = `
-            <div class="col-12">
-                <div class="alert alert-danger">
-                    <i class="fas fa-exclamation-triangle me-2"></i>
-                    Failed to load AI settings. Please check your network connection.
+            <div class="pf-c-alert pf-m-danger pf-m-inline" aria-label="Danger alert">
+                <div class="pf-c-alert__icon">
+                    <i class="fas fa-exclamation-circle" aria-hidden="true"></i>
                 </div>
+                <p class="pf-c-alert__title">
+                    Failed to load AI settings. Please check your network connection.
+                </p>
             </div>
         `;
     });
