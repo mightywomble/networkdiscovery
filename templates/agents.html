@@ -779,6 +779,72 @@ async function refreshData() {
     }
 }
 
+// Function to determine agent status based on heartbeat
+function determineAgentStatus(agent) {
+    if (!agent) {
+        return {
+            status: 'Not Deployed',
+            statusClass: 'secondary',
+            statusIcon: 'fas fa-minus-circle',
+            cardClass: '',
+            heartbeatStatus: null
+        };
+    }
+    
+    // Check if agent has last_heartbeat timestamp
+    if (agent.last_heartbeat) {
+        const now = new Date();
+        const lastHeartbeat = new Date(agent.last_heartbeat);
+        const minutesSinceHeartbeat = Math.floor((now - lastHeartbeat) / (1000 * 60));
+        
+        // Update the agent object with calculated minutes
+        agent.minutes_since_heartbeat = minutesSinceHeartbeat;
+        
+        // Determine status based on time since last heartbeat
+        if (minutesSinceHeartbeat <= 5) {
+            // Online: heartbeat within last 5 minutes
+            agent.heartbeat_status = 'online';
+            return {
+                status: 'Online',
+                statusClass: 'success',
+                statusIcon: 'fas fa-check-circle',
+                cardClass: 'online',
+                heartbeatStatus: 'online'
+            };
+        } else if (minutesSinceHeartbeat <= 15) {
+            // Warning: heartbeat between 5-15 minutes ago
+            agent.heartbeat_status = 'warning';
+            return {
+                status: 'Warning',
+                statusClass: 'warning',
+                statusIcon: 'fas fa-exclamation-triangle',
+                cardClass: 'warning',
+                heartbeatStatus: 'warning'
+            };
+        } else {
+            // Offline: heartbeat more than 15 minutes ago
+            agent.heartbeat_status = 'offline';
+            return {
+                status: 'Offline',
+                statusClass: 'danger',
+                statusIcon: 'fas fa-times-circle',
+                cardClass: 'offline',
+                heartbeatStatus: 'offline'
+            };
+        }
+    } else {
+        // No heartbeat data - check if agent exists but never connected
+        agent.heartbeat_status = 'offline';
+        return {
+            status: 'Never Connected',
+            statusClass: 'danger',
+            statusIcon: 'fas fa-times-circle',
+            cardClass: 'offline',
+            heartbeatStatus: 'offline'
+        };
+    }
+}
+
 function renderHosts() {
     const container = document.getElementById('hosts-container');
     
@@ -803,33 +869,12 @@ function renderHosts() {
         const agent = agents.find(a => a.ip_address === host.ip_address || a.hostname === host.name);
         const isSelected = selectedHosts.has(host.id);
         
-        let agentStatus = 'Not Deployed';
-        let agentStatusClass = 'secondary';
-        let agentStatusIcon = 'fas fa-minus-circle';
-        let cardClass = '';
-        
-        if (agent) {
-            switch (agent.heartbeat_status) {
-                case 'online':
-                    agentStatus = 'Online';
-                    agentStatusClass = 'success';
-                    agentStatusIcon = 'fas fa-check-circle';
-                    cardClass = 'online';
-                    break;
-                case 'warning':
-                    agentStatus = 'Warning';
-                    agentStatusClass = 'warning';
-                    agentStatusIcon = 'fas fa-exclamation-triangle';
-                    cardClass = 'warning';
-                    break;
-                case 'offline':
-                    agentStatus = 'Offline';
-                    agentStatusClass = 'danger';
-                    agentStatusIcon = 'fas fa-times-circle';
-                    cardClass = 'offline';
-                    break;
-            }
-        }
+        // Determine agent status using the new robust logic
+        const agentStatusInfo = determineAgentStatus(agent);
+        const agentStatus = agentStatusInfo.status;
+        const agentStatusClass = agentStatusInfo.statusClass;
+        const agentStatusIcon = agentStatusInfo.statusIcon;
+        const cardClass = agentStatusInfo.cardClass;
         
         return `
             <div class="pf-l-gallery__item">
@@ -922,12 +967,33 @@ function renderHosts() {
 function updateStats() {
     const totalHosts = hosts.length;
     const deployedAgents = agents.length;
-    const onlineAgents = agents.filter(a => a.heartbeat_status === 'online').length;
+    
+    // Update agent statuses before counting
+    let onlineCount = 0;
+    let offlineCount = 0;
+    let warningCount = 0;
+    
+    agents.forEach(agent => {
+        const statusInfo = determineAgentStatus(agent);
+        switch (statusInfo.heartbeatStatus) {
+            case 'online':
+                onlineCount++;
+                break;
+            case 'warning':
+                warningCount++;
+                break;
+            case 'offline':
+            default:
+                offlineCount++;
+                break;
+        }
+    });
+    
     const pendingAgents = selectedHosts.size;
     
     document.getElementById('total-hosts').textContent = totalHosts;
     document.getElementById('deployed-agents').textContent = deployedAgents;
-    document.getElementById('online-agents').textContent = onlineAgents;
+    document.getElementById('online-agents').textContent = onlineCount;
     document.getElementById('pending-agents').textContent = pendingAgents;
 }
 
@@ -1763,14 +1829,33 @@ async function loadVersionSummary() {
 function updateVersionStats(agents) {
     const totalHosts = hosts.length;
     const totalAgents = agents.length;
-    const onlineAgents = agents.filter(a => a.heartbeat_status === 'online').length;
-    const offlineAgents = agents.filter(a => a.heartbeat_status === 'offline').length;
     
-    document.getElementById('version-latest-version').textContent = latestVersion;
+    // Update agent statuses and count them properly
+    let onlineCount = 0;
+    let offlineCount = 0;
+    let warningCount = 0;
+    
+    agents.forEach(agent => {
+        const statusInfo = determineAgentStatus(agent);
+        switch (statusInfo.heartbeatStatus) {
+            case 'online':
+                onlineCount++;
+                break;
+            case 'warning':
+                warningCount++;
+                break;
+            case 'offline':
+            default:
+                offlineCount++;
+                break;
+        }
+    });
+    
+    document.getElementById('version-latest-version').textContent = latestVersion || 'Unknown';
     document.getElementById('version-total-hosts').textContent = totalHosts;
     document.getElementById('version-total-agents').textContent = totalAgents;
-    document.getElementById('version-online-agents').textContent = onlineAgents;
-    document.getElementById('version-offline-agents').textContent = offlineAgents;
+    document.getElementById('version-online-agents').textContent = onlineCount;
+    document.getElementById('version-offline-agents').textContent = offlineCount;
 }
 
 function displayVersionSummary(versions) {
@@ -1836,8 +1921,8 @@ function displayVersionSummary(versions) {
                         <!-- Agent Status -->
                         <div class="pf-u-mb-sm">
                             <span class="pf-u-font-weight-bold">Status:</span>
-                            <span class="pf-c-label pf-m-${agent.heartbeat_status === 'online' ? 'green' : agent.heartbeat_status === 'warning' ? 'orange' : 'red'} pf-u-ml-sm">
-                                ${agent.heartbeat_status || 'unknown'}
+                            <span class="pf-c-label pf-m-${determineAgentStatus(agent).heartbeatStatus === 'online' ? 'green' : determineAgentStatus(agent).heartbeatStatus === 'warning' ? 'orange' : 'red'} pf-u-ml-sm">
+                                ${determineAgentStatus(agent).heartbeatStatus || 'offline'}
                             </span>
                         </div>
                         
