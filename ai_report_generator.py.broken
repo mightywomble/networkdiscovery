@@ -92,7 +92,9 @@ class AIReportGenerator:
             report['metadata']['generation_time'] = f"{generation_time:.2f} seconds"
             
             logger.info(f"AI report generation completed in {generation_time:.2f} seconds")
-            return report
+            # Convert structured report to markdown format
+            markdown_report = self.format_report_as_markdown(report)
+            return markdown_report
             
         except Exception as e:
             logger.error(f"Error generating AI report: {e}")
@@ -316,15 +318,20 @@ class AIReportGenerator:
         """Call Google Gemini API"""
         try:
             api_key = config.get('api_key')
-            model_name = config.get('model_name', 'gemini-pro')
+            model_name = config.get('model_name', 'gemini-2.5-flash')
             api_endpoint = config.get('api_endpoint', 'https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent')
-            timeout = config.get('timeout', 30)
+            timeout = config.get('timeout', 120)
             
             if not api_key:
                 raise ValueError("Gemini API key not configured")
             
-            # Format endpoint URL
-            endpoint_url = api_endpoint.format(model=model_name)
+            # Format endpoint URL - ensure we have the correct v1beta path
+            if '{model}' in api_endpoint:
+                endpoint_url = api_endpoint.format(model=model_name)
+            else:
+                # Fallback to construct correct URL if endpoint doesn't have placeholder
+                endpoint_url = f'https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent'
+            
             if '?' in endpoint_url:
                 endpoint_url += f'&key={api_key}'
             else:
@@ -870,3 +877,198 @@ Format recommendations with clear action items and expected benefits.
 if __name__ == "__main__":
     # Basic test
     print("AI Report Generator module loaded successfully")
+
+    def format_report_as_markdown(self, report_dict: Dict[str, Any]) -> str:
+        """Convert structured report dictionary to markdown format"""
+        try:
+            markdown_lines = []
+            
+            # Title
+            markdown_lines.append("# AI Network Analysis Report")
+            markdown_lines.append("")
+            
+            # Metadata section
+            if 'metadata' in report_dict:
+                metadata = report_dict['metadata']
+                markdown_lines.append("## Report Information")
+                markdown_lines.append(f"**Generated:** {metadata.get('generated_at', 'Unknown')}")
+                markdown_lines.append(f"**AI Model:** {metadata.get('ai_model', 'Unknown').title()}")
+                markdown_lines.append(f"**Data Source:** {metadata.get('data_type', 'Unknown').replace('_', ' ').title()}")
+                
+                if 'generation_time' in metadata and metadata['generation_time']:
+                    markdown_lines.append(f"**Generation Time:** {metadata['generation_time']:.2f} seconds")
+                
+                markdown_lines.append("")
+            
+            # Executive Summary
+            if 'executive_summary' in report_dict and report_dict['executive_summary']:
+                exec_summary = report_dict['executive_summary']
+                markdown_lines.append("## Executive Summary")
+                markdown_lines.append("")
+                markdown_lines.append(exec_summary.get('summary', 'No summary available'))
+                
+                if 'key_points' in exec_summary and exec_summary['key_points']:
+                    markdown_lines.append("")
+                    markdown_lines.append("### Key Points")
+                    for point in exec_summary['key_points']:
+                        markdown_lines.append(f"- {point}")
+                
+                if 'risk_level' in exec_summary:
+                    markdown_lines.append("")
+                    markdown_lines.append(f"**Risk Level:** {exec_summary['risk_level']}")
+                
+                markdown_lines.append("")
+            
+            # Network Overview  
+            if 'network_overview' in report_dict and report_dict['network_overview']:
+                network = report_dict['network_overview']
+                markdown_lines.append("## Network Overview")
+                markdown_lines.append("")
+                markdown_lines.append(network.get('analysis', 'No network analysis available'))
+                
+                if 'topology_insights' in network:
+                    topology = network['topology_insights']
+                    markdown_lines.append("")
+                    markdown_lines.append("### Network Topology")
+                    markdown_lines.append(f"- **Total Hosts:** {topology.get('total_hosts', 0)}")
+                    markdown_lines.append(f"- **Total Connections:** {topology.get('total_connections', 0)}")
+                    markdown_lines.append(f"- **Unique Destinations:** {topology.get('unique_destinations', 0)}")
+                
+                markdown_lines.append("")
+            
+            # Security Analysis
+            if 'security_analysis' in report_dict and report_dict['security_analysis']:
+                security = report_dict['security_analysis']
+                markdown_lines.append("## Security Analysis")
+                markdown_lines.append("")
+                markdown_lines.append(security.get('analysis', 'No security analysis available'))
+                
+                if 'threats_identified' in security and security['threats_identified']:
+                    markdown_lines.append("")
+                    markdown_lines.append("### Threats Identified")
+                    for threat in security['threats_identified']:
+                        markdown_lines.append(f"- {threat}")
+                
+                if 'recommendations' in security and security['recommendations']:
+                    markdown_lines.append("")
+                    markdown_lines.append("### Security Recommendations")
+                    for rec in security['recommendations']:
+                        markdown_lines.append(f"- {rec}")
+                
+                markdown_lines.append("")
+            
+            # Performance Insights
+            if 'performance_insights' in report_dict and report_dict['performance_insights']:
+                performance = report_dict['performance_insights']
+                markdown_lines.append("## Performance Insights")
+                markdown_lines.append("")
+                markdown_lines.append(performance.get('analysis', 'No performance analysis available'))
+                
+                if 'bottlenecks' in performance and performance['bottlenecks']:
+                    markdown_lines.append("")
+                    markdown_lines.append("### Bottlenecks Identified")
+                    for bottleneck in performance['bottlenecks']:
+                        markdown_lines.append(f"- {bottleneck}")
+                
+                markdown_lines.append("")
+            
+            # Infrastructure Analysis
+            if 'infrastructure_analysis' in report_dict and report_dict['infrastructure_analysis']:
+                infra = report_dict['infrastructure_analysis']
+                markdown_lines.append("## Infrastructure Analysis")
+                markdown_lines.append("")
+                markdown_lines.append(infra.get('analysis', 'No infrastructure analysis available'))
+                markdown_lines.append("")
+            
+            # Recommendations
+            if 'recommendations' in report_dict and report_dict['recommendations']:
+                recs = report_dict['recommendations']
+                markdown_lines.append("## Recommendations")
+                markdown_lines.append("")
+                markdown_lines.append(recs.get('analysis', 'No recommendations available'))
+                
+                if 'priority_actions' in recs and recs['priority_actions']:
+                    markdown_lines.append("")
+                    markdown_lines.append("### Priority Actions")
+                    for action in recs['priority_actions']:
+                        markdown_lines.append(f"1. {action}")
+                
+                if 'immediate_actions' in recs and recs['immediate_actions']:
+                    markdown_lines.append("")
+                    markdown_lines.append("### Immediate Actions")
+                    for action in recs['immediate_actions']:
+                        markdown_lines.append(f"- {action}")
+                
+                if 'short_term_goals' in recs and recs['short_term_goals']:
+                    markdown_lines.append("")
+                    markdown_lines.append("### Short Term Goals")
+                    for goal in recs['short_term_goals']:
+                        markdown_lines.append(f"- {goal}")
+                
+                if 'long_term_strategy' in recs and recs['long_term_strategy']:
+                    markdown_lines.append("")
+                    markdown_lines.append("### Long Term Strategy")
+                    for strategy in recs['long_term_strategy']:
+                        markdown_lines.append(f"- {strategy}")
+                
+                markdown_lines.append("")
+            
+            # Detailed Findings
+            if 'detailed_findings' in report_dict and report_dict['detailed_findings']:
+                findings = report_dict['detailed_findings']
+                markdown_lines.append("## Detailed Technical Findings")
+                markdown_lines.append("")
+                
+                if 'network_statistics' in findings:
+                    stats = findings['network_statistics']
+                    markdown_lines.append("### Network Statistics")
+                    markdown_lines.append(f"- **Total Hosts:** {stats.get('total_hosts', 0)}")
+                    markdown_lines.append(f"- **Online Hosts:** {stats.get('online_hosts', 0)}")
+                    markdown_lines.append(f"- **Total Connections:** {stats.get('total_connections', 0)}")
+                    markdown_lines.append(f"- **Data Collection Period:** {stats.get('data_collection_period', 'Unknown')}")
+                    markdown_lines.append("")
+                
+                if 'host_analysis' in findings and findings['host_analysis']:
+                    markdown_lines.append("### Host Analysis")
+                    for host in findings['host_analysis'][:5]:  # Show top 5 hosts
+                        markdown_lines.append(f"- **{host.get('host_name', 'Unknown')}** ({host.get('ip_address', 'Unknown IP')})")
+                        markdown_lines.append(f"  - Status: {host.get('status', 'Unknown')}")
+                        markdown_lines.append(f"  - Connections: {host.get('connection_count', 0)}")
+                        markdown_lines.append(f"  - Last Activity: {host.get('last_activity', 'Unknown')}")
+                    markdown_lines.append("")
+                
+                if 'traffic_analysis' in findings:
+                    traffic = findings['traffic_analysis']
+                    markdown_lines.append("### Traffic Analysis")
+                    if 'recent_activity' in traffic:
+                        activity = traffic['recent_activity']
+                        markdown_lines.append(f"- **Last Hour:** {activity.get('last_hour', 0)} connections")
+                        markdown_lines.append(f"- **Last 24 Hours:** {activity.get('last_24_hours', 0)} connections")
+                    markdown_lines.append("")
+                
+                if 'error_analysis' in findings:
+                    errors = findings['error_analysis']
+                    markdown_lines.append("### Error Analysis")
+                    markdown_lines.append(f"- **Total Errors:** {errors.get('total_errors', 0)}")
+                    if 'recent_errors' in errors and errors['recent_errors']:
+                        markdown_lines.append("- **Recent Error Types:**")
+                        for error in errors['recent_errors']:
+                            markdown_lines.append(f"  - {error}")
+                    markdown_lines.append("")
+            
+            return "\n".join(markdown_lines)
+            
+        except Exception as e:
+            logger.error(f"Error formatting report as markdown: {e}")
+            return f"""# AI Network Analysis Report
+
+## Report Generation Error
+
+An error occurred while formatting the report:
+
+```
+{str(e)}
+```
+
+Raw report data was available but could not be properly formatted. Please check the logs for more details.
+"""

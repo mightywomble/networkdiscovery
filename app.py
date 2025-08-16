@@ -4715,92 +4715,342 @@ def get_ai_reports_data_stats():
         }), 500
 
 def format_ai_report_to_html(report):
-    """Format AI report dictionary into readable HTML"""
+    """Format AI report dictionary into well-structured, readable HTML"""
     if not report:
-        return "<p>No report data available.</p>"
+        return "<div class='alert alert-info'><strong>No Report Data</strong><br>No report data is available to display.</div>"
     
     html = []
+    
+    def format_text_content(text, add_paragraphs=True):
+        """Helper function to format text content with proper structure"""
+        import re  # Import re module at the function start
+        
+        if not text:
+            return ""
+        
+        # Convert text to string if it's not already
+        text = str(text)
+        
+        # Split on common AI formatting patterns and numbered points
+        lines = []
+        current_line = ""
+        
+        for char in text:
+            current_line += char
+            # Break on sentence endings followed by numbers or bullet points
+            if char in '.!' and len(current_line) > 50:
+                # Look ahead to see if next content starts with number or bullet
+                remaining = text[text.find(current_line) + len(current_line):].strip()
+                if remaining and (remaining.startswith(('1.', '2.', '3.', '4.', '5.', '6.', '7.', '8.', '9.', '###', '**', '-')) or remaining.startswith('###')):
+                    lines.append(current_line.strip())
+                    current_line = ""
+        
+        # Add any remaining content
+        if current_line.strip():
+            lines.append(current_line.strip())
+        
+        # If no natural breaks found, split on long sentences
+        if len(lines) <= 1 and len(text) > 200:
+            # Split on periods followed by spaces and capital letters
+            sentences = re.split(r'\. (?=[A-Z])', text)
+            lines = [s.strip() + ('.' if not s.strip().endswith(('.', '!', '?')) else '') for s in sentences if s.strip()]
+        
+        formatted_lines = []
+        for line in lines:
+            line = line.strip()
+            if not line:
+                continue
+                
+            # Format numbered points
+            if re.match(r'^\d+\.', line):
+                formatted_lines.append(f"<div class='numbered-point'><strong>{line[:line.find('.')+1]}</strong> {line[line.find('.')+1:].strip()}</div>")
+            # Format headers with ###
+            elif line.startswith('###'):
+                header_text = line.replace('###', '').strip()
+                formatted_lines.append(f"<h4 style='color: #0066cc; margin-top: 20px; margin-bottom: 10px;'>{header_text}</h4>")
+            # Format bold items with **
+            elif '**' in line:
+                # Replace **text** with <strong>text</strong>
+                formatted_line = re.sub(r'\*\*([^*]+)\*\*', r'<strong>\1</strong>', line)
+                formatted_lines.append(f"<div class='content-line'>{formatted_line}</div>")
+            # Format bullet points
+            elif line.startswith(('-', '•', '*')):
+                bullet_content = line[1:].strip()
+                formatted_lines.append(f"<div class='bullet-point'>• {bullet_content}</div>")
+            else:
+                formatted_lines.append(f"<div class='content-line'>{line}</div>")
+        
+        return '<div class="formatted-content">' + '\n'.join(formatted_lines) + '</div>'
     
     # Add metadata header if available
     metadata = report.get('metadata', {})
     if metadata:
-        html.append('<div class="nm-report-section">')
-        html.append('<h2>Report Information</h2>')
-        html.append(f'<p><strong>Generated:</strong> {metadata.get("generated_at", "Unknown")}</p>')
-        html.append(f'<p><strong>AI Model:</strong> {metadata.get("ai_model", "Unknown").title()}</p>')
-        html.append(f'<p><strong>Data Source:</strong> {metadata.get("data_type", "Unknown").replace("_", " ").title()}</p>')
+        html.append('<div class="report-section metadata-section">')
+        html.append('<h2><i class="fas fa-info-circle"></i> Report Information</h2>')
+        html.append('<div class="metadata-grid">')
+        html.append(f'<div class="metadata-item"><strong>Generated:</strong> {metadata.get("generated_at", "Unknown")}</div>')
+        html.append(f'<div class="metadata-item"><strong>AI Model:</strong> {metadata.get("ai_model", "Unknown").title()}</div>')
+        html.append(f'<div class="metadata-item"><strong>Data Source:</strong> {metadata.get("data_type", "Unknown").replace("_", " ").title()}</div>')
         if metadata.get('generation_time'):
-            html.append(f'<p><strong>Generation Time:</strong> {metadata.get("generation_time")}</p>')
-        html.append('</div>')
+            try:
+                gen_time = float(metadata.get('generation_time', 0))
+                html.append(f'<div class="metadata-item"><strong>Generation Time:</strong> {gen_time:.2f} seconds</div>')
+            except (ValueError, TypeError):
+                html.append(f'<div class="metadata-item"><strong>Generation Time:</strong> {metadata.get("generation_time", "Unknown")} seconds</div>')
+        html.append('</div></div>')
     
     # Check if this is an error report
     if 'error_details' in report:
-        html.append('<div class="nm-report-section">')
-        html.append('<h2 style="color: #c9190b;">Report Generation Failed</h2>')
-        html.append(f'<p>{report.get("error_details", "Unknown error occurred.")}</p>')
+        html.append('<div class="report-section error-section">')
+        html.append('<h2 style="color: #c9190b;"><i class="fas fa-exclamation-triangle"></i> Report Generation Failed</h2>')
+        html.append(f'<div class="error-content">{report.get("error_details", "Unknown error occurred.")}</div>')
         html.append('</div>')
         return '\n'.join(html)
     
-    # Format each section
-    sections = [
-        ('executive_summary', 'Executive Summary'),
-        ('network_overview', 'Network Overview'), 
-        ('security_analysis', 'Security Analysis'),
-        ('performance_insights', 'Performance Insights'),
-        ('infrastructure_analysis', 'Infrastructure Analysis'),
-        ('recommendations', 'Recommendations'),
-        ('detailed_findings', 'Detailed Findings')
-    ]
-    
-    for section_key, section_title in sections:
-        section = report.get(section_key, {})
-        if not section:
-            continue
-            
-        html.append('<div class="nm-report-section">')
-        html.append(f'<h2>{section_title}</h2>')
+    # Executive Summary
+    exec_summary = report.get('executive_summary', {})
+    if exec_summary and isinstance(exec_summary, dict) and exec_summary.get('summary'):
+        html.append('<div class="report-section">')
+        html.append('<h2><i class="fas fa-chart-line"></i> Executive Summary</h2>')
+        html.append(format_text_content(exec_summary['summary']))
         
-        # Handle different section formats
-        if 'summary' in section:
-            html.append(f'<p>{section["summary"]}</p>')
-        elif 'analysis' in section:
-            html.append(f'<p>{section["analysis"]}</p>')
-        
-        # Add key points if available
-        if 'key_points' in section and section['key_points']:
-            html.append('<h4>Key Points:</h4>')
-            html.append('<ul>')
-            for point in section['key_points']:
+        if exec_summary.get('key_points'):
+            html.append('<h3>Key Points</h3>')
+            html.append('<ul class="key-points-list">')
+            for point in exec_summary['key_points']:
                 html.append(f'<li>{point}</li>')
             html.append('</ul>')
         
-        # Add recommendations if available
-        if 'recommendations' in section and section['recommendations']:
-            html.append('<h4>Recommendations:</h4>')
-            html.append('<ul>')
-            for rec in section['recommendations']:
-                html.append(f'<li>{rec}</li>')
-            html.append('</ul>')
-        
-        # Add threats if available (security section)
-        if 'threats_identified' in section and section['threats_identified']:
-            html.append('<h4>Threats Identified:</h4>')
-            html.append('<ul>')
-            for threat in section['threats_identified']:
-                html.append(f'<li>{threat}</li>')
-            html.append('</ul>')
-        
-        # Add error information if section failed
-        if 'error' in section:
-            html.append(f'<p style="color: #c9190b;"><em>Error generating this section: {section["error"]}</em></p>')
+        if exec_summary.get('risk_level'):
+            risk_level = exec_summary['risk_level']
+            risk_color = '#28a745' if 'low' in str(risk_level).lower() else '#ffc107' if 'medium' in str(risk_level).lower() else '#dc3545'
+            html.append(f'<div class="risk-indicator" style="background-color: {risk_color}20; border-left: 4px solid {risk_color}; padding: 10px; margin-top: 15px;"><strong>Risk Level:</strong> {risk_level}</div>')
         
         html.append('</div>')
     
-    if not html or len(html) == 0:
-        return "<p>Report generated but no displayable content found.</p>"
+    # Security Analysis
+    security = report.get('security_analysis', {})
+    if security and isinstance(security, dict) and security.get('analysis'):
+        html.append('<div class="report-section">')
+        html.append('<h2><i class="fas fa-shield-alt"></i> Security Analysis</h2>')
+        html.append(format_text_content(security['analysis']))
+        
+        if security.get('threats_identified'):
+            html.append('<h3>Threats Identified</h3>')
+            html.append('<ul class="threats-list">')
+            for threat in security['threats_identified']:
+                html.append(f'<li class="threat-item">{threat}</li>')
+            html.append('</ul>')
+        
+        if security.get('recommendations'):
+            html.append('<h3>Security Recommendations</h3>')
+            html.append('<ol class="recommendations-list">')
+            for rec in security['recommendations']:
+                html.append(f'<li class="recommendation-item">{rec}</li>')
+            html.append('</ol>')
+        
+        html.append('</div>')
     
-    return '\n'.join(html)
-
+    # Performance Insights
+    performance = report.get('performance_insights', {})
+    if performance and isinstance(performance, dict) and performance.get('analysis'):
+        html.append('<div class="report-section">')
+        html.append('<h2><i class="fas fa-tachometer-alt"></i> Performance Insights</h2>')
+        html.append(format_text_content(performance['analysis']))
+        
+        if performance.get('bottlenecks'):
+            html.append('<h3>Performance Bottlenecks</h3>')
+            html.append('<ul class="bottlenecks-list">')
+            for bottleneck in performance['bottlenecks']:
+                html.append(f'<li class="bottleneck-item">{bottleneck}</li>')
+            html.append('</ul>')
+        
+        html.append('</div>')
+    
+    # Network Overview
+    network = report.get('network_overview', {})
+    if network and isinstance(network, dict) and network.get('analysis'):
+        html.append('<div class="report-section">')
+        html.append('<h2><i class="fas fa-network-wired"></i> Network Overview</h2>')
+        html.append(format_text_content(network['analysis']))
+        
+        # Add topology insights if available
+        if network.get('topology_insights'):
+            topology = network['topology_insights']
+            html.append('<h3>Network Statistics</h3>')
+            html.append('<div class="stats-grid">')
+            html.append(f'<div class="stat-item"><span class="stat-value">{topology.get("total_hosts", 0)}</span><span class="stat-label">Total Hosts</span></div>')
+            html.append(f'<div class="stat-item"><span class="stat-value">{topology.get("total_connections", 0)}</span><span class="stat-label">Connections</span></div>')
+            html.append(f'<div class="stat-item"><span class="stat-value">{topology.get("unique_destinations", 0)}</span><span class="stat-label">Unique Destinations</span></div>')
+            html.append('</div>')
+        
+        html.append('</div>')
+    
+    # Infrastructure Analysis
+    infra = report.get('infrastructure_analysis', {})
+    if infra and isinstance(infra, dict) and infra.get('analysis'):
+        html.append('<div class="report-section">')
+        html.append('<h2><i class="fas fa-server"></i> Infrastructure Analysis</h2>')
+        html.append(format_text_content(infra['analysis']))
+        html.append('</div>')
+    
+    # Recommendations
+    recs = report.get('recommendations', {})
+    if recs and isinstance(recs, dict) and recs.get('analysis'):
+        html.append('<div class="report-section">')
+        html.append('<h2><i class="fas fa-lightbulb"></i> Recommendations</h2>')
+        html.append(format_text_content(recs['analysis']))
+        
+        # Priority actions
+        if recs.get('priority_actions'):
+            html.append('<h3>Priority Actions</h3>')
+            html.append('<ol class="priority-actions">')
+            for action in recs['priority_actions']:
+                html.append(f'<li class="priority-action">{action}</li>')
+            html.append('</ol>')
+        
+        html.append('</div>')
+    
+    # Detailed Findings
+    findings = report.get('detailed_findings', {})
+    if findings and isinstance(findings, dict):
+        html.append('<div class="report-section">')
+        html.append('<h2><i class="fas fa-search"></i> Detailed Technical Findings</h2>')
+        
+        # Network statistics
+        if findings.get('network_statistics'):
+            stats = findings['network_statistics']
+            html.append('<h3>Network Statistics</h3>')
+            html.append('<div class="detailed-stats">')
+            html.append(f'<div class="stat-row"><span class="stat-name">Total Hosts:</span> <span class="stat-value">{stats.get("total_hosts", 0)}</span></div>')
+            html.append(f'<div class="stat-row"><span class="stat-name">Online Hosts:</span> <span class="stat-value">{stats.get("online_hosts", 0)}</span></div>')
+            html.append(f'<div class="stat-row"><span class="stat-name">Total Connections:</span> <span class="stat-value">{stats.get("total_connections", 0)}</span></div>')
+            html.append(f'<div class="stat-row"><span class="stat-name">Data Collection Period:</span> <span class="stat-value">{stats.get("data_collection_period", "Unknown")}</span></div>')
+            html.append('</div>')
+        
+        html.append('</div>')
+    
+    # Add CSS styles for better formatting
+    styles = """
+    <style>
+    .report-section {
+        margin-bottom: 30px;
+        padding: 20px;
+        border: 1px solid #e1e5e9;
+        border-radius: 8px;
+        background-color: #ffffff;
+    }
+    .report-section h2 {
+        color: #0066cc;
+        border-bottom: 2px solid #0066cc;
+        padding-bottom: 8px;
+        margin-bottom: 15px;
+    }
+    .report-section h3 {
+        color: #004499;
+        margin-top: 20px;
+        margin-bottom: 10px;
+    }
+    .formatted-content {
+        line-height: 1.6;
+    }
+    .content-line {
+        margin-bottom: 8px;
+    }
+    .numbered-point {
+        margin: 12px 0;
+        padding-left: 10px;
+        border-left: 3px solid #0066cc;
+        background-color: #f8f9fa;
+        padding: 10px;
+        border-radius: 4px;
+    }
+    .bullet-point {
+        margin: 8px 0;
+        padding-left: 15px;
+    }
+    .metadata-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 10px;
+        margin-top: 10px;
+    }
+    .metadata-item {
+        padding: 8px;
+        background-color: #f8f9fa;
+        border-radius: 4px;
+    }
+    .key-points-list, .threats-list, .bottlenecks-list, .recommendations-list, .priority-actions {
+        padding-left: 20px;
+    }
+    .key-points-list li, .threats-list li, .bottlenecks-list li, .recommendations-list li, .priority-actions li {
+        margin-bottom: 8px;
+        line-height: 1.5;
+    }
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: 15px;
+        margin: 15px 0;
+    }
+    .stat-item {
+        text-align: center;
+        padding: 15px;
+        background-color: #f8f9fa;
+        border-radius: 8px;
+        border: 1px solid #dee2e6;
+    }
+    .stat-value {
+        display: block;
+        font-size: 1.5em;
+        font-weight: bold;
+        color: #0066cc;
+    }
+    .stat-label {
+        display: block;
+        font-size: 0.9em;
+        color: #6c757d;
+        margin-top: 5px;
+    }
+    .detailed-stats {
+        background-color: #f8f9fa;
+        padding: 15px;
+        border-radius: 6px;
+        border: 1px solid #dee2e6;
+    }
+    .stat-row {
+        display: flex;
+        justify-content: space-between;
+        padding: 5px 0;
+        border-bottom: 1px solid #dee2e6;
+    }
+    .stat-row:last-child {
+        border-bottom: none;
+    }
+    .stat-name {
+        font-weight: 500;
+    }
+    .error-section {
+        border-color: #dc3545;
+        background-color: #f8d7da;
+    }
+    .error-content {
+        background-color: #fff;
+        padding: 15px;
+        border-radius: 4px;
+        border: 1px solid #f5c6cb;
+    }
+    </style>
+    """
+    
+    # Combine everything
+    result = styles + '\n'.join(html)
+    
+    # If no content was generated, show a message
+    if len(html) <= 1:  # Only styles
+        result += '<div class="report-section"><h2>Report Generated</h2><p>The AI has completed the analysis, but no structured content was returned. This may indicate an issue with the AI response format.</p></div>'
+    
+    return result
 @app.route('/api/ai_reports/generate', methods=['POST'])
 def generate_ai_report():
     """Generate an AI-powered network analysis report"""
@@ -4854,11 +5104,45 @@ def generate_ai_report():
         })
         
     except Exception as e:
+        import traceback
+        error_details = str(e)
+        
+        # Log the full error for debugging
         print(f"Error generating AI report: {e}")
+        traceback.print_exc()
+        
+        # Create a user-friendly error message
+        if "404" in str(e):
+            error_details = "AI service endpoint not found. Please check your API configuration in Settings."
+        elif "timeout" in str(e).lower():
+            error_details = "AI service timeout. The request took too long to process."
+        elif "api key" in str(e).lower():
+            error_details = "AI API key not configured or invalid. Please check your settings."
+        elif "connection" in str(e).lower():
+            error_details = "Unable to connect to AI service. Please check your internet connection."
+        
+        # Return error in the expected format that the HTML formatter can handle
+        error_report = {
+            'error_details': error_details,
+            'metadata': {
+                'generated_at': datetime.now().isoformat(),
+                'ai_model': request.json.get('ai_model', 'Unknown') if request.json else 'Unknown',
+                'data_type': request.json.get('data_type', 'Unknown') if request.json else 'Unknown',
+                'error': True
+            }
+        }
+        
+        # Format the error as HTML
+        formatted_error = format_ai_report_to_html(error_report)
+        
         return jsonify({
-            'success': False,
-            'error': str(e)
-        }), 500
+            'success': True,  # We successfully formatted the error
+            'report': formatted_error,
+            'error': True,
+            'ai_model': request.json.get('ai_model', 'Unknown') if request.json else 'Unknown',
+            'data_type': request.json.get('data_type', 'Unknown') if request.json else 'Unknown',
+            'generated_at': datetime.now().isoformat()
+        })
 
 # Statistics page route
 @app.route('/statistics')

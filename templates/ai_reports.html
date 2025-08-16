@@ -15,6 +15,10 @@
 {% endblock %}
 
 {% block styles %}
+<!-- Include marked.js for markdown parsing -->
+<script src="https://cdn.jsdelivr.net/npm/marked@9.1.2/lib/marked.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/dompurify@3.0.6/dist/purify.min.js"></script>
+
 <style>
 /* AI Reports specific styles */
 .nm-ai-card {
@@ -57,19 +61,172 @@
     text-align: center;
 }
 
+/* Updated report output styles for markdown */
 .nm-report-output {
-    background-color: var(--pf-global--BackgroundColor--100);
+    background-color: #ffffff;
     border: 1px solid var(--pf-global--BorderColor--100);
     border-radius: var(--pf-global--BorderRadius--sm);
-    padding: var(--pf-global--spacer--md);
+    padding: var(--pf-global--spacer--lg);
     min-height: 400px;
-    max-height: 600px;
+    max-height: 700px;
     overflow-y: auto;
-    font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
     font-size: var(--pf-global--FontSize--sm);
     line-height: 1.6;
-    white-space: pre-wrap;
-    word-wrap: break-word;
+    color: #333333;
+}
+
+/* Markdown-specific styles */
+.nm-report-output h1,
+.nm-report-output h2,
+.nm-report-output h3,
+.nm-report-output h4,
+.nm-report-output h5,
+.nm-report-output h6 {
+    color: var(--pf-global--primary-color--100);
+    margin-top: var(--pf-global--spacer--lg);
+    margin-bottom: var(--pf-global--spacer--md);
+    font-weight: var(--pf-global--FontWeight--bold);
+}
+
+.nm-report-output h1 {
+    font-size: var(--pf-global--FontSize--xl);
+    border-bottom: 2px solid var(--pf-global--primary-color--100);
+    padding-bottom: var(--pf-global--spacer--sm);
+}
+
+.nm-report-output h2 {
+    font-size: var(--pf-global--FontSize--lg);
+    border-bottom: 1px solid var(--pf-global--BorderColor--100);
+    padding-bottom: var(--pf-global--spacer--xs);
+}
+
+.nm-report-output h3 {
+    font-size: var(--pf-global--FontSize--md);
+    color: var(--pf-global--secondary-color--100);
+}
+
+.nm-report-output p {
+    margin-bottom: var(--pf-global--spacer--md);
+    text-align: justify;
+}
+
+.nm-report-output ul,
+.nm-report-output ol {
+    margin-bottom: var(--pf-global--spacer--md);
+    padding-left: var(--pf-global--spacer--lg);
+}
+
+.nm-report-output li {
+    margin-bottom: var(--pf-global--spacer--xs);
+}
+
+.nm-report-output blockquote {
+    border-left: 4px solid var(--pf-global--primary-color--100);
+    padding-left: var(--pf-global--spacer--md);
+    margin: var(--pf-global--spacer--lg) 0;
+    font-style: italic;
+    color: var(--pf-global--Color--200);
+    background-color: var(--pf-global--BackgroundColor--light-200);
+    padding: var(--pf-global--spacer--md);
+    border-radius: var(--pf-global--BorderRadius--sm);
+}
+
+.nm-report-output code {
+    background-color: #f5f5f5;
+    padding: 2px 4px;
+    border-radius: 3px;
+    font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+    font-size: var(--pf-global--FontSize--xs);
+    color: #d73027;
+}
+
+.nm-report-output pre {
+    background-color: #f8f9fa;
+    padding: var(--pf-global--spacer--md);
+    border-radius: var(--pf-global--BorderRadius--sm);
+    overflow-x: auto;
+    margin-bottom: var(--pf-global--spacer--md);
+    border: 1px solid #dee2e6;
+}
+
+.nm-report-output pre code {
+    background: none;
+    padding: 0;
+    color: #333333;
+}
+
+.nm-report-output table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: var(--pf-global--spacer--lg);
+    border: 1px solid var(--pf-global--BorderColor--100);
+}
+
+.nm-report-output th,
+.nm-report-output td {
+    padding: var(--pf-global--spacer--sm);
+    border: 1px solid var(--pf-global--BorderColor--100);
+    text-align: left;
+}
+
+.nm-report-output th {
+    background-color: var(--pf-global--primary-color--100);
+    color: white;
+    font-weight: var(--pf-global--FontWeight--bold);
+}
+
+.nm-report-output tr:nth-child(even) {
+    background-color: var(--pf-global--BackgroundColor--light-200);
+}
+
+.nm-report-output strong,
+.nm-report-output b {
+    color: var(--pf-global--Color--dark-100);
+    font-weight: var(--pf-global--FontWeight--bold);
+}
+
+.nm-report-output em,
+.nm-report-output i {
+    color: var(--pf-global--Color--200);
+    font-style: italic;
+}
+
+/* Alert-like sections for different types of content */
+.nm-report-output .alert-info,
+.nm-report-output .info {
+    background-color: var(--pf-global--info-color--50);
+    border-left: 4px solid var(--pf-global--info-color--100);
+    padding: var(--pf-global--spacer--md);
+    margin: var(--pf-global--spacer--md) 0;
+    border-radius: var(--pf-global--BorderRadius--sm);
+}
+
+.nm-report-output .alert-warning,
+.nm-report-output .warning {
+    background-color: var(--pf-global--warning-color--50);
+    border-left: 4px solid var(--pf-global--warning-color--100);
+    padding: var(--pf-global--spacer--md);
+    margin: var(--pf-global--spacer--md) 0;
+    border-radius: var(--pf-global--BorderRadius--sm);
+}
+
+.nm-report-output .alert-danger,
+.nm-report-output .critical {
+    background-color: var(--pf-global--danger-color--50);
+    border-left: 4px solid var(--pf-global--danger-color--100);
+    padding: var(--pf-global--spacer--md);
+    margin: var(--pf-global--spacer--md) 0;
+    border-radius: var(--pf-global--BorderRadius--sm);
+}
+
+.nm-report-output .alert-success,
+.nm-report-output .success {
+    background-color: var(--pf-global--success-color--50);
+    border-left: 4px solid var(--pf-global--success-color--100);
+    padding: var(--pf-global--spacer--md);
+    margin: var(--pf-global--spacer--md) 0;
+    border-radius: var(--pf-global--BorderRadius--sm);
 }
 
 .nm-report-loading {
@@ -677,10 +834,45 @@ function generateReport() {
     })
     .then(data => {
         if (data.success) {
-            // Display the report
-            reportOutput.innerHTML = data.report;
-            reportActions.style.display = 'block';
+            // Display the HTML report (already formatted from backend)
+            let reportContent = data.report;
             
+            // Handle different types of content that might be returned
+            if (typeof reportContent === 'object') {
+                // If it's still an object, convert to readable format
+                if (reportContent.error_details) {
+                    reportOutput.innerHTML = `
+                        <div style="color: #c9190b; font-weight: bold; margin-bottom: 10px;">
+                            Report Generation Failed
+                        </div>
+                        <div style="background: #f9f2f2; padding: 15px; border-left: 4px solid #c9190b; border-radius: 4px;">
+                            ${reportContent.error_details || 'Unknown error occurred'}
+                        </div>
+                    `;
+                } else {
+                    reportOutput.innerHTML = `
+                        <div style="color: #c9190b; font-weight: bold; margin-bottom: 10px;">
+                            Unexpected Response Format
+                        </div>
+                        <pre style="background: #f5f5f5; padding: 15px; border-radius: 4px; overflow: auto;">
+                            ${JSON.stringify(reportContent, null, 2)}
+                        </pre>
+                    `;
+                }
+            } else if (typeof reportContent === 'string') {
+                // String content - display as HTML
+                reportOutput.innerHTML = reportContent;
+            } else {
+                // Unknown format
+                reportOutput.innerHTML = `
+                    <div style="color: #c9190b; font-weight: bold; margin-bottom: 10px;">
+                        Invalid Report Format
+                    </div>
+                    <div>The server returned an unexpected format. Please try again.</div>
+                `;
+            }
+            
+            reportActions.style.display = 'block';
             showAlert('success', 'Report Generated', 'AI analysis completed successfully.');
         } else {
             throw new Error(data.error || 'Report generation failed');
@@ -713,9 +905,25 @@ function generateReport() {
     });
 }
 
-// Copy report to clipboard
+
+// Utility function to escape HTML
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+// Copy report to clipboard (as markdown if available, otherwise as text)
 function copyReport() {
-    const reportText = document.getElementById('report-output').textContent;
+    const reportElement = document.getElementById('report-output');
+    // Try to get the original markdown content if it's stored
+    let reportText = reportElement.textContent;
+    
+    // If there's a data attribute with original markdown, use that
+    if (reportElement.dataset.originalMarkdown) {
+        reportText = reportElement.dataset.originalMarkdown;
+    }
+    
     navigator.clipboard.writeText(reportText).then(function() {
         showAlert('success', 'Copied', 'Report copied to clipboard.');
     }).catch(function(err) {
@@ -724,13 +932,23 @@ function copyReport() {
     });
 }
 
-// Download report as text file
+// Download report as markdown or text file
 function downloadReport() {
-    const reportText = document.getElementById('report-output').textContent;
-    const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
-    const filename = `ai-network-report-${timestamp}.txt`;
+    const reportElement = document.getElementById('report-output');
+    let reportText = reportElement.textContent;
+    let fileExtension = 'txt';
     
-    const blob = new Blob([reportText], { type: 'text/plain' });
+    // If there's original markdown, use that and save as .md
+    if (reportElement.dataset.originalMarkdown) {
+        reportText = reportElement.dataset.originalMarkdown;
+        fileExtension = 'md';
+    }
+    
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+    const filename = `ai-network-report-${timestamp}.${fileExtension}`;
+    
+    const mimeType = fileExtension === 'md' ? 'text/markdown' : 'text/plain';
+    const blob = new Blob([reportText], { type: mimeType });
     const url = window.URL.createObjectURL(blob);
     const link = document.createElement('a');
     
@@ -741,7 +959,7 @@ function downloadReport() {
     document.body.removeChild(link);
     window.URL.revokeObjectURL(url);
     
-    showAlert('success', 'Downloaded', 'Report saved to downloads folder.');
+    showAlert('success', 'Downloaded', `Report saved as ${filename} to downloads folder.`);
 }
 
 // Clear report output

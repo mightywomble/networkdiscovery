@@ -526,9 +526,9 @@ class AIDataCollector:
             logger.error(f"Error collecting recent activity: {e}")
             return {}
     
-    def format_data_for_ai(self, data, max_size_mb=10):
+    def format_data_for_ai(self, data, max_size_mb=25):
         """
-        Format and potentially truncate data for AI analysis
+        Format and potentially truncate data for AI analysis with improved sampling
         
         Args:
             data: Raw data dictionary
@@ -538,35 +538,114 @@ class AIDataCollector:
             dict: Formatted data suitable for AI analysis
         """
         try:
-            # Calculate approximate size and truncate if necessary
+            # Calculate approximate size and use intelligent truncation if necessary
             data_str = json.dumps(data, default=str)
             size_mb = len(data_str.encode('utf-8')) / (1024 * 1024)
             
             if size_mb > max_size_mb:
-                logger.warning(f"Data size ({size_mb:.2f}MB) exceeds limit ({max_size_mb}MB), truncating")
+                logger.warning(f"Data size ({size_mb:.2f}MB) exceeds limit ({max_size_mb}MB), applying intelligent sampling")
                 
-                # Truncate large data sections
+                # Intelligent truncation with representative sampling
                 if 'network_connections' in data and len(data['network_connections']) > 1000:
-                    data['network_connections'] = data['network_connections'][:1000]
-                    data['_truncated'] = True
+                    # Keep most recent connections, some random samples, and any with errors
+                    connections = data['network_connections']
+                    recent = connections[-500:]  # Most recent 500
+                    errors = [c for c in connections if 'error' in str(c).lower()][:100]  # Up to 100 error connections
+                    # Random sample from the rest
+                    import random
+                    remaining = [c for c in connections[:-500] if c not in errors]
+                    sample_size = min(400, len(remaining))
+                    random_sample = random.sample(remaining, sample_size) if remaining else []
+                    
+                    data['network_connections'] = recent + errors + random_sample
+                    data['_connections_truncated'] = {
+                        'original_count': len(connections),
+                        'kept_recent': len(recent),
+                        'kept_errors': len(errors),
+                        'kept_sample': len(random_sample)
+                    }
                 
-                if 'system_logs' in data and isinstance(data['system_logs'], list) and len(data['system_logs']) > 500:
-                    data['system_logs'] = data['system_logs'][:500]
-                    data['_truncated'] = True
+                # Apply same intelligent sampling to system logs
+                if 'system_logs' in data and isinstance(data['system_logs'], list) and len(data['system_logs']) > 1000:
+                    logs = data['system_logs']
+                    # Keep recent logs, error logs, and warning logs
+                    recent = logs[-300:]
+                    errors = [l for l in logs if any(level in str(l).lower() for level in ['error', 'critical', 'fail'])][:200]
+                    warnings = [l for l in logs if 'warn' in str(l).lower()][:200]
+                    
+                    # Combine and deduplicate
+                    important_logs = list({str(l): l for l in (recent + errors + warnings)}.values())
+                    data['system_logs'] = important_logs[:800]  # Max 800 logs
+                    data['_logs_truncated'] = {
+                        'original_count': len(logs),
+                        'kept_important': len(important_logs)
+                    }
                 
+                # Apply same to agent logs
                 if 'agent_logs' in data and len(data['agent_logs']) > 500:
-                    data['agent_logs'] = data['agent_logs'][:500]
-                    data['_truncated'] = True
+                    logs = data['agent_logs']
+                    # Keep most recent and error logs
+                    recent = logs[-200:]
+                    errors = [l for l in logs if any(level in str(l).lower() for level in ['error', 'critical', 'fail', 'warn'])][:300]
+                    combined = list({str(l): l for l in (recent + errors)}.values())
+                    
+                    data['agent_logs'] = combined[:400]
+                    data['_agent_logs_truncated'] = {
+                        'original_count': len(logs),
+                        'kept_important': len(combined)
+                    }
+                
+                # Check size again after intelligent truncation and force further reduction if needed
+                data_str = json.dumps(data, default=str)
+                new_size_mb = len(data_str.encode('utf-8')) / (1024 * 1024)
+                
+                # If still too large, do more aggressive truncation
+                if new_size_mb > max_size_mb:
+                    logger.warning(f"Still too large ({new_size_mb:.2f}MB), applying aggressive truncation")
+                    
+                    # More aggressive truncation - keep only essential data
+                    for key in ['network_connections', 'system_logs', 'agent_logs', 'hosts', 'scan_results']:
+                        if key in data and isinstance(data[key], list):
+                            original_length = len(data[key])
+                            if original_length > 0:
+                                # Keep only 5% of the data, max 50 items for large collections
+                                keep_count = min(50, max(5, original_length // 20))
+                                data[key] = data[key][-keep_count:]  # Keep most recent
+                                logger.info(f"Reduced {key} from {original_length} to {keep_count} items")
+                    
+                    # Remove large text fields from remaining items
+                    if 'hosts' in data:
+                        for host in data['hosts']:
+                            if isinstance(host, dict):
+                                # Remove potentially large fields
+                                for field in ['logs', 'full_scan_results', 'detailed_info']:
+                                    host.pop(field, None)
+                    
+                    # Recalculate size
+                    data_str = json.dumps(data, default=str)
+                    new_size_mb = len(data_str.encode('utf-8')) / (1024 * 1024)
+                    logger.info(f"After aggressive truncation: {new_size_mb:.2f}MB")
+                
+                logger.info(f"After intelligent sampling: {new_size_mb:.2f}MB (reduced from {size_mb:.2f}MB)")
+                
+                data['_truncated'] = True
+                data['_size_reduction'] = {
+                    'original_size_mb': round(size_mb, 2),
+                    'final_size_mb': round(new_size_mb, 2),
+                    'reduction_percent': round((1 - new_size_mb/size_mb) * 100, 1)
+                }
             
-            # Add summary statistics
+            # Add comprehensive summary statistics
             data['data_summary'] = {
                 'hosts_count': len(data.get('hosts', [])),
                 'connections_count': len(data.get('network_connections', [])),
                 'agents_count': len(data.get('agents', [])),
                 'scans_count': len(data.get('scan_results', [])),
                 'logs_count': len(data.get('agent_logs', [])),
+                'system_logs_count': len(data.get('system_logs', [])),
                 'data_size_mb': round(len(json.dumps(data, default=str).encode('utf-8')) / (1024 * 1024), 2),
-                'truncated': data.get('_truncated', False)
+                'truncated': data.get('_truncated', False),
+                'collection_time': datetime.now().isoformat()
             }
             
             return data
@@ -574,7 +653,6 @@ class AIDataCollector:
         except Exception as e:
             logger.error(f"Error formatting data for AI: {e}")
             raise
-
 if __name__ == "__main__":
     # Basic test
     print("AI Data Collector module loaded successfully")
