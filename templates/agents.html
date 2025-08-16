@@ -1592,7 +1592,7 @@ async function runAgentNow(hostname, ipAddress) {
         logsElement.textContent += `[${new Date().toLocaleTimeString()}] Sending immediate scan command\n`;
         logsElement.scrollTop = logsElement.scrollHeight;
         
-        const response = await fetch('/api/run_agent_now', {
+        const response = await fetch('/api/agent/run_now', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
