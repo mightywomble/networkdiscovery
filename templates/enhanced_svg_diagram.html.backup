@@ -56,9 +56,9 @@
     }
     
     .connection-line {
-        stroke: #666;
-        stroke-width: 2;
-        opacity: 0.7;
+        stroke: #0066cc;
+        stroke-width: 4;
+        opacity: 1;
         pointer-events: none;
     }
     
@@ -237,21 +237,75 @@
     
     // Process raw network data
     function processData(rawData) {
-        return {
-            nodes: rawData.nodes.map(node => ({
-                id: node.id,
-                label: node.label || node.name || `Node ${node.id}`,
-                ip: node.ip,
-                type: classifyNodeType(node),
-                status: node.status || 'unknown'
-            })),
-            edges: rawData.edges.map(edge => ({
-                from: edge.from,
-                to: edge.to,
-                label: edge.label || '',
-                type: classifyEdgeType(edge)
-            }))
+        // Debug: Check for duplicate IDs in raw data first
+        console.log('🔍 Raw nodes count:', rawData.nodes.length);
+        const idCounts = {};
+        rawData.nodes.forEach(node => {
+            idCounts[node.id] = (idCounts[node.id] || 0) + 1;
+        });
+        const duplicateIds = Object.entries(idCounts).filter(([id, count]) => count > 1);
+        if (duplicateIds.length > 0) {
+            console.log('🚨 DUPLICATE NODE IDs FOUND:', duplicateIds);
+            duplicateIds.forEach(([id, count]) => {
+                const nodesWithId = rawData.nodes.filter(n => n.id === id);
+                console.log(`  ID: ${id} appears ${count} times:`);
+                nodesWithId.forEach((node, i) => {
+                    console.log(`    ${i+1}: label="${node.label || node.name}", ip="${node.ip}"`);
+                });
+            });
+        }
+        
+        // BETTER FIX: Merge duplicate nodes into single consolidated nodes
+        const mergedNodes = [];
+        const nodeMap = {};
+        
+        rawData.nodes.forEach(node => {
+            if (nodeMap[node.id]) {
+                // This ID already exists, merge with existing node
+                console.log(`🔗 Merging duplicate node: ${node.id} (${node.label || node.name})`);
+                // Keep the existing node but potentially update info if needed
+                // Could merge additional properties here if desired
+            } else {
+                // First occurrence of this ID, add it
+                nodeMap[node.id] = {
+                    id: node.id,
+                    label: node.label || node.name || `Node ${node.id}`,
+                    ip: node.ip,
+                    type: classifyNodeType(node),
+                    status: node.status || 'unknown'
+                };
+                mergedNodes.push(nodeMap[node.id]);
+            }
+        });
+        
+        // Remove duplicate edges (same from/to combination)
+        const edgeSet = new Set();
+        const processedEdges = [];
+        
+        rawData.edges.forEach(edge => {
+            const edgeKey = `${edge.from}->${edge.to}`;
+            if (!edgeSet.has(edgeKey)) {
+                edgeSet.add(edgeKey);
+                processedEdges.push({
+                    from: edge.from,
+                    to: edge.to,
+                    label: edge.label || '',
+                    type: classifyEdgeType(edge)
+                });
+            } else {
+                console.log(`🔗 Skipping duplicate edge: ${edgeKey}`);
+            }
+        });
+        
+        const processed = {
+            nodes: mergedNodes,
+            edges: processedEdges
         };
+        
+        console.log(`🔧 Processed: ${rawData.nodes.length} raw nodes -> ${processed.nodes.length} unique nodes`);
+        console.log(`🔧 Processed: ${rawData.edges.length} raw edges -> ${processed.edges.length} edges`);
+        
+        return processed;
     }
     
     // Classify node type based on properties
@@ -365,13 +419,34 @@
     
     // Draw connection lines
     function drawConnections() {
+        console.log('🔗 Drawing connections...', networkData.edges.length, 'edges');
         const nodeMap = new Map(networkData.nodes.map(n => [n.id, n]));
+        let drawnLines = 0;
+        let skippedLines = 0;
         
-        networkData.edges.forEach(edge => {
+        // Debug: Check for duplicate labels
+        const labelCounts = {};
+        networkData.nodes.forEach(node => {
+            labelCounts[node.label] = (labelCounts[node.label] || 0) + 1;
+        });
+        const duplicateLabels = Object.entries(labelCounts).filter(([label, count]) => count > 1);
+        if (duplicateLabels.length > 0) {
+            console.log('🔍 Found nodes with duplicate labels:', duplicateLabels);
+            duplicateLabels.forEach(([label, count]) => {
+                const nodesWithLabel = networkData.nodes.filter(n => n.label === label);
+                console.log(`  ${label} (${count} instances):`, nodesWithLabel.map(n => ({ id: n.id, x: n.x, y: n.y })));
+            });
+        }
+        
+        networkData.edges.forEach((edge, index) => {
             const fromNode = nodeMap.get(edge.from);
             const toNode = nodeMap.get(edge.to);
             
-            if (!fromNode || !toNode) return;
+            if (!fromNode || !toNode) {
+                console.log(`⚠️  Skipping edge ${index}: missing node`, edge);
+                skippedLines++;
+                return;
+            }
             
             const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
             line.setAttribute('x1', fromNode.x);
@@ -382,8 +457,46 @@
             line.setAttribute('data-from', edge.from);
             line.setAttribute('data-to', edge.to);
             
+            // Apply inline styles to ensure visibility
+            if (edge.type === 'external') {
+                line.setAttribute('stroke', '#dc3545');
+                line.setAttribute('stroke-dasharray', '5,5');
+            } else {
+                line.setAttribute('stroke', '#007bff');
+            }
+            line.setAttribute('stroke-width', '4');
+            line.setAttribute('opacity', '1');
+            line.setAttribute('pointer-events', 'none');
+            
+            // Debug connections involving dns.google nodes
+            if (fromNode.label.includes('dns.google') || toNode.label.includes('dns.google')) {
+                console.log(`🔗 DNS.Google connection: ${fromNode.label} (ID: ${fromNode.id}) -> ${toNode.label} (ID: ${toNode.id})`);
+            }
+            
             svgElement.appendChild(line);
+            drawnLines++;
         });
+        
+        console.log(`✅ Drew ${drawnLines} connection lines, skipped ${skippedLines}`);
+        
+        // Check if any lines are in the DOM
+        setTimeout(() => {
+            const linesInDOM = svgElement.querySelectorAll('.connection-line').length;
+            console.log(`🔍 Lines in DOM after render: ${linesInDOM}`);
+            if (linesInDOM > 0) {
+                const firstLine = svgElement.querySelector('.connection-line');
+                console.log('🔍 First line attributes:', {
+                    x1: firstLine.getAttribute('x1'),
+                    y1: firstLine.getAttribute('y1'),
+                    x2: firstLine.getAttribute('x2'),
+                    y2: firstLine.getAttribute('y2'),
+                    class: firstLine.getAttribute('class'),
+                    stroke: window.getComputedStyle(firstLine).stroke,
+                    strokeWidth: window.getComputedStyle(firstLine).strokeWidth,
+                    opacity: window.getComputedStyle(firstLine).opacity
+                });
+            }
+        }, 100);
     }
     
     // Draw device nodes with drag functionality
@@ -525,19 +638,26 @@
     // Update connected lines when node moves
     function updateConnectedLines(nodeId, x, y) {
         const lines = svgElement.querySelectorAll('.connection-line');
+        let updatedLines = 0;
+        
         lines.forEach(line => {
             const from = line.getAttribute('data-from');
             const to = line.getAttribute('data-to');
             
-            if (from == nodeId) {
+            // Use strict equality to ensure exact ID matching
+            if (from === nodeId.toString()) {
                 line.setAttribute('x1', x);
                 line.setAttribute('y1', y);
+                updatedLines++;
             }
-            if (to == nodeId) {
+            if (to === nodeId.toString()) {
                 line.setAttribute('x2', x);
                 line.setAttribute('y2', y);
+                updatedLines++;
             }
         });
+        
+        console.log(`🔄 Updated ${updatedLines} line endpoints for node ${nodeId}`);
     }
     
     // Toggle edit mode
@@ -728,6 +848,7 @@
         
         tooltip.innerHTML = `
             <strong>${node.label}</strong><br>
+            ID: ${node.id}<br>
             IP: ${node.ip || 'Unknown'}<br>
             Type: ${node.type}<br>
             Status: ${node.status}
