@@ -1435,14 +1435,15 @@ function resetAgentDataTabs() {
 
 async function loadAgentData(agentId) {
     try {
-        const response = await fetch(`/api/agent/data/${agentId}`);
+        const response = await fetch(`/api/agent/last_data/${agentId}`);
         const data = await response.json();
         
         if (data.success) {
-            displayAgentSummary(data.data);
-            displayNetworkScans(data.data.network_scans || []);
-            displayTestResults(data.data.test_results || []);
-            displayRawData(data.data);
+            const agentData = data.agent_data;
+            displayAgentSummary(agentData);
+            displayNetworkScans(agentData.network_data || []);
+            displayTestResults(agentData.test_results || {});
+            displayRawData(agentData);
         } else {
             document.getElementById('agent-summary-content').innerHTML = 
                 `<div class="pf-c-alert pf-m-danger pf-m-inline"><div class="pf-c-alert__icon"><i class="fas fa-exclamation-circle"></i></div><p class="pf-c-alert__title">Failed to load agent data: ${data.error}</p></div>`;
@@ -1641,7 +1642,7 @@ async function loadVersionSummary() {
         const data = await response.json();
         
         if (data.success) {
-            displayVersionSummary(data.versions);
+            displayVersionSummary(data.agents || []);
         } else {
             document.getElementById('version-summary-content').innerHTML = 
                 `<div class="pf-c-alert pf-m-danger pf-m-inline"><div class="pf-c-alert__icon"><i class="fas fa-exclamation-circle"></i></div><p class="pf-c-alert__title">Failed to load version data: ${data.error}</p></div>`;
@@ -1724,20 +1725,9 @@ function closeCleanupToolsModal() {
 }
 
 async function loadCleanupTools() {
-    try {
-        const response = await fetch('/api/agent/cleanup_tools');
-        const data = await response.json();
-        
-        if (data.success) {
-            displayCleanupTools(data.tools);
-        } else {
-            document.getElementById('cleanup-tools-content').innerHTML = 
-                `<div class="pf-c-alert pf-m-danger pf-m-inline"><div class="pf-c-alert__icon"><i class="fas fa-exclamation-circle"></i></div><p class="pf-c-alert__title">Failed to load cleanup tools: ${data.error}</p></div>`;
-        }
-    } catch (error) {
-        document.getElementById('cleanup-tools-content').innerHTML = 
-            `<div class="pf-c-alert pf-m-danger pf-m-inline"><div class="pf-c-alert__icon"><i class="fas fa-exclamation-circle"></i></div><p class="pf-c-alert__title">Error loading cleanup tools: ${error.message}</p></div>`;
-    }
+    // Since the cleanup tools don't need to be loaded from an endpoint, 
+    // we'll just display them directly
+    displayCleanupTools();
 }
 
 function displayCleanupTools(tools) {
@@ -1747,15 +1737,15 @@ function displayCleanupTools(tools) {
                 <div class="pf-c-card">
                     <div class="pf-c-card__header">
                         <div class="pf-c-card__title">
-                            <i class="fas fa-trash-alt pf-u-mr-sm"></i>
-                            Remove Inactive Agents
+                            <i class="fas fa-copy pf-u-mr-sm"></i>
+                            Remove Duplicate Agents
                         </div>
                     </div>
                     <div class="pf-c-card__body">
-                        <p class="pf-u-mb-md">Remove agents that haven't reported in for more than 7 days</p>
+                        <p class="pf-u-mb-md">Remove duplicate agent entries from the database</p>
                         <button class="pf-c-button pf-m-danger" onclick="cleanupInactiveAgents()">
                             <i class="fas fa-broom pf-u-mr-sm"></i>
-                            Remove Inactive Agents
+                            Remove Duplicates
                         </button>
                     </div>
                 </div>
@@ -1765,14 +1755,14 @@ function displayCleanupTools(tools) {
                     <div class="pf-c-card__header">
                         <div class="pf-c-card__title">
                             <i class="fas fa-database pf-u-mr-sm"></i>
-                            Clear Old Data
+                            Remove Stale Data
                         </div>
                     </div>
                     <div class="pf-c-card__body">
-                        <p class="pf-u-mb-md">Remove scan data older than 30 days</p>
+                        <p class="pf-u-mb-md">Remove stale agent data from the database</p>
                         <button class="pf-c-button pf-m-warning" onclick="cleanupOldData()">
                             <i class="fas fa-calendar-times pf-u-mr-sm"></i>
-                            Clear Old Data
+                            Remove Stale Data
                         </button>
                     </div>
                 </div>
@@ -1786,7 +1776,7 @@ function displayCleanupTools(tools) {
                         </div>
                     </div>
                     <div class="pf-c-card__body">
-                        <p class="pf-u-mb-md">Clear agent log files older than 14 days</p>
+                        <p class="pf-u-mb-md">Clear agent log files to free up disk space</p>
                         <button class="pf-c-button pf-m-secondary" onclick="cleanupLogFiles()">
                             <i class="fas fa-file-times pf-u-mr-sm"></i>
                             Clear Log Files
@@ -1801,45 +1791,45 @@ function displayCleanupTools(tools) {
 }
 
 async function cleanupInactiveAgents() {
-    if (!confirm('Are you sure you want to remove all inactive agents? This action cannot be undone.')) {
+    if (!confirm('Are you sure you want to remove duplicate agent entries? This action cannot be undone.')) {
         return;
     }
     
     try {
-        const response = await fetch('/api/agent/cleanup/inactive', {
+        const response = await fetch('/api/agent/cleanup/duplicates', {
             method: 'POST'
         });
         const data = await response.json();
         
         if (data.success) {
-            showAlert('success', `Removed ${data.count} inactive agents`);
+            showAlert('success', `Removed ${data.count || 0} duplicate agents`);
             refreshData();
         } else {
-            showAlert('danger', 'Failed to cleanup inactive agents: ' + data.error);
+            showAlert('danger', 'Failed to cleanup duplicate agents: ' + data.error);
         }
     } catch (error) {
-        showAlert('danger', 'Error cleaning up inactive agents: ' + error.message);
+        showAlert('danger', 'Error cleaning up duplicate agents: ' + error.message);
     }
 }
 
 async function cleanupOldData() {
-    if (!confirm('Are you sure you want to remove old scan data? This action cannot be undone.')) {
+    if (!confirm('Are you sure you want to remove stale agent data? This action cannot be undone.')) {
         return;
     }
     
     try {
-        const response = await fetch('/api/agent/cleanup/old_data', {
+        const response = await fetch('/api/agent/cleanup/stale', {
             method: 'POST'
         });
         const data = await response.json();
         
         if (data.success) {
-            showAlert('success', `Removed old data (${data.count} records)`);
+            showAlert('success', `Removed stale data (${data.count || 0} records)`);
         } else {
-            showAlert('danger', 'Failed to cleanup old data: ' + data.error);
+            showAlert('danger', 'Failed to cleanup stale data: ' + data.error);
         }
     } catch (error) {
-        showAlert('danger', 'Error cleaning up old data: ' + error.message);
+        showAlert('danger', 'Error cleaning up stale data: ' + error.message);
     }
 }
 
@@ -1855,7 +1845,7 @@ async function cleanupLogFiles() {
         const data = await response.json();
         
         if (data.success) {
-            showAlert('success', `Cleared log files (${data.size} freed)`);
+            showAlert('success', `Cleared log files (${data.size || 'unknown size'} freed)`);
         } else {
             showAlert('danger', 'Failed to cleanup log files: ' + data.error);
         }
