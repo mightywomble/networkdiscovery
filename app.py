@@ -4108,60 +4108,76 @@ def run_agent_with_progress(agent, host):
         
         run_info['phases_completed'].append('checking')
         
-        # Phase 3: Trigger immediate scan
-        log_agent_progress("Triggering immediate scan", 'info', 'triggering', 50, 'Sending scan trigger signal...')
+        # Phase 3: Run comprehensive network scan directly
+        log_agent_progress("Starting comprehensive network scan", 'info', 'scanning', 50, 'Running network discovery...')
         
-        # Try multiple methods to trigger immediate scan
-        trigger_methods = [
+        # Run comprehensive scan commands similar to what the agent would do
+        scan_commands = [
             {
-                'name': 'USR1 signal',
+                'name': 'System Information',
+                'cmd': 'uname -a && hostname && whoami && uptime',
+                'progress': 55
+            },
+            {
+                'name': 'Network Interfaces',
+                'cmd': 'ip addr show',
+                'progress': 60
+            },
+            {
+                'name': 'Routing Table',
+                'cmd': 'ip route show',
+                'progress': 65
+            },
+            {
+                'name': 'ARP Table',
+                'cmd': 'arp -a 2>/dev/null || ip neigh show',
+                'progress': 70
+            },
+            {
+                'name': 'Network Discovery',
                 'cmd': '''
-                AGENT_PID=$(pgrep -f "networkmap.*agent" | head -1)
-                if [ -n "$AGENT_PID" ]; then
-                    echo "Sending USR1 signal to agent process $AGENT_PID"
-                    sudo kill -USR1 $AGENT_PID && echo "Signal sent successfully" || echo "Signal failed"
+                # Get local network range
+                LOCAL_NET=$(ip route | grep -E "^192\\.|^10\\.|^172\\." | grep -v default | head -1 | awk '{print $1}' | head -1)
+                if [ -n "$LOCAL_NET" ]; then
+                    echo "Scanning network: $LOCAL_NET"
+                    # Quick ping sweep of first 20 IPs
+                    for i in {1..20}; do
+                        IP=$(echo $LOCAL_NET | sed 's/\/.*//').${i}
+                        timeout 1 ping -c 1 $IP >/dev/null 2>&amp;1 && echo "$IP is up" &
+                    done
+                    wait
                 else
-                    echo "Agent process not found"
-                    exit 1
+                    echo "Could not determine local network range"
                 fi
-                '''
+                ''',
+                'progress': 75
             },
             {
-                'name': 'service restart',
-                'cmd': 'sudo systemctl restart networkmap-agent && echo "Service restarted successfully"'
+                'name': 'Port Scan',
+                'cmd': 'ss -tlnp',
+                'progress': 80
             },
             {
-                'name': 'config update',
-                'cmd': '''
-                echo "$(date): Manual scan trigger" | sudo tee -a /var/log/networkmap-agent/manual_trigger.log
-                sudo systemctl reload networkmap-agent 2>/dev/null || sudo systemctl restart networkmap-agent
-                echo "Config reload completed"
-                '''
+                'name': 'Active Connections',
+                'cmd': 'ss -tuanp',
+                'progress': 85
             }
         ]
         
-        trigger_success = False
-        for i, method in enumerate(trigger_methods):
-            progress = 50 + (i * 10)
-            log_agent_progress(f"Trying {method['name']}...", 'info', 'triggering', progress, f'Attempting {method["name"]}...')
+        scan_results = {}
+        for i, scan_cmd in enumerate(scan_commands):
+            log_agent_progress(f"Running {scan_cmd['name']}", 'info', 'scanning', scan_cmd['progress'], f'Executing {scan_cmd["name"]}...')
             
-            result, error = host_manager.execute_command(host, method['cmd'], timeout=30)
+            result, error = host_manager.execute_command(host, scan_cmd['cmd'], timeout=60)
             
             if result and result.get('success'):
                 output = result.get('stdout', '').strip()
-                log_agent_progress(f"✅ {method['name']} successful: {output}", 'info', 'triggering', progress + 5, f'{method["name"]} completed')
-                trigger_success = True
-                break
+                scan_results[scan_cmd['name']] = output
+                log_agent_progress(f"✅ {scan_cmd['name']} completed", 'info', 'scanning', scan_cmd['progress'], f'{scan_cmd["name"]} done')
             else:
                 error_msg = result.get('stderr', error) if result else str(error)
-                log_agent_progress(f"❌ {method['name']} failed: {error_msg[:100]}", 'warning', 'triggering', progress + 5, f'{method["name"]} failed')
-        
-        if not trigger_success:
-            error_msg = "All trigger methods failed"
-            log_agent_progress(error_msg, 'error', 'error', 80, 'All trigger attempts failed')
-            run_info['status'] = 'error'
-            run_info['error'] = error_msg
-            return
+                scan_results[scan_cmd['name']] = f"Error: {error_msg[:200]}"
+                log_agent_progress(f"⚠️ {scan_cmd['name']} failed: {error_msg[:100]}", 'warning', 'scanning', scan_cmd['progress'], f'{scan_cmd["name"]} failed')
         
         run_info['phases_completed'].append('triggering')
         

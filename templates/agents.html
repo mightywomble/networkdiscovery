@@ -1884,13 +1884,32 @@ function displayNetworkScans(networkScans) {
 }
 
 function displayTestResults(testResults) {
-    if (!testResults || testResults.length === 0) {
+    // Handle both array and object formats
+    let testArray = [];
+    
+    if (!testResults) {
         document.getElementById('test-results-content').innerHTML = 
-            '<div class="pf-u-text-align-center pf-u-p-lg pf-u-color-200">No test results available</div>';
+            '\u003cdiv class="pf-u-text-align-center pf-u-p-lg pf-u-color-200"\u003eNo test results available\u003c/div\u003e';
         return;
     }
     
-    const resultsHtml = testResults.map(test => `
+    if (Array.isArray(testResults)) {
+        testArray = testResults;
+    } else if (typeof testResults === 'object') {
+        // Convert object to array of test results
+        testArray = Object.keys(testResults).map(key => ({
+            test_name: key,
+            ...testResults[key]
+        }));
+    }
+    
+    if (testArray.length === 0) {
+        document.getElementById('test-results-content').innerHTML = 
+            '\u003cdiv class="pf-u-text-align-center pf-u-p-lg pf-u-color-200"\u003eNo test results available\u003c/div\u003e';
+        return;
+    }
+    
+    const resultsHtml = testArray.map(test =\u003e `
         <div class="pf-c-card pf-m-compact pf-u-mb-md">
             <div class="pf-c-card__header">
                 <div class="pf-c-card__title">
