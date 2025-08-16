@@ -1267,18 +1267,73 @@ def network_data():
                 'color': node_color
             })
         
-        # Add connections from database if any exist
+        # Create external nodes for connections and add connections from database
+        external_nodes = {}  # Track external nodes by IP
+        host_id_map = {host['id']: host for host in hosts}  # Map host ID to host data
+        
         for conn in connections:
-            edges.append({
-                'id': f"{conn['source_host_id']}-{conn['dest_host_id']}-{conn.get('dest_port', 'unknown')}",
-                'from': conn['source_host_id'],
-                'to': conn['dest_host_id'],
-                'label': f":{conn.get('dest_port', '?')}",
-                'title': f"Protocol: {conn.get('protocol', 'unknown')}\nPort: {conn.get('dest_port', 'unknown')}\nConnections: {conn.get('connection_count', 1)}\nLast seen: {conn.get('last_seen', 'unknown')}",
-                'width': 2,
-                'color': '#007bff',
-                'arrows': {'to': True}
-            })
+            source_host_id = conn['source_host_id']
+            dest_host_id = conn.get('dest_host_id')
+            dest_ip = conn.get('dest_ip')
+            
+            # Only create edges for connections between known hosts or to external IPs
+            if dest_host_id is not None and dest_host_id in host_id_map:
+                # Internal connection between managed hosts
+                edges.append({
+                    'id': f"{source_host_id}-{dest_host_id}-{conn.get('dest_port', 'unknown')}",
+                    'from': source_host_id,
+                    'to': dest_host_id,
+                    'label': f":{conn.get('dest_port', '?')}",
+                    'title': f"Protocol: {conn.get('protocol', 'unknown')}\nPort: {conn.get('dest_port', 'unknown')}\nConnections: {conn.get('connection_count', 1)}\nLast seen: {conn.get('last_seen', 'unknown')}",
+                    'width': 2,
+                    'color': '#007bff',
+                    'arrows': {'to': True}
+                })
+            elif dest_ip and dest_host_id is None:
+                # External connection - create external node if not exists
+                if dest_ip not in external_nodes:
+                    # Determine if this is a local or internet IP
+                    is_local = (dest_ip.startswith('192.168.') or 
+                               dest_ip.startswith('10.') or 
+                               dest_ip.startswith('172.16.') or 
+                               dest_ip.startswith('172.17.') or 
+                               dest_ip.startswith('172.18.') or 
+                               dest_ip.startswith('172.19.') or 
+                               dest_ip.startswith('172.2') or 
+                               dest_ip.startswith('172.3') or 
+                               dest_ip.startswith('127.'))
+                    
+                    # Create a unique ID for external node
+                    external_id = f"ext_{dest_ip.replace('.', '_')}"
+                    
+                    external_nodes[dest_ip] = {
+                        'id': external_id,
+                        'label': dest_ip,
+                        'ip': dest_ip,
+                        'status': 'external',
+                        'group': 'external',
+                        'title': f"External Host\nIP: {dest_ip}\nConnections: {sum(1 for c in connections if c.get('dest_ip') == dest_ip)}",
+                        'size': 20,
+                        'shape': 'dot',
+                        'color': {'background': '#dc3545', 'border': '#c82333'} if not is_local else {'background': '#17a2b8', 'border': '#138496'}
+                    }
+                    
+                    # Add external node to nodes list
+                    nodes.append(external_nodes[dest_ip])
+                
+                # Create edge to external node
+                external_id = external_nodes[dest_ip]['id']
+                edges.append({
+                    'id': f"{source_host_id}-{external_id}-{conn.get('dest_port', 'unknown')}",
+                    'from': source_host_id,
+                    'to': external_id,
+                    'label': f":{conn.get('dest_port', '?')}",
+                    'title': f"Protocol: {conn.get('protocol', 'unknown')}\nPort: {conn.get('dest_port', 'unknown')}\nConnections: {conn.get('connection_count', 1)}\nLast seen: {conn.get('last_seen', 'unknown')}",
+                    'width': 1,
+                    'color': '#dc3545' if not dest_ip.startswith(('192.168.', '10.', '172.')) else '#17a2b8',
+                    'arrows': {'to': True},
+                    'dashes': True if not dest_ip.startswith(('192.168.', '10.', '172.')) else False
+                })
         
         return jsonify({'nodes': nodes, 'edges': edges})
         

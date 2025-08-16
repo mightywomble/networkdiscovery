@@ -122,14 +122,17 @@
 
 .tooltip {
     position: absolute;
-    background: rgba(0, 0, 0, 0.8);
+    background: rgba(0, 0, 0, 0.9);
     color: white;
     padding: 8px 12px;
-    border-radius: 4px;
+    border-radius: 6px;
     font-size: 12px;
     pointer-events: none;
-    z-index: 1000;
+    z-index: 10000;
     white-space: nowrap;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    border: 1px solid rgba(255,255,255,0.1);
+    font-family: "Red Hat Text", "Overpass", overpass, helvetica, arial, sans-serif;
 }
 </style>
 
@@ -363,10 +366,15 @@ function drawNodes(svg, nodes) {
         statusCircle.setAttribute('stroke-width', 1);
         group.appendChild(statusCircle);
         
-        // Event handlers
+        // Event handlers with proper this binding
         group.addEventListener('click', () => selectDevice(node));
-        group.addEventListener('mouseenter', (e) => showTooltip(e, node));
-        group.addEventListener('mouseleave', hideTooltip);
+        group.addEventListener('mouseenter', (e) => {
+            e.stopPropagation();
+            showTooltip(e, node);
+        });
+        group.addEventListener('mouseleave', () => {
+            hideTooltip();
+        });
         
         svg.appendChild(group);
     });
@@ -478,26 +486,38 @@ function getDeviceConnections(deviceId) {
     return connections;
 }
 
+// Global tooltip element to prevent flicker
+let tooltipElement = null;
+
 function showTooltip(event, device) {
-    const tooltip = document.createElement('div');
-    tooltip.className = 'tooltip';
-    tooltip.innerHTML = `
+    // Remove existing tooltip
+    hideTooltip();
+    
+    // Create new tooltip
+    tooltipElement = document.createElement('div');
+    tooltipElement.className = 'tooltip';
+    tooltipElement.innerHTML = `
         <strong>${device.label}</strong><br>
         ${device.ip}<br>
         Status: ${device.status}
     `;
     
-    tooltip.style.left = (event.pageX + 10) + 'px';
-    tooltip.style.top = (event.pageY - 10) + 'px';
+    // Position tooltip
+    const x = event.pageX + 10;
+    const y = event.pageY - 10;
     
-    document.body.appendChild(tooltip);
-    event.target._tooltip = tooltip;
+    tooltipElement.style.left = x + 'px';
+    tooltipElement.style.top = y + 'px';
+    tooltipElement.style.position = 'absolute';
+    tooltipElement.style.zIndex = '10000';
+    
+    document.body.appendChild(tooltipElement);
 }
 
-function hideTooltip(event) {
-    if (event.target._tooltip) {
-        document.body.removeChild(event.target._tooltip);
-        event.target._tooltip = null;
+function hideTooltip() {
+    if (tooltipElement && tooltipElement.parentNode) {
+        document.body.removeChild(tooltipElement);
+        tooltipElement = null;
     }
 }
 
