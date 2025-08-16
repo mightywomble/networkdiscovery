@@ -519,76 +519,16 @@
                 </p>
             </header>
             <div class="pf-c-modal-box__body">
-                <!-- Tabs for different data sections -->
-                <div class="pf-c-tabs" id="agent-data-tabs">
-                    <ul class="pf-c-tabs__list" role="tablist">
-                        <li class="pf-c-tabs__item" role="presentation">
-                            <button class="pf-c-tabs__link pf-m-current" id="summary-tab" aria-controls="summary-tab-panel" role="tab">
-                                <span class="pf-c-tabs__item-text">Summary</span>
-                            </button>
-                        </li>
-                        <li class="pf-c-tabs__item" role="presentation">
-                            <button class="pf-c-tabs__link" id="network-scans-tab" aria-controls="network-scans-tab-panel" role="tab">
-                                <span class="pf-c-tabs__item-text">Network Scans</span>
-                            </button>
-                        </li>
-                        <li class="pf-c-tabs__item" role="presentation">
-                            <button class="pf-c-tabs__link" id="test-results-tab" aria-controls="test-results-tab-panel" role="tab">
-                                <span class="pf-c-tabs__item-text">Test Results</span>
-                            </button>
-                        </li>
-                        <li class="pf-c-tabs__item" role="presentation">
-                            <button class="pf-c-tabs__link" id="raw-data-tab" aria-controls="raw-data-tab-panel" role="tab">
-                                <span class="pf-c-tabs__item-text">Raw Data</span>
-                            </button>
-                        </li>
-                    </ul>
-                </div>
-                
-                <!-- Tab Panels -->
-                <div class="pf-c-tabs__content">
-                    <!-- Summary Panel -->
-                    <section class="pf-c-tabs__item-body" id="summary-tab-panel" role="tabpanel">
-                        <div id="agent-summary-content">
-                            <div class="pf-u-text-align-center pf-u-p-lg">
-                                <div class="pf-c-spinner" role="progressbar">
-                                    <span class="pf-c-spinner__clipper"></span>
-                                    <span class="pf-c-spinner__lead-ball"></span>
-                                    <span class="pf-c-spinner__tail-ball"></span>
-                                </div>
-                                <p class="pf-u-mt-md">Loading agent data...</p>
-                            </div>
+                <!-- Single view with all data sections -->
+                <div id="agent-data-content">
+                    <div class="pf-u-text-align-center pf-u-p-lg">
+                        <div class="pf-c-spinner" role="progressbar">
+                            <span class="pf-c-spinner__clipper"></span>
+                            <span class="pf-c-spinner__lead-ball"></span>
+                            <span class="pf-c-spinner__tail-ball"></span>
                         </div>
-                    </section>
-                    
-                    <!-- Network Scans Panel -->
-                    <section class="pf-c-tabs__item-body pf-m-hidden" id="network-scans-tab-panel" role="tabpanel">
-                        <div id="network-scans-content">
-                            <div class="pf-u-text-align-center pf-u-p-lg pf-u-color-200">
-                                Select Summary tab first to load data
-                            </div>
-                        </div>
-                    </section>
-                    
-                    <!-- Test Results Panel -->
-                    <section class="pf-c-tabs__item-body pf-m-hidden" id="test-results-tab-panel" role="tabpanel">
-                        <div id="test-results-content">
-                            <div class="pf-u-text-align-center pf-u-p-lg pf-u-color-200">
-                                Select Summary tab first to load data
-                            </div>
-                        </div>
-                    </section>
-                    
-                    <!-- Raw Data Panel -->
-                    <section class="pf-c-tabs__item-body pf-m-hidden" id="raw-data-tab-panel" role="tabpanel">
-                        <div id="raw-data-content">
-                            <div class="nm-code-block" style="max-height: 500px;" id="raw-data-display">
-                                <div class="pf-u-text-align-center pf-u-p-lg pf-u-color-light-200">
-                                    Select Summary tab first to load data
-                                </div>
-                            </div>
-                        </div>
-                    </section>
+                        <p class="pf-u-mt-md">Loading agent data...</p>
+                    </div>
                 </div>
             </div>
         </div>
@@ -1696,8 +1636,8 @@ function viewLastAgentData(agentId) {
     // Set agent name in the modal
     document.getElementById('data-agent-name').textContent = `${agent.hostname} (${agent.ip_address})`;
     
-    // Reset tab content
-    resetAgentDataTabs();
+    // Reset content
+    resetAgentDataContent();
     
     // Show the modal
     document.getElementById('agent-data-backdrop').hidden = false;
@@ -1747,22 +1687,18 @@ function closeAgentStatusModal() {
 }
 
 // Agent Data Modal Functions
-function resetAgentDataTabs() {
-    // Reset all tab panels to hidden
-    const panels = document.querySelectorAll('#agent-data-tabs .pf-c-tabs__item-body');
-    panels.forEach(panel => {
-        panel.classList.add('pf-m-hidden');
-    });
-    
-    // Show summary panel and set active tab
-    document.getElementById('summary-tab-panel').classList.remove('pf-m-hidden');
-    
-    // Reset tab buttons
-    const tabButtons = document.querySelectorAll('#agent-data-tabs .pf-c-tabs__link');
-    tabButtons.forEach(btn => {
-        btn.classList.remove('pf-m-current');
-    });
-    document.getElementById('summary-tab').classList.add('pf-m-current');
+function resetAgentDataContent() {
+    // Reset content to loading state
+    document.getElementById('agent-data-content').innerHTML = `
+        <div class="pf-u-text-align-center pf-u-p-lg">
+            <div class="pf-c-spinner" role="progressbar">
+                <span class="pf-c-spinner__clipper"></span>
+                <span class="pf-c-spinner__lead-ball"></span>
+                <span class="pf-c-spinner__tail-ball"></span>
+            </div>
+            <p class="pf-u-mt-md">Loading agent data...</p>
+        </div>
+    `;
 }
 
 async function loadAgentData(agentId) {
@@ -1772,21 +1708,19 @@ async function loadAgentData(agentId) {
         
         if (data.success) {
             const agentData = data.agent_data;
-            displayAgentSummary(agentData);
-            displayNetworkScans(agentData.network_data || []);
-            displayTestResults(agentData.test_results || {});
-            displayRawData(agentData);
+            displayAllAgentData(agentData);
         } else {
-            document.getElementById('agent-summary-content').innerHTML = 
+            document.getElementById('agent-data-content').innerHTML = 
                 `<div class="pf-c-alert pf-m-danger pf-m-inline"><div class="pf-c-alert__icon"><i class="fas fa-exclamation-circle"></i></div><p class="pf-c-alert__title">Failed to load agent data: ${data.error}</p></div>`;
         }
     } catch (error) {
-        document.getElementById('agent-summary-content').innerHTML = 
+        document.getElementById('agent-data-content').innerHTML = 
             `<div class="pf-c-alert pf-m-danger pf-m-inline"><div class="pf-c-alert__icon"><i class="fas fa-exclamation-circle"></i></div><p class="pf-c-alert__title">Error loading agent data: ${error.message}</p></div>`;
     }
 }
 
-function displayAgentSummary(data) {
+function displayAllAgentData(data) {
+    // Build summary section
     const summaryHtml = `
         <div class="pf-l-gallery pf-m-gutter pf-u-mb-md">
             <div class="pf-c-card pf-m-compact">
@@ -1827,7 +1761,7 @@ function displayAgentSummary(data) {
             </div>
         </div>
         
-        <div class="pf-c-description-list pf-m-horizontal">
+        <div class="pf-c-description-list pf-m-horizontal pf-u-mb-lg">
             <div class="pf-c-description-list__group">
                 <dt class="pf-c-description-list__term">Agent Version</dt>
                 <dd class="pf-c-description-list__description">
@@ -1843,7 +1777,127 @@ function displayAgentSummary(data) {
         </div>
     `;
     
-    document.getElementById('agent-summary-content').innerHTML = summaryHtml;
+    // Build network scans section
+    let networkScansHtml = '';
+    if (data.network_data && data.network_data.length > 0) {
+        networkScansHtml = `
+            <h2 class="pf-c-title pf-m-lg pf-u-mb-md">
+                <i class="fas fa-network-wired pf-u-mr-sm"></i>
+                Network Scans
+            </h2>
+            ${data.network_data.map(scan => `
+                <div class="pf-c-card pf-m-compact pf-u-mb-md">
+                    <div class="pf-c-card__header">
+                        <div class="pf-c-card__title">
+                            <i class="fas fa-server pf-u-mr-sm"></i>
+                            ${scan.ip_address} ${scan.hostname ? `(${scan.hostname})` : ''}
+                        </div>
+                    </div>
+                    <div class="pf-c-card__body">
+                        <div class="pf-l-flex pf-u-mb-sm">
+                            <div class="pf-l-flex__item">
+                                <strong>MAC Address:</strong> ${scan.mac_address || 'Unknown'}
+                            </div>
+                            <div class="pf-l-flex__item">
+                                <strong>Status:</strong> 
+                                <span class="pf-c-label pf-m-${scan.status === 'up' ? 'green' : 'red'}">
+                                    ${scan.status || 'Unknown'}
+                                </span>
+                            </div>
+                        </div>
+                        ${scan.services && scan.services.length > 0 ? `
+                        <div class="pf-u-mb-sm">
+                            <strong>Services:</strong>
+                            <div class="pf-u-mt-xs">
+                                ${scan.services.map(service => 
+                                    `<span class="pf-c-label pf-m-outline pf-u-mr-xs">${service.port}/${service.protocol}</span>`
+                                ).join('')}
+                            </div>
+                        </div>
+                        ` : ''}
+                    </div>
+                </div>
+            `).join('')}
+        `;
+    }
+    
+    // Build test results section
+    let testResultsHtml = '';
+    const testResults = data.test_results || {};
+    let testArray = [];
+    
+    if (testResults && typeof testResults === 'object') {
+        if (Array.isArray(testResults)) {
+            testArray = testResults;
+        } else {
+            // Handle nested test results structure
+            Object.keys(testResults).forEach(categoryKey => {
+                const category = testResults[categoryKey];
+                if (typeof category === 'object' && !Array.isArray(category)) {
+                    // Nested structure like { "System Monitoring": { "Network Interfaces": {...} } }
+                    Object.keys(category).forEach(testKey => {
+                        const test = category[testKey];
+                        if (typeof test === 'object') {
+                            testArray.push({
+                                test_name: `${categoryKey} - ${testKey}`,
+                                status: test.success ? 'pass' : 'fail',
+                                description: test.description || 'No description available',
+                                result_details: test.details || test.result_details || null
+                            });
+                        }
+                    });
+                } else {
+                    // Simple structure
+                    testArray.push({
+                        test_name: categoryKey,
+                        ...category
+                    });
+                }
+            });
+        }
+    }
+    
+    if (testArray.length > 0) {
+        testResultsHtml = `
+            <h2 class="pf-c-title pf-m-lg pf-u-mb-md">
+                <i class="fas fa-shield-alt pf-u-mr-sm"></i>
+                Test Results
+            </h2>
+            ${testArray.map(test => `
+                <div class="pf-c-card pf-m-compact pf-u-mb-md">
+                    <div class="pf-c-card__header">
+                        <div class="pf-c-card__title">
+                            <i class="fas fa-${test.status === 'pass' ? 'check-circle' : test.status === 'fail' ? 'times-circle' : 'exclamation-circle'} pf-u-mr-sm"></i>
+                            ${test.test_name}
+                        </div>
+                        <div class="pf-c-card__actions">
+                            <span class="pf-c-label pf-m-${test.status === 'pass' ? 'green' : test.status === 'fail' ? 'red' : 'orange'}">
+                                ${(test.status || 'unknown').toUpperCase()}
+                            </span>
+                        </div>
+                    </div>
+                    <div class="pf-c-card__body">
+                        <p class="pf-u-mb-sm">${test.description || 'No description available'}</p>
+                        ${test.result_details ? `<div class="nm-code-block" style="max-height: 150px;">${test.result_details}</div>` : ''}
+                    </div>
+                </div>
+            `).join('')}
+        `;
+    }
+    
+    // Build raw data section
+    const rawDataHtml = `
+        <h2 class="pf-c-title pf-m-lg pf-u-mb-md">
+            <i class="fas fa-code pf-u-mr-sm"></i>
+            Raw Data
+        </h2>
+        <div class="nm-code-block" style="max-height: 400px;">${JSON.stringify(data, null, 2)}</div>
+    `;
+    
+    // Combine all sections
+    const allContent = summaryHtml + networkScansHtml + testResultsHtml + rawDataHtml;
+    
+    document.getElementById('agent-data-content').innerHTML = allContent;
 }
 
 function displayNetworkScans(networkScans) {
@@ -1963,39 +2017,7 @@ function displayRawData(data) {
     document.getElementById('raw-data-display').textContent = rawDataString;
 }
 
-// Tab switching for agent data modal
-document.addEventListener('click', function(e) {
-    // Check if the clicked element is inside the agent data tabs
-    if (e.target.closest('#agent-data-tabs .pf-c-tabs__link')) {
-        e.preventDefault();
-        e.stopPropagation();
-        
-        const clickedTab = e.target.closest('.pf-c-tabs__link');
-        const tabId = clickedTab.id;
-        const panelId = clickedTab.getAttribute('aria-controls');
-        
-        console.log('Tab clicked:', tabId, 'Panel:', panelId);
-        
-        // Remove current class from all tabs
-        document.querySelectorAll('#agent-data-tabs .pf-c-tabs__link').forEach(tab => {
-            tab.classList.remove('pf-m-current');
-        });
-        
-        // Hide all panels
-        document.querySelectorAll('#agent-data-tabs .pf-c-tabs__item-body').forEach(panel => {
-            panel.classList.add('pf-m-hidden');
-        });
-        
-        // Activate clicked tab and show corresponding panel
-        clickedTab.classList.add('pf-m-current');
-        const targetPanel = document.getElementById(panelId);
-        if (targetPanel) {
-            targetPanel.classList.remove('pf-m-hidden');
-        } else {
-            console.error('Panel not found:', panelId);
-        }
-    }
-});
+// No longer need tab switching since we removed tabs
 
 function closeAgentDataModal() {
     document.getElementById('agent-data-backdrop').hidden = true;
