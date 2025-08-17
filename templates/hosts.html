@@ -180,13 +180,9 @@
                                         title="Test Connection" id="test-btn-{{ host.id }}">
                                     <i class="fas fa-heartbeat pf-u-mr-xs"></i>Test
                                 </button>
-                                <button class="pf-c-button pf-m-secondary pf-m-small" onclick="openHostEditModal({{ host.id }})" 
+                                <button class="pf-c-button pf-m-primary pf-m-small" onclick="openHostEditModal({{ host.id }})" 
                                         title="Edit Host">
-                                    <i class="fas fa-edit pf-u-mr-xs"></i>Edit
-                                </button>
-                                <button class="pf-c-button pf-m-secondary pf-m-small" onclick="showHostDetails({{ host.id }})" 
-                                        title="View Details">
-                                    <i class="fas fa-info-circle pf-u-mr-xs"></i>Details
+                                    <i class="fas fa-cog pf-u-mr-xs"></i>Edit
                                 </button>
                                 <button class="pf-c-button pf-m-danger pf-m-small" onclick="showRemoveHostCard({{ host.id }}, '{{ host.name }}')" 
                                         title="Remove Host">
@@ -434,35 +430,6 @@
     </div>
 </div>
 
-<!-- Host Details Modal -->
-<div class="pf-c-backdrop" id="hostDetailsModal" hidden>
-    <div class="pf-l-bullseye">
-        <div class="pf-c-modal-box pf-m-lg" role="dialog" aria-modal="true" aria-labelledby="host-details-title">
-            <button class="pf-c-button pf-m-plain" type="button" aria-label="Close" onclick="closeHostDetailsModal()">
-                <i class="fas fa-times" aria-hidden="true"></i>
-            </button>
-            <header class="pf-c-modal-box__header">
-                <h1 class="pf-c-modal-box__title" id="host-details-title">
-                    <i class="fas fa-info-circle pf-u-mr-sm pf-u-primary-color-100"></i>
-                    Host Details
-                </h1>
-            </header>
-            <div class="pf-c-modal-box__body" id="hostDetailsContent">
-                <div class="pf-u-text-align-center">
-                    <div class="pf-c-spinner" role="progressbar" aria-label="Loading...">
-                        <span class="pf-c-spinner__clipper"></span>
-                        <span class="pf-c-spinner__lead-ball"></span>
-                        <span class="pf-c-spinner__tail-ball"></span>
-                    </div>
-                    <p class="pf-u-mt-md">Loading host details...</p>
-                </div>
-            </div>
-            <footer class="pf-c-modal-box__footer">
-                <button class="pf-c-button pf-m-link" type="button" onclick="closeHostDetailsModal()">Close</button>
-            </footer>
-        </div>
-    </div>
-</div>
 
 <!-- Host Import Modal -->
 <div class="pf-c-backdrop" id="importHostsModal" hidden>
@@ -1066,108 +1033,6 @@ function closeRemoveHostModal() {
     modal.hidden = true;
 }
 
-function showHostDetails(hostId) {
-    const modal = document.getElementById('hostDetailsModal');
-    const content = document.getElementById('hostDetailsContent');
-    
-    // Show loading state
-    content.innerHTML = `
-        <div class="pf-u-text-align-center">
-            <div class="pf-c-spinner" role="progressbar" aria-label="Loading...">
-                <span class="pf-c-spinner__clipper"></span>
-                <span class="pf-c-spinner__lead-ball"></span>
-                <span class="pf-c-spinner__tail-ball"></span>
-            </div>
-            <p class="pf-u-mt-md">Loading host details...</p>
-        </div>
-    `;
-    
-    modal.hidden = false;
-    
-    // Fetch host details
-    fetch(`/api/host_stats/${hostId}`)
-    .then(response => response.json())
-    .then(data => {
-        const host = data.host;
-        
-        // Get device metadata to show device type
-        return fetch(`/api/device_metadata/${host.ip_address}`)
-        .then(metaResponse => {
-            let deviceType = 'server'; // default
-            if (metaResponse.ok) {
-                return metaResponse.json().then(metaData => {
-                    if (metaData.success) {
-                        deviceType = metaData.device.device_type || 'server';
-                    }
-                    return { host, data, deviceType };
-                });
-            }
-            return { host, data, deviceType };
-        });
-    })
-    .then(({ host, data, deviceType }) => {
-        // Device type icons mapping
-        const deviceTypeIcons = {
-            server: '🖥️ Server',
-            router: '📡 Router', 
-            switch: '🔗 Switch',
-            cloud: '☁️ Cloud',
-            vpn: '🛡️ VPN',
-            workstation: '💻 Workstation',
-            firewall: '🔥 Firewall',
-            gateway: '🚪 Gateway'
-        };
-        
-        content.innerHTML = `
-            <div class="row">
-                <div class="col-md-6">
-                    <div class="d-flex justify-content-between align-items-center mb-2">
-                        <h6 class="mb-0">Host Information</h6>
-                        <button class="btn btn-sm btn-outline-secondary" onclick="openHostEditModal(${host.id})" title="Edit Host">
-                            <i class="fas fa-edit"></i> Edit
-                        </button>
-                    </div>
-                    <table class="table table-sm">
-                        <tr><th>Name:</th><td>${host.name}</td></tr>
-                        <tr><th>IP Address:</th><td><code>${host.ip_address}</code></td></tr>
-                        <tr><th>Device Type:</th><td>${deviceTypeIcons[deviceType] || '🖥️ Server'}</td></tr>
-                        <tr><th>Username:</th><td>${host.username}</td></tr>
-                        <tr><th>SSH Port:</th><td>${host.ssh_port}</td></tr>
-                        <tr><th>Status:</th><td><span class="status-${host.status}">${host.status}</span></td></tr>
-                        <tr><th>Description:</th><td>${host.description || 'None'}</td></tr>
-                        <tr><th>Created:</th><td>${host.created_at || 'Unknown'}</td></tr>
-                        <tr><th>Last Seen:</th><td>${host.last_seen || 'Never'}</td></tr>
-                    </table>
-                </div>
-                <div class="col-md-6">
-                    <h6>Network Statistics</h6>
-                    <table class="table table-sm">
-                        <tr><th>Open Ports:</th><td>${data.open_ports}</td></tr>
-                        <tr><th>Outbound Connections:</th><td>${data.outbound_connections}</td></tr>
-                        <tr><th>Inbound Connections:</th><td>${data.inbound_connections}</td></tr>
-                        <tr><th>Bytes In (24h):</th><td>${formatBytes(data.bytes_in_24h)}</td></tr>
-                        <tr><th>Bytes Out (24h):</th><td>${formatBytes(data.bytes_out_24h)}</td></tr>
-                    </table>
-                    
-                    <div class="mt-3">
-                        <button class="btn btn-sm btn-outline-primary" onclick="testHost(${host.id})">
-                            <i class="fas fa-heartbeat me-1"></i>Test Connection
-                        </button>
-                    </div>
-                </div>
-            </div>
-        `;
-    })
-    .catch(error => {
-        console.error('Error loading host details:', error);
-        content.innerHTML = `
-            <div class="alert alert-danger">
-                <i class="fas fa-exclamation-triangle me-2"></i>
-                Error loading host details. Please try again.
-            </div>
-        `;
-    });
-}
 
 // Form validation
 document.getElementById('ip_address').addEventListener('input', function(e) {
@@ -1590,10 +1455,6 @@ function closeImportHostsModal() {
     modal.hidden = true;
 }
 
-function closeHostDetailsModal() {
-    const modal = document.getElementById('hostDetailsModal');
-    modal.hidden = true;
-}
 
 function closeHostEditModal() {
     const modal = document.getElementById('hostEditModal');

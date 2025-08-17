@@ -26,62 +26,19 @@
     </div>
 </section>
 
-<!-- Statistics Cards -->
+<!-- Dynamic Statistics Cards -->
 <section class="pf-c-page__main-section">
-    <div class="pf-l-gallery pf-m-gutter">
-        <!-- Total Hosts Card -->
-        <div class="pf-c-card nm-stat-card">
-            <div class="pf-c-card__header">
-                <div class="pf-c-card__header-main">
-                    <i class="fas fa-server pf-u-mr-sm"></i>
-                    Total Hosts
+    <div class="pf-l-gallery pf-m-gutter" id="overviewStats" style="grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));">
+        <!-- Stats will be populated here dynamically -->
+        <div class="pf-l-gallery__item">
+            <div class="pf-c-card nm-stat-card">
+                <div class="pf-c-card__body pf-u-text-align-center">
+                    <div class="pf-u-mb-sm">
+                        <i class="fas fa-spinner fa-spin fa-2x" style="color: var(--pf-global--Color--200);"></i>
+                    </div>
+                    <div class="nm-stat-value">Loading...</div>
+                    <div class="nm-stat-label">Statistics</div>
                 </div>
-            </div>
-            <div class="pf-c-card__body">
-                <div class="nm-stat-value">{{ stats.total_hosts }}</div>
-                <div class="nm-stat-label">Discovered Hosts</div>
-            </div>
-        </div>
-        
-        <!-- Online Hosts Card -->
-        <div class="pf-c-card nm-stat-card">
-            <div class="pf-c-card__header">
-                <div class="pf-c-card__header-main">
-                    <i class="fas fa-check-circle pf-u-mr-sm"></i>
-                    Online Hosts
-                </div>
-            </div>
-            <div class="pf-c-card__body">
-                <div class="nm-stat-value" style="color: var(--pf-global--success-color--100)">{{ stats.online_hosts }}</div>
-                <div class="nm-stat-label">Currently Active</div>
-            </div>
-        </div>
-        
-        <!-- Total Connections Card -->
-        <div class="pf-c-card nm-stat-card">
-            <div class="pf-c-card__header">
-                <div class="pf-c-card__header-main">
-                    <i class="fas fa-network-wired pf-u-mr-sm"></i>
-                    Total Connections
-                </div>
-            </div>
-            <div class="pf-c-card__body">
-                <div class="nm-stat-value" style="color: var(--pf-global--info-color--100)">{{ stats.total_connections }}</div>
-                <div class="nm-stat-label">Network Connections</div>
-            </div>
-        </div>
-        
-        <!-- Recent Activity Card -->
-        <div class="pf-c-card nm-stat-card">
-            <div class="pf-c-card__header">
-                <div class="pf-c-card__header-main">
-                    <i class="fas fa-clock pf-u-mr-sm"></i>
-                    Recent Activity
-                </div>
-            </div>
-            <div class="pf-c-card__body">
-                <div class="nm-stat-value" style="color: var(--pf-global--warning-color--100)">{{ stats.recent_connections }}</div>
-                <div class="nm-stat-label">Recent Connections</div>
             </div>
         </div>
     </div>
@@ -216,18 +173,11 @@
                             </button>
                         </div>
                         <div class="pf-l-stack__item">
-                            <a href="{{ url_for('network_map') }}" class="pf-c-button pf-m-secondary pf-m-block">
+                            <a href="{{ url_for('network_diagram') }}" class="pf-c-button pf-m-secondary pf-m-block">
                                 <i class="fas fa-project-diagram pf-u-mr-sm"></i>
                                 View Network Map
                             </a>
                         </div>
-                        <div class="pf-l-stack__item">
-                            <a href="{{ url_for('hosts') }}" class="pf-c-button pf-m-link pf-m-block">
-                                <i class="fas fa-plus pf-u-mr-sm"></i>
-                                Add New Host
-                            </a>
-                        </div>
-                    </div>
                     
                     <hr class="pf-c-divider">
                     
@@ -572,11 +522,141 @@
 .nm-host-scan-card {
     transition: all 0.2s ease;
 }
+
+/* Enhanced Statistics Cards Styling */
+.nm-stat-card {
+    transition: all 0.2s ease-in-out;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.nm-stat-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+
+.nm-stat-card .pf-c-card__body {
+    padding: 1.5rem;
+}
+
+/* Icon animation on hover */
+.nm-stat-card:hover i {
+    transform: scale(1.1);
+    transition: transform 0.2s ease-in-out;
+
+/* Statistics value and label classes from statistics page */
+.nm-stat-value {
+    font-size: var(--pf-global--FontSize--2xl);
+    font-weight: var(--pf-global--FontWeight--bold);
+    line-height: 1.2;
+}
+
+.nm-stat-label {
+    font-size: var(--pf-global--FontSize--md);
+    font-weight: var(--pf-global--FontWeight--semi-bold);
+    color: var(--pf-global--Color--dark-200);
+    margin-top: var(--pf-global--spacer--xs);
+}
+}
 </style>
 {% endblock %}
 
 {% block scripts %}
 <script>
+// Load dashboard statistics dynamically
+async function loadDashboardStats() {
+    try {
+        const response = await fetch('/api/stats/overview');
+        const result = await response.json();
+        
+        if (result.success) {
+            displayDashboardStats(result.data);
+        } else {
+            throw new Error(result.error);
+        }
+    } catch (error) {
+        console.error('Error loading dashboard stats:', error);
+        // Show error state
+        document.getElementById('overviewStats').innerHTML = `
+            <div class="pf-l-gallery__item">
+                <div class="pf-c-card nm-stat-card">
+                    <div class="pf-c-card__body pf-u-text-align-center">
+                        <div class="pf-u-mb-sm">
+                            <i class="fas fa-exclamation-triangle fa-2x" style="color: var(--pf-global--danger-color--100);"></i>
+                        </div>
+                        <div class="nm-stat-value">Error</div>
+                        <div class="nm-stat-label">Unable to load statistics</div>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+}
+
+function displayDashboardStats(data) {
+    const container = document.getElementById('overviewStats');
+    
+    const stats = [
+        {
+            title: 'Total Hosts',
+            value: data.hosts?.total_hosts || 0,
+            subtitle: `${data.hosts?.online_hosts || 0} online`,
+            icon: 'fas fa-server',
+            color: 'primary'
+        },
+        {
+            title: 'Network Connections',
+            value: data.connections?.total_connections || 0,
+            subtitle: `${data.connections?.active_last_hour || 0} active`,
+            icon: 'fas fa-network-wired',
+            color: 'success'
+        },
+        {
+            title: 'Active Agents',
+            value: data.agents?.active_agents || 0,
+            subtitle: `${data.agents?.recently_active || 0} recent`,
+            icon: 'fas fa-robot',
+            color: 'info'
+        },
+        {
+            title: 'Open Ports',
+            value: data.ports?.total_open_ports || 0,
+            subtitle: `${data.ports?.hosts_with_open_ports || 0} hosts`,
+            icon: 'fas fa-door-open',
+            color: 'warning'
+        },
+        {
+            title: 'Recent Scans',
+            value: data.scans?.scans_last_day || 0,
+            subtitle: `${data.scans?.scans_last_hour || 0} this hour`,
+            icon: 'fas fa-search',
+            color: 'secondary'
+        }
+    ];
+
+    container.innerHTML = stats.map(stat => `
+        <div class="pf-l-gallery__item">
+            <div class="pf-c-card nm-stat-card">
+                <div class="pf-c-card__body pf-u-text-align-center">
+                    <div class="pf-u-mb-sm">
+                        <i class="${stat.icon} fa-2x" style="color: var(--pf-global--${stat.color}-color--100);"></i>
+                    </div>
+                    <div class="nm-stat-value" style="color: var(--pf-global--${stat.color}-color--100);">${stat.value.toLocaleString()}</div>
+                    <div class="nm-stat-label">${stat.title}</div>
+                    <div class="pf-u-font-size-sm pf-u-color-200 pf-u-mt-sm">${stat.subtitle}</div>
+                </div>
+            </div>
+        </div>
+    `).join('');
+}
+
+// Load stats when page loads
+document.addEventListener('DOMContentLoaded', function() {
+    loadDashboardStats();
+    
+    // Refresh stats every 30 seconds
+    setInterval(loadDashboardStats, 30000);
+});
+
 function showHostDetails(hostId) {
     const modal = document.getElementById('hostDetailsModal');
     const content = document.getElementById('hostDetailsContent');

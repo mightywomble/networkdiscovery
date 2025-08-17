@@ -403,6 +403,27 @@
                     </ul>
                 </div>
                 
+                <!-- AI Tooling -->
+                <div class="nm-nav-section">
+                    <div class="nm-nav-section-title">AI Tooling</div>
+                    <ul class="nm-nav-list">
+                        <li class="nm-nav-item {% if 'ai_reports' in request.endpoint %}expanded{% endif %}">
+                            <a href="#" class="nm-nav-link" onclick="toggleSubmenu(event, this)">
+                                <i class="fas fa-brain"></i>
+                                <span>AI Reports</span>
+                                <i class="fas fa-chevron-right nm-nav-toggle"></i>
+                            </a>
+                            <ul class="nm-nav-submenu">
+                                <li class="nm-nav-item">
+                                    <a href="{{ url_for('ai_reports') }}" class="nm-nav-link {% if request.endpoint == 'ai_reports' %}active{% endif %}">
+                                        <span>Generate Reports</span>
+                                    </a>
+                                </li>
+                            </ul>
+                        </li>
+                    </ul>
+                </div>
+                
                 <!-- Settings -->
                 <div class="nm-nav-section">
                     <div class="nm-nav-section-title">Settings</div>
@@ -424,30 +445,6 @@
                     </ul>
                 </div>
                 
-                <!-- Tools & Actions -->
-                <div class="nm-nav-section">
-                    <div class="nm-nav-section-title">Tools</div>
-                    <ul class="nm-nav-list">
-                        <li class="nm-nav-item">
-                            <a href="#" class="nm-nav-link" onclick="startNetworkScan(event)">
-                                <i class="fas fa-search"></i>
-                                <span>Run Network Scan</span>
-                            </a>
-                        </li>
-                        <li class="nm-nav-item">
-                            <a href="#" class="nm-nav-link" onclick="showImportHosts(event)">
-                                <i class="fas fa-upload"></i>
-                                <span>Import Hosts</span>
-                            </a>
-                        </li>
-                        <li class="nm-nav-item">
-                            <a href="#" class="nm-nav-link" onclick="showInstallTools(event)">
-                                <i class="fas fa-download"></i>
-                                <span>Install Tools</span>
-                            </a>
-                        </li>
-                    </ul>
-                </div>
             </div>
         </nav>
         
@@ -967,10 +964,10 @@
                 gemini: {
                     provider: 'gemini',
                     model_name: 'gemini-2.5-flash',
-                    api_endpoint: 'https://generativelanguage.googleapis.com/v1beta',
+                    api_endpoint: 'https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent',
                     temperature: 0.7,
                     max_tokens: 1000,
-                    timeout: 30,
+                    timeout: 120,
                     enabled: false
                 },
                 chatgpt: {
@@ -979,7 +976,7 @@
                     api_endpoint: 'https://api.openai.com/v1/chat/completions',
                     temperature: 0.7,
                     max_tokens: 1000,
-                    timeout: 30,
+                    timeout: 120,
                     enabled: false
                 }
             };
@@ -1085,7 +1082,13 @@
                 return;
             }
             
-            const testBtn = form.querySelector('.pf-c-button[onclick*="testAIConnection"]');
+            const modal = document.getElementById(provider + 'Modal');
+            const testBtn = modal.querySelector('footer .pf-c-button[onclick*="testAIConnection"]');
+            if (!testBtn) {
+                console.error('Test button not found for provider:', provider);
+                return;
+            }
+            
             const originalText = testBtn.innerHTML;
             testBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Testing...';
             testBtn.disabled = true;
