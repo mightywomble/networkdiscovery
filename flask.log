@@ -1,27 +1,17 @@
-/Users/david/code/networkmap/venv/lib/python3.13/site-packages/paramiko/pkey.py:100: CryptographyDeprecationWarning: TripleDES has been moved to cryptography.hazmat.decrepit.ciphers.algorithms.TripleDES and will be removed from cryptography.hazmat.primitives.ciphers.algorithms in 48.0.0.
+nohup: ignoring input
+/home/david/live/networkmap/venv/lib/python3.12/site-packages/paramiko/pkey.py:100: CryptographyDeprecationWarning: TripleDES has been moved to cryptography.hazmat.decrepit.ciphers.algorithms.TripleDES and will be removed from cryptography.hazmat.primitives.ciphers.algorithms in 48.0.0.
   "cipher": algorithms.TripleDES,
-/Users/david/code/networkmap/venv/lib/python3.13/site-packages/paramiko/transport.py:258: CryptographyDeprecationWarning: TripleDES has been moved to cryptography.hazmat.decrepit.ciphers.algorithms.TripleDES and will be removed from cryptography.hazmat.primitives.ciphers.algorithms in 48.0.0.
+/home/david/live/networkmap/venv/lib/python3.12/site-packages/paramiko/transport.py:258: CryptographyDeprecationWarning: TripleDES has been moved to cryptography.hazmat.decrepit.ciphers.algorithms.TripleDES and will be removed from cryptography.hazmat.primitives.ciphers.algorithms in 48.0.0.
   "class": algorithms.TripleDES,
 Initializing NetworkMap Flask Application...
 Initializing database...
+DEBUG: Initializing database at networkmap.db
+DEBUG: Got database connection
+DEBUG: Database initialization completed successfully
 ✓ Database initialized successfully
 Starting Flask server on http://0.0.0.0:5150
 Note: Debug mode disabled for stability
  * Serving Flask app 'app'
  * Debug mode: off
-[31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
- * Running on all addresses (0.0.0.0)
- * Running on http://127.0.0.1:5150
- * Running on http://10.211.54.220:5150
-[33mPress CTRL+C to quit[0m
-127.0.0.1 - - [16/Aug/2025 16:54:41] "GET /api/ai_settings HTTP/1.1" 200 -
-127.0.0.1 - - [16/Aug/2025 16:54:47] "POST /api/ai_settings HTTP/1.1" 200 -
-127.0.0.1 - - [16/Aug/2025 16:54:52] "GET /api/ai_settings HTTP/1.1" 200 -
-127.0.0.1 - - [16/Aug/2025 16:54:59] "POST /api/ai_settings HTTP/1.1" 200 -
-127.0.0.1 - - [16/Aug/2025 16:55:05] "GET /settings HTTP/1.1" 200 -
-127.0.0.1 - - [16/Aug/2025 16:55:12] "GET /api/ai_settings HTTP/1.1" 200 -
-127.0.0.1 - - [16/Aug/2025 16:55:18] "GET /api/ai_settings/gemini HTTP/1.1" 200 -
-127.0.0.1 - - [16/Aug/2025 16:55:34] "POST /api/ai_settings/chatgpt/enable HTTP/1.1" 200 -
-127.0.0.1 - - [16/Aug/2025 16:55:39] "GET / HTTP/1.1" 200 -
-127.0.0.1 - - [16/Aug/2025 16:55:44] "GET / HTTP/1.1" 200 -
-127.0.0.1 - - [16/Aug/2025 16:55:50] "GET /settings HTTP/1.1" 200 -
+Address already in use
+Port 5150 is in use by another program. Either identify and stop that program, or start the server with a different port.
