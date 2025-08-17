@@ -473,6 +473,22 @@
                             <div class="nm-stat-label">Hours Ago</div>
                         </div>
                     </div>
+                    <!-- Network Scan Suggestion -->
+                    <div class="pf-c-alert pf-m-info pf-m-inline pf-u-mt-md" id="scan-suggestion-alert" style="border-left: 4px solid var(--pf-global--info-color--100);">
+                        <div class="pf-c-alert__icon">
+                            <i class="fas fa-search" aria-hidden="true"></i>
+                        </div>
+                        <div class="pf-c-alert__title">
+                            <strong>Get More Comprehensive Results</strong>
+                        </div>
+                        <div class="pf-c-alert__description pf-u-mt-sm">
+                            <p class="pf-u-mb-sm">Running a network scan now would provide more informative results with up-to-date network topology, device discovery, and security analysis.</p>
+                            <button class="pf-c-button pf-m-primary pf-m-small" onclick="startNetworkScanFromAIReports()" title="Start comprehensive network scan">
+                                <i class="fas fa-radar-chart pf-u-mr-xs"></i>
+                                Run Network Scan Now
+                            </button>
+                        </div>
+                    </div>
                 </div>
                 <div class="pf-c-card__footer">
                     <div class="pf-c-label pf-m-green">
@@ -622,6 +638,25 @@ function loadDataStats() {
                 hoursAgo = Math.floor((now - latestTime) / (1000 * 60 * 60));
             }
             document.getElementById('latest-data-time').textContent = hoursAgo;
+            
+            // Show/hide scan suggestion based on data age
+            const scanSuggestion = document.getElementById('scan-suggestion-alert');
+            if (scanSuggestion) {
+                if (hoursAgo > 6) {
+                    // Data is more than 6 hours old, show scan suggestion
+                    scanSuggestion.style.display = 'block';
+                    scanSuggestion.querySelector('.pf-c-alert__description p').innerHTML = 
+                        `Data is ${hoursAgo} hours old. Running a fresh network scan would provide more current and comprehensive results for AI analysis.`;
+                } else if (hoursAgo === 0) {
+                    // Very recent data, hide suggestion
+                    scanSuggestion.style.display = 'none';
+                } else {
+                    // Moderate age data, show with gentler message
+                    scanSuggestion.style.display = 'block';
+                    scanSuggestion.querySelector('.pf-c-alert__description p').innerHTML = 
+                        'Running a network scan now would provide additional insights and more comprehensive results for AI analysis.';
+                }
+            }
             
             // Latest logs stats (Latest System Logs)
             document.getElementById('logs-data-hosts').textContent = stats.agents.active || 0;
@@ -1001,6 +1036,24 @@ function showAlert(type, title, message) {
         const alert = content.querySelector('.pf-c-alert');
         if (alert) alert.remove();
     }, 5000);
+}
+
+// Start network scan from AI Reports page
+function startNetworkScanFromAIReports() {
+    // Check if we have the enhanced scan functionality available
+    if (typeof showEnhancedScanModal === 'function') {
+        // Use the enhanced scan modal if available
+        showEnhancedScanModal();
+    } else if (typeof startScan === 'function') {
+        // Fallback to basic scan function
+        startScan();
+    } else {
+        // Redirect to dashboard for full scan functionality
+        showAlert('info', 'Network Scan', 'Redirecting to Dashboard for network scan...');
+        setTimeout(() => {
+            window.location.href = '/';
+        }, 1500);
+    }
 }
 </script>
 {% endblock %}
