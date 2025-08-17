@@ -1,15 +1,16 @@
-# 🌐 NetworkMap - Advanced Network Monitoring & Visualization Platform
+# 🌐 NetworkMap - Advanced Network Monitoring & AI-Powered Analytics Platform
 
 <div align="center">
 
-![NetworkMap Logo](https://img.shields.io/badge/NetworkMap-v1.6.4-blue?style=for-the-badge&logo=network-wired)
+![NetworkMap Logo](https://img.shields.io/badge/NetworkMap-v2.1.0-blue?style=for-the-badge&logo=network-wired)
 [![Python](https://img.shields.io/badge/python-3.8+-blue.svg?style=for-the-badge&logo=python)](https://python.org)
 [![Flask](https://img.shields.io/badge/flask-2.3.3-green.svg?style=for-the-badge&logo=flask)](https://flask.palletsprojects.com/)
+[![PatternFly](https://img.shields.io/badge/PatternFly-4.224.5-red.svg?style=for-the-badge&logo=redhat)](https://www.patternfly.org/)
 [![License](https://img.shields.io/badge/license-MIT-green.svg?style=for-the-badge)](LICENSE)
 
-*A comprehensive network monitoring and visualization platform with distributed agent architecture*
+*A comprehensive network monitoring platform with AI-powered analytics, modern PatternFly UI, and distributed agent architecture*
 
-[Features](#-features) • [Quick Start](#-quick-start) • [Installation](#-installation) • [Documentation](#-documentation) • [API](#-api-reference)
+[🚀 Features](#-features) • [⚡ Quick Start](#-quick-start) • [🤖 AI Reports](#-ai-powered-analytics) • [📊 Dashboard](#-enhanced-dashboard) • [🔧 Installation](#-installation)
 
 </div>
 
@@ -17,439 +18,380 @@
 
 ## 📋 Executive Summary
 
-**NetworkMap** is a powerful, web-based network monitoring and visualization platform designed for IT administrators, network engineers, and DevOps teams. The platform provides real-time network topology mapping, distributed monitoring through lightweight agents, and comprehensive network analysis tools.
+**NetworkMap** is a cutting-edge network monitoring and visualization platform featuring **AI-powered analytics**, **modern PatternFly UI design**, and **intelligent network insights**. Designed for IT administrators, network engineers, and DevOps teams who need comprehensive network intelligence with beautiful, professional interfaces.
 
 ### 🎯 Key Benefits
 
-- **🔍 Real-time Network Discovery**: Automatically discover and map network devices, connections, and topology
-- **🤖 Distributed Agent Architecture**: Deploy lightweight monitoring agents across your infrastructure
-- **📊 Interactive Visualizations**: Multiple visualization modes including D3.js network diagrams and enhanced topology maps
-- **⚡ Live Monitoring**: Real-time status updates, heartbeat monitoring, and instant scan triggers
-- **🛠 Advanced Analytics**: Built-in tools for network analysis, performance monitoring, and security assessment
-- **🔧 Easy Management**: Web-based interface for agent deployment, configuration, and monitoring
-- **📈 Scalable Design**: Supports monitoring of small networks to enterprise-scale infrastructures
+- **🧠 AI-Powered Analytics**: Generate comprehensive network analysis reports using Google Gemini and OpenAI
+- **🎨 Modern UI Design**: Professional PatternFly 4 interface with responsive design and intuitive workflows
+- **📊 Real-time Dashboard**: Dynamic statistics with live updates and colorful, informative visualizations
+- **🤖 Distributed Monitoring**: Lightweight agents with automatic deployment and real-time status updates
+- **🔍 Advanced Network Discovery**: Multi-method network scanning with enhanced topology mapping
+- **📈 Intelligent Insights**: Smart suggestions and contextual guidance for better network management
+- **🛠 Professional Tools**: Comprehensive host management, agent lifecycle, and network analytics
+- **⚡ Performance Optimized**: Fast, responsive interface with efficient data loading and caching
 
 ---
 
 ## ✨ Features
 
-### 🖥 **Web Dashboard**
-- **Interactive Network Maps**: Visual topology with drag-and-drop node positioning
-- **Real-time Status Monitoring**: Live updates of host and agent status
-- **Advanced Filtering**: Search, sort, and filter network components
-- **Mobile Responsive**: Works on desktop, tablet, and mobile devices
+### 🧠 **AI-Powered Analytics**
+- **Smart Report Generation**: Comprehensive network analysis using advanced AI models
+- **Multiple AI Providers**: Support for Google Gemini (2.5 Flash, 2.5 Pro, 1.5 Pro) and OpenAI ChatGPT
+- **Intelligent Data Analysis**: Analyze complete network datasets, latest snapshots, or system logs
+- **Contextual Suggestions**: Smart recommendations for network scans and data collection
+- **Professional Report Format**: Well-structured, actionable reports with executive summaries
+- **Real-time Processing**: Live report generation with progress tracking and error handling
 
-### 🤖 **Distributed Agent System**
-- **Lightweight Agents**: Minimal resource footprint monitoring agents with automatic versioning
-- **Auto-deployment**: One-click SSH-based agent deployment to multiple hosts
-- **Real-time Communication**: Heartbeat monitoring and instant status updates
-- **Configurable Scanning**: Customizable scan intervals and test suites
-- **System Monitoring**: CPU, memory, network interfaces, and process monitoring
-- **Version Management**: Automated agent versioning with update tracking
-- **Enhanced Data Structure**: Comprehensive agent information with build dates and platform details
+### 🎨 **Modern PatternFly Interface**
+- **Professional Design**: Enterprise-grade UI components with consistent styling
+- **Responsive Layout**: Optimized for desktop, tablet, and mobile devices
+- **Intuitive Navigation**: Clean sidebar navigation with organized sections
+- **Enhanced Modals**: Interactive dialogs with proper form validation and user feedback
+- **Accessible Design**: WCAG compliant with keyboard navigation and screen reader support
+- **Visual Indicators**: Color-coded status indicators, progress bars, and interactive elements
+
+### 📊 **Enhanced Dashboard**
+- **Dynamic Statistics Cards**: Real-time data from API endpoints with automatic refresh
+- **5-Column Layout**: Total Hosts, Network Connections, Active Agents, Open Ports, Recent Scans
+- **Live Updates**: Statistics refresh every 30 seconds with loading states and error handling
+- **Visual Appeal**: Colorful icons, hover effects, and professional styling
+- **Consistent Data**: Same data sources as Statistics page ensuring accuracy
+- **Quick Actions**: Direct access to network scans, tool installation, and network maps
+
+### 🖥 **Improved Web Interface**
+- **Streamlined Sidebar**: Organized navigation with Main, Infrastructure, Visualization, AI Tooling, and Settings
+- **Enhanced Host Management**: Improved edit buttons, removed clutter, better visual hierarchy
+- **Smart Quick Actions**: Context-aware action buttons with intelligent suggestions
+- **Professional Cards**: Clean card layouts with proper spacing and visual indicators
+- **Loading States**: Smooth transitions and loading indicators for better UX
+- **Error Handling**: Graceful error states with user-friendly messages
+
+### 🤖 **Advanced Agent System** 
+- **Lightweight Monitoring**: Minimal resource footprint with comprehensive data collection
+- **Auto-deployment**: One-click SSH-based deployment with real-time progress tracking
+- **Version Management**: Automatic versioning with build date tracking and update management
+- **Real-time Communication**: Heartbeat monitoring with instant status updates
+- **Enhanced Data Structure**: Comprehensive agent information with platform details
+- **Bulk Operations**: Mass deployment, updates, and configuration management
 
 ### 🔍 **Network Discovery & Analysis**
-- **Multi-method Discovery**: ARP scanning, ping sweeps, port scanning
-- **Topology Mapping**: Automatic network topology generation
-- **Performance Testing**: Bandwidth testing, latency analysis, connectivity tests
-- **Security Scanning**: Port scanning, service detection, vulnerability assessment
-- **Traffic Analysis**: Network traffic monitoring and analysis
+- **Multi-method Discovery**: ARP scanning, ping sweeps, advanced port scanning
+- **Intelligent Topology**: Automatic network mapping with relationship analysis
+- **Performance Testing**: Bandwidth analysis, latency monitoring, connectivity validation
+- **Security Assessment**: Vulnerability scanning, service detection, port analysis
+- **Traffic Analysis**: Network flow monitoring and pattern recognition
+- **Tool Installation**: Automated installation of network analysis utilities
 
-### 📊 **Visualization Modes**
-- **Traditional Network Diagram**: Structured network diagrams with device icons
-- **D3.js Interactive Map**: Dynamic, zoomable network topology
-- **Enhanced Topology**: Comprehensive interconnection mapping
-- **Real-time Updates**: Live visualization updates during scans
+### 📊 **Advanced Visualizations**
+- **Interactive Network Maps**: D3.js powered topology with zoom, pan, and node manipulation
+- **Enhanced Diagrams**: Professional network diagrams with device-specific icons
+- **Real-time Updates**: Live visualization updates during network scans
+- **Multiple View Modes**: Traditional diagrams, force-directed graphs, hierarchical layouts
+- **Export Capabilities**: Save network diagrams and topology data
+- **Responsive Design**: Optimized viewing across all device sizes
 
-### 🛠 **Management Tools**
-- **Host Management**: Add, edit, remove, and organize network hosts
-- **Agent Lifecycle**: Deploy, update, configure, and remove agents with version tracking
-- **Bulk Operations**: Mass deployment, updates, and configuration changes
-- **Configuration Management**: Centralized agent configuration and policies
-- **Log Management**: Centralized logging and log analysis with enhanced formatting
-- **Agent Data Modal**: Comprehensive agent data viewer with Summary, Network Scans, and Test Results tabs
-- **Version Summary**: Agent version tracking and update management dashboard
-- **Cleanup Tools**: Database cleanup utilities for managing agent records
-
-### 📈 **Advanced Features**
-- **Enhanced Network Scanner**: Advanced discovery using multiple network tools
-- **Tool Installation**: Automatic installation of network analysis tools
-- **Database Analytics**: SQLite-based data storage with analytics
-- **API Integration**: RESTful API for integration with other systems
-- **Export/Import**: Host configuration backup and restore
-- **Auto-Versioning System**: Git hook-based automatic agent version management
-- **Progress Monitoring**: Real-time progress tracking for agent operations
-- **Test Results Formatting**: Enhanced display of multiline test results with proper formatting
-- **Fallback Compatibility**: Support for both new and legacy agent data structures
+### 🛠 **Professional Management Tools**
+- **Comprehensive Host Management**: Add, edit, organize hosts with enhanced forms
+- **Agent Lifecycle Management**: Deploy, configure, update, monitor with version tracking
+- **Centralized Configuration**: Unified configuration management across all agents
+- **Advanced Analytics**: SQLite-based data analytics with performance insights
+- **Import/Export**: Backup and restore configurations with data validation
+- **Cleanup Utilities**: Database maintenance tools and stale record removal
 
 ---
 
 ## 🚀 Quick Start
 
 ### Prerequisites
-- Python 3.8 or higher
-- Ubuntu/Debian server (recommended)
-- SSH access to target hosts
-- Network connectivity between server and monitored hosts
+- **Python 3.8+** with pip and virtual environment support
+- **Ubuntu/Debian Server** (recommended for optimal performance)
+- **SSH Access** to target hosts for agent deployment
+- **Network Connectivity** between server and monitored infrastructure
+- **Modern Web Browser** (Chrome, Firefox, Safari, Edge)
 
-### 1. Clone and Setup Server
+### 1. 🔧 Server Setup
 ```bash
-# Clone repository
-git clone https://github.com/mightywomble/networktool.git
-cd networktool
+# Clone the repository
+git clone https://github.com/mightywomble/networkdiscovery.git
+cd networkdiscovery
+
+# Create and activate virtual environment
+python3 -m venv venv
+source venv/bin/activate
 
 # Install dependencies
-pip3 install -r requirements.txt
+pip install -r requirements.txt
+
+# Initialize the database
+python3 -c "from database import Database; db = Database(); db.init_db()"
 
 # Start the server
 python3 app.py
 ```
 
-### 2. Access Web Interface
+### 2. 🌐 Access the Web Interface
 Open your browser and navigate to:
 ```
 http://your-server-ip:5150
 ```
 
-### 3. Add Your First Host
-1. Go to **Hosts** → **Add Host**
-2. Enter hostname, IP address, and SSH credentials
-3. Click **Save**
+### 3. 🏠 Configure Your Network
+1. **Dashboard** → Overview of your network with live statistics
+2. **Hosts** → Add hosts with IP addresses and SSH credentials
+3. **Agents** → Deploy monitoring agents to your infrastructure
+4. **AI Configuration** → Set up Google Gemini or OpenAI API keys
 
-### 4. Deploy Your First Agent
-1. Go to **Agents** 
-2. Select a host and click **Deploy Agent**
-3. Monitor deployment progress in real-time
+### 4. 🤖 Generate AI Reports
+1. **AI Reports** → Choose data type (Complete Dataset, Latest Snapshot, System Logs)
+2. **Select AI Model** → Choose from Gemini 2.5 Flash, Gemini Pro, or ChatGPT
+3. **Generate Report** → Get comprehensive network analysis with actionable insights
+4. **Review Recommendations** → Follow AI suggestions for network optimization
 
-### 5. Start Monitoring
-1. Click **Run Agent Now** to trigger immediate scanning
-2. View results in **View Last Data**
-3. Explore network topology in **Network Map**
+### 5. 📊 Monitor Your Network
+1. **Statistics** → View detailed network metrics and trends
+2. **Network Maps** → Visualize topology and device relationships
+3. **Agent Monitoring** → Track agent health and data collection
+4. **Real-time Updates** → Monitor live network status and changes
+
+---
+
+## 🧠 AI-Powered Analytics
+
+### 🎯 Overview
+NetworkMap's AI analytics engine provides intelligent network insights using state-of-the-art language models. Generate comprehensive reports that identify issues, suggest optimizations, and provide actionable recommendations.
+
+### 🤖 Supported AI Models
+
+#### Google Gemini (Recommended)
+- **Gemini 2.5 Flash** (Default) - Fast, efficient analysis
+- **Gemini 2.5 Pro** - Enhanced reasoning and detailed insights  
+- **Gemini 1.5 Pro** - Comprehensive analysis with deep context
+- **Gemini 1.5 Flash** - Quick analysis for routine monitoring
+- **Gemini Pro** (Legacy) - Backward compatibility support
+- **Gemini Pro Vision** (Legacy) - Image and visual analysis
+
+#### OpenAI ChatGPT
+- **ChatGPT-4o** - Advanced reasoning and detailed analysis
+- **ChatGPT-4** - Professional-grade network analysis
+- **ChatGPT-3.5 Turbo** - Fast, cost-effective insights
+
+### 📊 Data Analysis Types
+
+#### 1. **Complete Network Dataset**
+- **Scope**: All historical data, connections, hosts, and log files
+- **Best For**: Comprehensive network audits, trend analysis, long-term planning
+- **Analysis**: Network evolution, pattern recognition, capacity planning
+- **Report Includes**: Historical trends, performance patterns, growth projections
+
+#### 2. **Latest Data Snapshot**
+- **Scope**: Most recent network scan results and current host status
+- **Best For**: Current state analysis, immediate issue detection
+- **Analysis**: Real-time network health, active connections, device status
+- **Report Includes**: Current network topology, active issues, immediate recommendations
+- **Smart Suggestions**: Automatic recommendations for fresh network scans when data is stale
+
+#### 3. **Latest System Logs**
+- **Scope**: Recent log files from all monitored hosts
+- **Best For**: Troubleshooting, security analysis, error detection
+- **Analysis**: Log pattern analysis, error correlation, security events
+- **Report Includes**: Critical events, error patterns, security recommendations
+
+### 🎨 Report Features
+
+#### Professional Format
+- **Executive Summary**: High-level overview for management
+- **Technical Analysis**: Detailed findings for technical teams
+- **Visual Formatting**: Well-structured HTML with proper styling
+- **Actionable Insights**: Specific recommendations with implementation guidance
+- **Risk Assessment**: Security vulnerabilities and priority rankings
+
+#### Smart Contextual Suggestions
+- **Data Freshness**: Intelligent recommendations for network scans based on data age
+- **Optimization Opportunities**: AI-identified areas for improvement
+- **Security Alerts**: Potential vulnerabilities and mitigation strategies
+- **Performance Insights**: Network bottlenecks and optimization suggestions
+
+### 🔧 AI Configuration
+
+#### Setting Up Google Gemini
+1. **Get API Key**: Visit [Google AI Studio](https://makersuite.google.com/app/apikey)
+2. **AI Configuration** → **Google Gemini** → Enter API key
+3. **Test Connection** → Verify API connectivity
+4. **Select Model** → Choose appropriate model for your needs
+5. **Generate Reports** → Start creating intelligent network insights
+
+#### Setting Up OpenAI ChatGPT
+1. **Get API Key**: Visit [OpenAI Platform](https://platform.openai.com/api-keys)
+2. **AI Configuration** → **OpenAI ChatGPT** → Enter API key
+3. **Test Connection** → Verify API access and model availability
+4. **Choose Model** → Select ChatGPT model based on requirements
+5. **Generate Analysis** → Create detailed network reports
+
+### 📈 Use Cases
+
+#### Network Health Assessment
+```
+Generate comprehensive health reports identifying:
+• Performance bottlenecks and optimization opportunities
+• Security vulnerabilities and recommended mitigations  
+• Configuration issues and best practice recommendations
+• Capacity planning insights and growth projections
+```
+
+#### Security Analysis
+```
+Analyze network for security issues including:
+• Open ports and potential attack vectors
+• Unusual connection patterns and anomalies
+• Service configurations and hardening opportunities
+• Compliance gaps and remediation strategies
+```
+
+#### Troubleshooting Assistant
+```
+Intelligent analysis for problem resolution:
+• Root cause analysis of network issues
+• Correlation of logs and network data
+• Step-by-step troubleshooting guides
+• Performance optimization recommendations
+```
+
+---
+
+## 📊 Enhanced Dashboard
+
+### 🎨 Dynamic Statistics
+The Dashboard features a modern, data-driven statistics bar with real-time updates:
+
+#### 5-Column Live Statistics
+1. **🖥 Total Hosts** - Complete host inventory with online status
+2. **🌐 Network Connections** - Active connections with recent activity metrics  
+3. **🤖 Active Agents** - Monitoring agent status with recent activity
+4. **🚪 Open Ports** - Security assessment with host distribution
+5. **🔍 Recent Scans** - Scanning activity with hourly and daily metrics
+
+#### Features
+- **Real-time Updates**: Statistics refresh every 30 seconds
+- **API-Driven Data**: Same reliable data sources as Statistics page
+- **Visual Excellence**: Colorful themed icons with hover animations
+- **Responsive Design**: Adapts beautifully to all screen sizes
+- **Loading States**: Professional loading indicators and error handling
+
+### 🎯 Quick Actions
+Streamlined action buttons for common network operations:
+- **🔍 Start Network Scan**: Launch comprehensive network discovery
+- **🛠 Install Ubuntu Tools**: Deploy network analysis utilities
+- **📊 View Network Map**: Navigate to interactive topology visualization
+
+### 💡 Smart Design Elements
+- **Color-coded Cards**: Each statistic has a unique color theme
+- **Professional Styling**: PatternFly components with enterprise appearance  
+- **Intuitive Icons**: Font Awesome icons that clearly represent each metric
+- **Hover Effects**: Subtle animations that enhance user interaction
+- **Consistent Layout**: Grid system that maintains visual hierarchy
 
 ---
 
 ## 🔧 Installation
 
-### Server Installation
+### 🖥 Production Server Setup
 
-#### Option 1: Manual Installation
+#### Option 1: Standard Installation
 ```bash
-# 1. Clone repository
-git clone https://github.com/mightywomble/networktool.git
-cd networktool
-
-# 2. Create virtual environment (recommended)
-python3 -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
-
-# 3. Install dependencies
-pip install -r requirements.txt
-
-# 4. Initialize database
-python3 -c "from database import Database; db = Database(); db.init_db()"
-
-# 5. Start server
-python3 app.py
-```
-
-#### Option 2: Production Deployment
-```bash
-# 1. Clone to production directory
+# Create production directory
 sudo mkdir -p /opt/networkmap
 sudo chown $USER:$USER /opt/networkmap
-git clone https://github.com/mightywomble/networktool.git /opt/networkmap
+
+# Clone repository  
+git clone https://github.com/mightywomble/networkdiscovery.git /opt/networkmap
 cd /opt/networkmap
 
-# 2. Install system dependencies
-sudo apt update
-sudo apt install -y python3 python3-pip python3-venv nginx
+# Install system dependencies
+sudo apt update && sudo apt install -y python3 python3-pip python3-venv nginx
 
-# 3. Setup Python environment
+# Create Python environment
 python3 -m venv venv
 source venv/bin/activate
 pip install -r requirements.txt
 
-# 4. Create systemd service (see service file below)
-sudo cp networkmap.service /etc/systemd/system/
+# Initialize database
+python3 -c "from database import Database; db = Database(); db.init_db()"
+
+# Create systemd service
+sudo cp scripts/networkmap.service /etc/systemd/system/
 sudo systemctl daemon-reload
 sudo systemctl enable networkmap
 sudo systemctl start networkmap
-
-# 5. Configure reverse proxy (optional)
-# Configure nginx to proxy to localhost:5150
 ```
 
-### SystemD Service File
-
-Create `/etc/systemd/system/networkmap.service`:
-
-```ini
-[Unit]
-Description=NetworkMap Monitoring Platform
-After=network.target
-Wants=network.target
-
-[Service]
-Type=simple
-User=networkmap
-Group=networkmap
-WorkingDirectory=/opt/networkmap
-Environment=PATH=/opt/networkmap/venv/bin
-Environment=PYTHONUNBUFFERED=1
-Environment=FLASK_ENV=production
-ExecStart=/opt/networkmap/venv/bin/python /opt/networkmap/app.py
-Restart=always
-RestartSec=10
-
-# Security settings
-NoNewPrivileges=true
-PrivateTmp=true
-ProtectHome=true
-ProtectKernelTunables=true
-ProtectControlGroups=true
-RestrictSUIDSGID=true
-ReadWritePaths=/opt/networkmap /var/log/networkmap
-
-# Logging
-StandardOutput=journal
-StandardError=journal
-SyslogIdentifier=networkmap
-
-[Install]
-WantedBy=multi-user.target
-```
-
-### User Setup for Production
+#### Option 2: Development Setup
 ```bash
-# Create dedicated user
-sudo useradd -r -s /bin/false networkmap
-sudo chown -R networkmap:networkmap /opt/networkmap
-sudo mkdir -p /var/log/networkmap
-sudo chown networkmap:networkmap /var/log/networkmap
+# Clone for development
+git clone https://github.com/mightywomble/networkdiscovery.git
+cd networkdiscovery
+
+# Create development environment
+python3 -m venv dev-env
+source dev-env/bin/activate
+pip install -r requirements.txt
+
+# Run in development mode
+export FLASK_DEBUG=1
+python3 app.py
 ```
 
-### Agent Deployment
-
-Agents are automatically deployed via the web interface, but you can also deploy manually:
-
-#### Automatic Deployment (Recommended)
-1. **Web Interface**: Go to Agents → Select Host → Deploy Agent
-2. **Bulk Deployment**: Select multiple hosts → Deploy Selected
-3. **Monitor Progress**: Real-time deployment progress tracking
-
-#### Manual Agent Installation
+### 🐳 Docker Deployment
 ```bash
-# On target host:
-curl -o networkmap_agent.py http://your-server:5150/static/networkmap_agent.py
-sudo python3 networkmap_agent.py --install --server-url http://your-server:5150
+# Build Docker image
+docker build -t networkmap:latest .
+
+# Run container
+docker run -d \
+  --name networkmap \
+  -p 5150:5150 \
+  -v /opt/networkmap/data:/app/data \
+  networkmap:latest
+```
+
+### ☁️ Cloud Deployment
+
+#### AWS EC2
+```bash
+# Create EC2 instance (Ubuntu 20.04+)
+# Configure security groups (port 5150, 22)
+# Follow standard installation steps
+# Consider using Application Load Balancer for high availability
+```
+
+#### Google Cloud Platform
+```bash
+# Create Compute Engine instance
+# Configure firewall rules
+# Use managed SQL for database (optional)
+# Deploy with Cloud Run for serverless (advanced)
 ```
 
 ---
 
-## 🏷️ Agent Versioning System
+## 🤖 Agent Management
 
-### Overview
-NetworkMap features a sophisticated automatic agent versioning system that ensures consistent version tracking and seamless updates across your distributed monitoring infrastructure.
+### 🚀 Enhanced Agent System
 
-### Features
-- **Automatic Version Increment**: Versions are automatically incremented during development commits
-- **Git Hook Integration**: Pre-commit and post-commit hooks manage versioning automatically  
-- **Build Date Tracking**: Each version includes precise build timestamp information
-- **Enhanced Agent Data**: Agents send comprehensive version information including platform details
-- **Update Management**: Web-based agent update tracking and deployment
-- **Fallback Compatibility**: Support for both legacy and new agent data structures
-
-### Versioning Components
-
-#### 1. Core Version Files
+#### Automatic Deployment
 ```bash
-# Main agent files with version information
-networkmap_agent.py          # Development version
-static/networkmap_agent.py   # Production/deployment version
-VERSION_INFO.txt            # Comprehensive version metadata
+# Web Interface (Recommended)
+1. Hosts → Select hosts → Deploy Selected
+2. Monitor real-time deployment progress
+3. Verify agent registration and heartbeat
+
+# Bulk Deployment
+1. Agents → Bulk Operations → Deploy All
+2. Configure deployment parameters
+3. Monitor deployment status dashboard
 ```
 
-#### 2. Automatic Versioning Scripts
-```bash
-scripts/auto_version.py      # Core versioning logic
-scripts/pre-commit           # Git pre-commit hook
-scripts/post-commit          # Git post-commit hook  
-update_agent_version.sh      # Manual version update utility
-```
-
-### Version Structure
-
-#### Agent Version Format
-```python
-# Example agent version information
-__version__ = "1.6.4"
-__build_date__ = "2025-08-15"
-VERSION = __version__
-
-# Enhanced agent data structure
-agent_info = {
-    "agent_version": "1.6.4",
-    "build_date": "2025-08-15", 
-    "platform": "Linux-5.4.0-generic-x86_64"
-}
-```
-
-#### VERSION_INFO.txt Content
-```
-NetworkMap Agent Version Information
-=====================================
-
-Agent Version: 1.6.4
-Build Date: 2025-08-15
-Build Time: 17:54:29
-Git Commit: AUTO_VERSIONED
-
-Release Notes:
-- Enhanced agent data structure with comprehensive version info
-- Improved UI compatibility with fallback data handling
-- Real-time progress monitoring for agent operations
-
-File Locations:
-- Main Agent: networkmap_agent.py
-- Static Agent: static/networkmap_agent.py
-- Version Info: VERSION_INFO.txt
-
-Last Updated: 2025-08-15T17:54:29.624727
-```
-
-### Usage
-
-#### Manual Version Update
-```bash
-# Update agent version manually
-./update_agent_version.sh
-
-# The script will:
-# 1. Check current version in all agent files
-# 2. Increment version number automatically
-# 3. Update build timestamp
-# 4. Stage files for commit
-# 5. Display next steps for git operations
-```
-
-#### Automatic Version Management
-```bash
-# Versions are automatically managed during git operations
-git add networkmap_agent.py static/networkmap_agent.py
-git commit -m "Update agent features"
-# → Auto-versioning triggers and increments version
-# → All agent files updated with new version
-# → Changes automatically staged for commit
-```
-
-### Web Interface Integration
-
-#### Agent Data Modal
-The web interface provides comprehensive agent information:
-- **Summary Tab**: Displays agent version with fallback compatibility
-- **Version Summary**: Dashboard showing all agent versions across infrastructure
-- **Update Management**: Bulk update capabilities for outdated agents
-
-#### Version Display Logic
-```javascript
-// Enhanced version display with fallback support
-const agentVersion = (data.agent_info && data.agent_info.agent_version) ||
-                    (data.system_info && data.system_info.agent_version) ||
-                    'Unknown';
-```
-
-#### Update Operations
-```bash
-# Update specific agents via web interface
-# 1. Go to Agents → Version Summary
-# 2. Select agents to update
-# 3. Click "Update Selected" or "Update All Outdated"
-# 4. Monitor real-time update progress
-```
-
-### Migration and Compatibility
-
-#### Data Structure Evolution
-```json
-// Legacy agent data (still supported)
-{
-  "system_info": {
-    "agent_version": "1.5.0"
-  }
-}
-
-// Enhanced agent data (new structure)
-{
-  "agent_info": {
-    "agent_version": "1.6.4",
-    "build_date": "2025-08-15",
-    "platform": "Linux-x86_64"
-  },
-  "system_info": {
-    // Other system information
-  }
-}
-```
-
-#### Update Process
-1. **Deploy New Server**: Updated server supports both data formats
-2. **Update Agents**: Use web interface to update agents to latest version
-3. **Verify Updates**: Check Version Summary for successful updates
-4. **Monitor Compatibility**: System automatically handles mixed environments
-
-### Troubleshooting
-
-#### Common Issues
-```bash
-# Version update script fails
-./update_agent_version.sh
-# Check: Python3 availability, file permissions, git status
-
-# Agent version shows "Unknown"
-# Check: Agent data structure, server compatibility, agent update status
-
-# Git hooks not working
-# Check: Hook permissions, Python path, script locations
-chmod +x scripts/pre-commit scripts/post-commit
-```
-
-#### Manual Recovery
-```bash
-# Manually fix version inconsistencies
-python3 scripts/auto_version.py
-
-# Reset version tracking
-git add VERSION_INFO.txt networkmap_agent.py static/networkmap_agent.py
-git commit -m "Fix version tracking"
-```
-
----
-
-## 🔧 Configuration
-
-### Server Configuration
-
-#### Environment Variables
-```bash
-# Optional configuration via environment variables
-export FLASK_SECRET_KEY="your-secret-key-here"
-export DATABASE_PATH="/opt/networkmap/data/networkmap.db"
-export LOG_LEVEL="INFO"
-export BIND_HOST="0.0.0.0"
-export BIND_PORT="5150"
-```
-
-#### Database Configuration
-The application uses SQLite by default. For production deployments:
-
-```python
-# Edit database.py for custom database configuration
-DATABASE_FILE = os.environ.get('DATABASE_PATH', 'networkmap.db')
-```
-
-### Agent Configuration
-
-#### Default Configuration
+#### Advanced Configuration
 ```json
 {
     "server_url": "http://your-server:5150",
@@ -457,329 +399,671 @@ DATABASE_FILE = os.environ.get('DATABASE_PATH', 'networkmap.db')
     "heartbeat_interval": 60,
     "log_collection_enabled": true,
     "scan_enabled": true,
-    "log_paths": ["/var/log", "/var/log/syslog", "/var/log/auth.log"]
+    "test_suites": ["connectivity", "performance", "security"],
+    "log_paths": ["/var/log", "/var/log/syslog", "/var/log/auth.log"],
+    "resource_limits": {
+        "max_cpu_percent": 10,
+        "max_memory_mb": 100
+    }
 }
 ```
 
-#### Advanced Configuration
-Configure agents via the web interface:
-1. **Agents** → Select Agent → **Edit Configuration**
-2. Modify scan intervals, test suites, and monitoring parameters
-3. Changes applied automatically on next heartbeat
+#### Version Management
+- **Automatic Versioning**: Git hook-based version increment
+- **Update Tracking**: Web interface for version monitoring
+- **Bulk Updates**: Mass agent update capabilities
+- **Compatibility**: Support for legacy and new agent formats
+- **Health Monitoring**: Agent health dashboards with status indicators
 
 ---
 
-## 🌐 Network Architecture
+## 🌐 Network Analysis
 
-### Deployment Models
+### 🔍 Advanced Discovery Methods
 
-#### Single Server Deployment
-```
-┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-│   NetworkMap    │    │     Agent       │    │     Agent       │
-│     Server      │◄──►│   (Host A)      │    │   (Host B)      │
-│   (Web + API)   │    │                 │    │                 │
-└─────────────────┘    └─────────────────┘    └─────────────────┘
-```
+#### Multi-Protocol Scanning
+```bash
+# ARP Table Analysis
+- Discovers devices via MAC address resolution
+- Identifies network segments and VLANs
+- Maps physical network topology
 
-#### Distributed Deployment
-```
-┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-│   NetworkMap    │    │    Network      │    │    Network      │
-│     Server      │◄──►│   Segment A     │    │   Segment B     │
-│                 │    │  ┌───┐  ┌───┐   │    │  ┌───┐  ┌───┐   │
-└─────────────────┘    │  │ A │  │ A │   │    │  │ A │  │ A │   │
-                       │  └───┘  └───┘   │    │  └───┘  └───┘   │
-                       └─────────────────┘    └─────────────────┘
+# ICMP Ping Sweeps  
+- Fast host discovery across subnets
+- Network reachability validation
+- Response time analysis
+
+# Port Scanning
+- Service discovery and fingerprinting
+- Security assessment and vulnerability detection
+- Application mapping and inventory
 ```
 
-### Communication Flow
-1. **Discovery**: Server discovers hosts via ping, SSH, or manual configuration
-2. **Deployment**: Automated agent deployment via SSH
-3. **Registration**: Agents register with server on startup
-4. **Monitoring**: Continuous heartbeat and data collection
-5. **Analysis**: Real-time data processing and visualization
+#### Enhanced Topology Mapping
+- **Relationship Analysis**: Device interconnection mapping
+- **Network Segmentation**: VLAN and subnet identification
+- **Path Discovery**: Network route analysis and optimization
+- **Performance Metrics**: Latency, bandwidth, and throughput analysis
+
+### 📊 Professional Visualizations
+
+#### Interactive Network Maps
+- **D3.js Power**: Modern, responsive network diagrams
+- **Real-time Updates**: Live topology changes during scans
+- **Multiple Layouts**: Force-directed, hierarchical, circular arrangements
+- **Device Icons**: Professional icons for servers, switches, routers, workstations
+- **Zoom & Pan**: Smooth navigation for large network topologies
+- **Export Options**: PNG, SVG, JSON export capabilities
+
+#### Enhanced Network Diagrams
+- **Professional Styling**: Enterprise-grade visual design
+- **Color Coding**: Status-based coloring for quick health assessment
+- **Interactive Elements**: Click, hover, drag for detailed information
+- **Responsive Design**: Optimized viewing on all devices
+- **Custom Styling**: Configurable themes and layout options
 
 ---
 
-## 📊 API Reference
+## 🎨 Modern UI Design
 
-### Authentication
-Currently uses basic session-based authentication. API endpoints are accessible via HTTP.
+### 🖌 PatternFly Integration
 
-### Core Endpoints
+#### Professional Components
+- **Enterprise Design System**: Red Hat's PatternFly 4 components
+- **Consistent Styling**: Unified visual language across all interfaces
+- **Accessibility**: WCAG 2.1 compliant with keyboard navigation
+- **Responsive Layouts**: Mobile-first design with tablet and desktop optimization
+- **Dark Mode Support**: Automatic theme detection and switching
 
-#### Host Management
+#### Enhanced User Experience
+```css
+/* Modern design elements */
+- Clean, minimalist interfaces with purposeful white space
+- Color-coded status indicators for quick visual scanning
+- Professional card layouts with subtle shadows and borders
+- Smooth animations and transitions for enhanced interaction
+- Interactive elements with hover states and visual feedback
+```
+
+#### Improved Navigation
+- **Organized Sidebar**: Logical grouping of features and tools
+- **Breadcrumb Navigation**: Clear page hierarchy and navigation context
+- **Quick Actions**: Context-sensitive action buttons and shortcuts
+- **Search Integration**: Global search capabilities across all data
+- **Keyboard Shortcuts**: Power user keyboard navigation support
+
+### 📱 Mobile Optimization
+
+#### Responsive Design
+- **Mobile-First**: Optimized for touch interfaces and small screens
+- **Tablet Support**: Enhanced layouts for medium-sized devices  
+- **Progressive Enhancement**: Advanced features for desktop users
+- **Touch Gestures**: Native mobile gestures for map navigation
+- **Offline Capability**: Basic functionality during connectivity issues
+
+---
+
+## ⚙️ Configuration
+
+### 🔐 Security Configuration
+
+#### Server Security
+```bash
+# SSL/TLS Configuration (Production)
+server {
+    listen 443 ssl http2;
+    server_name networkmap.yourdomain.com;
+    
+    ssl_certificate /path/to/certificate.crt;
+    ssl_certificate_key /path/to/private.key;
+    
+    location / {
+        proxy_pass http://127.0.0.1:5150;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}
+```
+
+#### API Security
+```python
+# Environment Variables
+export FLASK_SECRET_KEY="your-secret-key-here"
+export GEMINI_API_KEY="your-gemini-api-key"
+export OPENAI_API_KEY="your-openai-api-key"
+export DATABASE_ENCRYPTION_KEY="your-db-encryption-key"
+```
+
+#### Network Security
+```bash
+# Firewall Configuration
+sudo ufw allow 22/tcp      # SSH access
+sudo ufw allow 443/tcp     # HTTPS (recommended)
+sudo ufw allow 5150/tcp    # NetworkMap (if not using reverse proxy)
+sudo ufw deny 5150/tcp --from any --to any  # If using reverse proxy
+sudo ufw enable
+```
+
+### 🎛 Advanced Configuration
+
+#### AI Model Configuration
+```json
+{
+    "gemini": {
+        "default_model": "gemini-2.5-flash",
+        "timeout": 120,
+        "max_tokens": 8192,
+        "temperature": 0.1
+    },
+    "openai": {
+        "default_model": "gpt-4o",
+        "timeout": 120,
+        "max_tokens": 4000,
+        "temperature": 0.2
+    }
+}
+```
+
+#### Database Configuration
+```python
+# Custom database settings
+DATABASE_CONFIG = {
+    'path': '/opt/networkmap/data/networkmap.db',
+    'backup_interval': 3600,  # hourly backups
+    'retention_days': 30,     # data retention
+    'vacuum_interval': 86400  # daily optimization
+}
+```
+
+---
+
+## 📚 API Reference
+
+### 🔗 Core API Endpoints
+
+#### Dashboard & Statistics
+```http
+GET    /api/stats/overview           # Live dashboard statistics
+GET    /api/stats/historical         # Historical data trends
+GET    /api/stats/realtime           # Real-time metrics
+GET    /api/stats/hosts              # Host-specific statistics
+GET    /api/stats/connections        # Network connection stats
+```
+
+#### AI Analytics
+```http
+GET    /api/ai_settings              # AI configuration status
+POST   /api/ai_settings              # Update AI configuration
+GET    /api/ai_settings/{provider}   # Provider-specific settings
+POST   /api/ai_reports/generate      # Generate AI report
+GET    /api/ai_reports/data_stats    # Data statistics for reports
+```
+
+#### Host & Agent Management
 ```http
 GET    /api/hosts                    # List all hosts
 POST   /api/hosts                    # Add new host
-PUT    /api/hosts/{id}               # Update host
+PUT    /api/hosts/{id}               # Update host configuration
 DELETE /api/hosts/{id}               # Remove host
-```
 
-#### Agent Management
-```http
 GET    /api/agents                   # List all agents
-GET    /api/agent/last_data/{id}     # Get agent's latest data
-POST   /api/agent/run_now            # Trigger immediate scan
-GET    /api/agent/logs               # Get agent logs
-POST   /api/deploy_agent             # Deploy agent to host
+POST   /api/agents/deploy            # Deploy agent to hosts
+PUT    /api/agents/{id}/config       # Update agent configuration
+GET    /api/agents/{id}/status       # Get agent status
+POST   /api/agents/{id}/scan         # Trigger agent scan
 ```
 
 #### Network Operations
 ```http
-POST   /api/scan_now                 # Trigger network scan
-GET    /api/scan_status              # Get scan status
-GET    /api/network_data             # Get topology data
-POST   /api/build_topology           # Build network topology
+POST   /api/network/scan             # Start network scan
+GET    /api/network/scan/status      # Get scan progress
+GET    /api/network/scan/results     # Get scan results
+POST   /api/network/topology/build   # Build network topology
+GET    /api/network/topology/data    # Get topology data
 ```
 
-#### System Management
-```http
-GET    /api/agent/versions           # Get agent version summary
-POST   /api/agent/update             # Update specific agent
-POST   /api/agent/cleanup/duplicates # Remove duplicate agents
-POST   /api/agent/cleanup/stale      # Remove stale agents
-```
+### 📖 API Usage Examples
 
-### Example API Usage
-
-#### Get Network Topology
+#### Generate AI Report
 ```bash
-curl -X GET http://localhost:5150/api/network_data
-```
-
-#### Trigger Agent Scan
-```bash
-curl -X POST http://localhost:5150/api/agent/run_now \
+curl -X POST http://localhost:5150/api/ai_reports/generate \
   -H "Content-Type: application/json" \
-  -d '{"hostname":"server01","ip_address":"192.168.1.100"}'
+  -d '{
+    "ai_model": "gemini-2.5-flash",
+    "data_type": "latest_capture",
+    "include_recommendations": true
+  }'
+```
+
+#### Get Live Statistics
+```bash
+curl -X GET http://localhost:5150/api/stats/overview \
+  -H "Accept: application/json"
 ```
 
 #### Deploy Agent
 ```bash
-curl -X POST http://localhost:5150/api/deploy_agent \
+curl -X POST http://localhost:5150/api/agents/deploy \
   -H "Content-Type: application/json" \
-  -d '{"host_id":1,"server_url":"http://your-server:5150"}'
+  -d '{
+    "host_ids": [1, 2, 3],
+    "config": {
+      "scan_interval": 300,
+      "heartbeat_interval": 60
+    }
+  }'
 ```
 
 ---
 
-## 🛠 Tools & Dependencies
+## 🔒 Security Best Practices
 
-### Server Dependencies
-```
-Flask==2.3.3           # Web framework
-paramiko==3.3.1        # SSH client library
-Werkzeug==2.3.7        # WSGI utilities
-Jinja2==3.1.2          # Template engine
-```
+### 🛡 Production Security
 
-### Network Tools (Auto-installed on agents)
-```
-nmap                    # Network discovery and port scanning
-fping                   # Fast ping utility
-arp-scan               # ARP-based network discovery
-traceroute             # Network path tracing
-mtr                    # Network diagnostics
-tcpdump                # Packet capture
-iftop                  # Network bandwidth monitoring
-nethogs                # Process network usage
-vnstat                 # Network statistics
-iperf3                 # Network performance testing
-```
-
-### Frontend Technologies
-- **Bootstrap 5**: Responsive UI framework
-- **D3.js**: Data visualization library
-- **Font Awesome**: Icon library
-- **jQuery**: JavaScript library
-
----
-
-## 🔒 Security Considerations
-
-### Server Security
-- **SSH Key Authentication**: Configure SSH key-based authentication for agent deployment
-- **Firewall Configuration**: Restrict access to port 5150
-- **HTTPS**: Use reverse proxy with SSL/TLS in production
-- **User Permissions**: Run service with dedicated user account
-
-### Agent Security
-- **Minimal Privileges**: Agents run with minimal required permissions
-- **Secure Communication**: All communication over HTTP(S)
-- **Configuration Validation**: Server-side validation of agent configurations
-- **Log Rotation**: Automatic log rotation to prevent disk space issues
-
-### Network Security
+#### Server Hardening
 ```bash
-# Example firewall configuration
-sudo ufw allow 22/tcp      # SSH
-sudo ufw allow 5150/tcp    # NetworkMap (from monitoring network only)
-sudo ufw enable
+# Create dedicated user
+sudo useradd -r -s /bin/false networkmap
+sudo chown -R networkmap:networkmap /opt/networkmap
+
+# Set proper permissions
+chmod 750 /opt/networkmap
+chmod 640 /opt/networkmap/config/*
+chmod 600 /opt/networkmap/.env
+
+# Configure log rotation
+sudo logrotate -f /etc/logrotate.d/networkmap
 ```
 
----
+#### API Key Management
+```bash
+# Store API keys securely
+echo 'GEMINI_API_KEY=your-key' >> /opt/networkmap/.env
+echo 'OPENAI_API_KEY=your-key' >> /opt/networkmap/.env
+chmod 600 /opt/networkmap/.env
 
-## 📚 Documentation
+# Use environment variables
+export $(cat /opt/networkmap/.env | xargs)
+```
 
-### Web Interface Guide
-1. **Dashboard**: Overview of network status and recent activity
-2. **Hosts**: Manage monitored hosts and their configurations
-3. **Agents**: Deploy, configure, and monitor network agents
-4. **Network Map**: Interactive network topology visualization
-5. **Enhanced Topology**: Advanced network relationship mapping
+#### Database Security
+```bash
+# Encrypt database
+sqlite3 /opt/networkmap/data/networkmap.db "PRAGMA key='your-encryption-key'"
 
-### Common Tasks
+# Regular backups
+0 2 * * * /opt/networkmap/scripts/backup-database.sh
+```
 
-#### Adding a New Network Segment
-1. Add hosts via **Hosts** → **Add Host**
-2. Deploy agents via **Agents** → **Deploy Selected**
-3. Configure scan parameters via **Agent Configuration**
-4. Monitor results in **Network Map**
+### 🔐 Agent Security
 
-#### Troubleshooting Connectivity
-1. Check agent status in **Agents** dashboard
-2. View recent logs via **View Logs**
-3. Test connectivity via **Run Agent Now**
-4. Check system status via **Health Dashboard**
+#### SSH Key Authentication
+```bash
+# Generate SSH keys for agent deployment
+ssh-keygen -t rsa -b 4096 -f /opt/networkmap/.ssh/networkmap_key
 
-#### Performance Optimization
-1. Adjust scan intervals based on network size
-2. Configure selective test suites for different host types
-3. Monitor system resources on server and agents
-4. Use bulk operations for configuration changes
+# Deploy public key to agents
+ssh-copy-id -i /opt/networkmap/.ssh/networkmap_key.pub user@agent-host
+```
+
+#### Agent Configuration Security
+- **Minimal Privileges**: Agents run with least required permissions
+- **Encrypted Communication**: All data transmission uses HTTPS
+- **Configuration Validation**: Server-side validation of all agent configs
+- **Resource Limits**: CPU and memory constraints prevent resource exhaustion
 
 ---
 
 ## 🚨 Troubleshooting
 
-### Common Issues
+### 🔧 Common Issues
 
-#### Agent Won't Deploy
+#### AI Reports Not Working
 ```bash
-# Check SSH connectivity
-ssh user@target-host "echo 'SSH works'"
+# Check API key configuration
+curl -X GET http://localhost:5150/api/ai_settings
 
-# Verify sudo access
-ssh user@target-host "sudo whoami"
+# Test AI connectivity
+curl -X POST http://localhost:5150/api/ai_settings/gemini/test \
+  -H "Content-Type: application/json" \
+  -d '{"api_key": "your-key"}'
 
-# Check system compatibility
-ssh user@target-host "python3 --version"
+# Check server logs
+tail -f /opt/networkmap/logs/app.log | grep -i "ai\|error"
 ```
 
-#### Agent Not Reporting
+#### Dashboard Statistics Not Loading
 ```bash
-# Check agent service status
-ssh user@target-host "sudo systemctl status networkmap-agent"
+# Test statistics API
+curl -X GET http://localhost:5150/api/stats/overview
 
-# View agent logs
-ssh user@target-host "sudo journalctl -u networkmap-agent -f"
+# Check JavaScript console
+# Open browser DevTools → Console tab
+# Look for JavaScript errors or failed API calls
 
-# Test connectivity to server
-ssh user@target-host "curl -s http://server:5150/api/test"
+# Verify database integrity
+sqlite3 /opt/networkmap/data/networkmap.db ".schema"
+```
+
+#### Agent Deployment Issues  
+```bash
+# Test SSH connectivity
+ssh -i /opt/networkmap/.ssh/networkmap_key user@target-host
+
+# Check agent logs
+tail -f /var/log/networkmap-agent.log
+
+# Verify Python environment
+ssh user@target-host "python3 --version && which python3"
 ```
 
 #### Performance Issues
 ```bash
-# Check system resources
+# Monitor system resources
 htop
+iostat 1
+netstat -tuln | grep 5150
 
-# Monitor database size
-du -h networkmap.db
+# Check database performance
+sqlite3 /opt/networkmap/data/networkmap.db "ANALYZE; VACUUM;"
 
-# Check network latency
-ping target-host
-mtr target-host
+# Review slow queries
+sqlite3 /opt/networkmap/data/networkmap.db ".timer on" "SELECT * FROM hosts;"
 ```
 
-### Log Locations
-- **Server Logs**: `journalctl -u networkmap -f`
-- **Agent Logs**: `journalctl -u networkmap-agent -f`
-- **Application Logs**: Check console output or configured log files
+### 📊 Monitoring & Maintenance
+
+#### Health Checks
+```bash
+# Application health endpoint
+curl -X GET http://localhost:5150/api/health
+
+# Database health check
+python3 -c "from database import Database; db = Database(); print(db.health_check())"
+
+# Agent connectivity check
+python3 -c "from agents import AgentManager; am = AgentManager(); am.check_all_agents()"
+```
+
+#### Regular Maintenance
+```bash
+# Daily maintenance script
+#!/bin/bash
+# Backup database
+sqlite3 /opt/networkmap/data/networkmap.db ".backup /opt/networkmap/backups/$(date +%Y%m%d).db"
+
+# Clean old logs
+find /opt/networkmap/logs -name "*.log" -mtime +30 -delete
+
+# Update agent versions
+python3 /opt/networkmap/scripts/update_agents.py --check-all
+
+# Generate system report
+python3 /opt/networkmap/scripts/health_report.py
+```
+
+---
+
+## 🎯 Advanced Features
+
+### 📊 Analytics Dashboard
+
+#### Network Intelligence
+- **Trend Analysis**: Historical pattern recognition and forecasting
+- **Anomaly Detection**: Automated identification of unusual network behavior  
+- **Performance Baselines**: Establish normal operating parameters
+- **Capacity Planning**: Predictive analysis for network growth
+- **Security Monitoring**: Continuous threat detection and analysis
+
+#### Reporting Engine
+- **Scheduled Reports**: Automated report generation and distribution
+- **Custom Templates**: Configurable report formats and content
+- **Export Options**: PDF, HTML, JSON, CSV export capabilities
+- **Email Integration**: Automated report delivery to stakeholders
+- **Dashboard Widgets**: Customizable visual components for key metrics
+
+### 🔮 Machine Learning Integration
+
+#### Predictive Analytics
+```python
+# Example: Network anomaly detection
+from ml_models import NetworkAnomalyDetector
+
+detector = NetworkAnomalyDetector()
+anomalies = detector.detect_anomalies(network_data)
+recommendations = detector.get_recommendations(anomalies)
+```
+
+#### Intelligent Automation
+- **Auto-scaling Recommendations**: Dynamic resource allocation suggestions
+- **Predictive Maintenance**: Proactive identification of potential issues
+- **Optimization Suggestions**: AI-driven network performance improvements
+- **Security Intelligence**: Advanced threat detection using ML models
 
 ---
 
 ## 🤝 Contributing
 
-We welcome contributions! Please see our [Contributing Guidelines](CONTRIBUTING.md) for details.
+### 🛠 Development Environment
 
-### Development Setup
+#### Setup for Contributors
 ```bash
-# Clone repository
-git clone https://github.com/mightywomble/networktool.git
-cd networktool
+# Fork the repository on GitHub
+# Clone your fork
+git clone https://github.com/your-username/networkdiscovery.git
+cd networkdiscovery
 
-# Create development environment
+# Create development branch
+git checkout -b feature/your-feature-name
+
+# Setup environment
 python3 -m venv dev-env
 source dev-env/bin/activate
 pip install -r requirements.txt
-pip install -r requirements-dev.txt  # If available
+pip install -r requirements-dev.txt
 
-# Run in development mode
-python3 app.py
+# Install pre-commit hooks
+pre-commit install
+
+# Run tests
+pytest tests/
 ```
 
-### Testing
+#### Code Style
 ```bash
-# Run test suite
-python3 -m pytest tests/
+# Format code
+black networkmap/
+isort networkmap/
 
-# Run specific tests
-python3 test_basic.py
-python3 test_agent_registration.py
+# Lint code  
+pylint networkmap/
+flake8 networkmap/
+
+# Type checking
+mypy networkmap/
 ```
 
+### 📝 Contribution Guidelines
+
+#### Pull Request Process
+1. **Fork & Branch**: Create feature branch from main
+2. **Develop**: Implement changes with tests
+3. **Test**: Ensure all tests pass
+4. **Document**: Update documentation and README
+5. **Submit**: Create pull request with detailed description
+
+#### Code Review Standards
+- **Functionality**: Features work as intended
+- **Testing**: Adequate test coverage (>80%)
+- **Documentation**: Clear documentation and comments
+- **Performance**: No significant performance degradation
+- **Security**: No security vulnerabilities introduced
+
 ---
 
-## 📝 License
+## 📈 Roadmap
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+### 🚀 Upcoming Features (v2.2.0)
+
+#### Enhanced AI Capabilities
+- [ ] **Multi-Provider Comparison**: Compare reports from different AI models
+- [ ] **Custom AI Prompts**: User-defined analysis templates
+- [ ] **AI-Powered Alerting**: Intelligent anomaly detection and notifications
+- [ ] **Natural Language Queries**: Ask questions about your network in plain English
+
+#### Advanced Analytics
+- [ ] **Machine Learning Integration**: Predictive network analysis
+- [ ] **Time Series Analysis**: Historical trend analysis with forecasting
+- [ ] **Behavioral Analysis**: User and device behavior pattern recognition
+- [ ] **Security Intelligence**: Advanced threat detection using AI
+
+#### Enterprise Features
+- [ ] **Multi-Tenancy**: Support for multiple organizations/networks
+- [ ] **Role-Based Access Control**: Granular permission management
+- [ ] **Single Sign-On**: SAML/OIDC integration
+- [ ] **Audit Logging**: Comprehensive activity tracking and compliance
+
+### 🎯 Long-term Vision (v3.0+)
+
+#### Cloud-Native Architecture
+- [ ] **Kubernetes Deployment**: Scalable containerized deployment
+- [ ] **Microservices**: Distributed architecture for high availability
+- [ ] **Edge Computing**: Distributed processing at network edge
+- [ ] **Global Load Balancing**: Multi-region deployment support
+
+#### Advanced Integrations
+- [ ] **API Ecosystem**: Extensive third-party integrations
+- [ ] **Webhook Support**: Real-time event notifications
+- [ ] **Custom Plugins**: Extensible architecture for custom features
+- [ ] **Mobile Applications**: Native iOS and Android apps
 
 ---
 
-## 📧 Support
+## 📋 Version History
 
-- **Issues**: [GitHub Issues](https://github.com/mightywomble/networktool/issues)
-- **Documentation**: [Wiki](https://github.com/mightywomble/networktool/wiki)
-- **Discussions**: [GitHub Discussions](https://github.com/mightywomble/networktool/discussions)
+### 🆕 v2.1.0 (Current) - AI-Powered Analytics & Modern UI
+- ✨ **AI Report Generation**: Google Gemini and OpenAI integration
+- 🎨 **PatternFly UI**: Complete interface redesign with modern components
+- 📊 **Dynamic Dashboard**: Real-time statistics with live API data
+- 💡 **Smart Suggestions**: Contextual recommendations for network scans
+- 🎯 **Enhanced UX**: Streamlined navigation and improved workflows
+- 🔧 **Better Agent Management**: Improved deployment and monitoring
+- 🚀 **Performance Optimizations**: Faster loading and response times
+
+### 📦 Previous Versions
+- **v2.0.0**: Major UI overhaul with PatternFly integration
+- **v1.6.4**: Agent versioning system and enhanced data structures  
+- **v1.5.0**: Advanced network analysis and improved agent management
+- **v1.4.0**: Enhanced visualization and reporting capabilities
+- **v1.3.0**: Real-time monitoring and agent lifecycle management
+- **v1.2.0**: Network topology visualization and mapping
+- **v1.1.0**: Multi-host scanning and bulk operations
+- **v1.0.0**: Initial release with basic network monitoring
 
 ---
 
-## 🎯 Roadmap
+## 📧 Support & Community
 
-### Upcoming Features
-- [ ] **Multi-tenancy**: Support for multiple organizations/networks
-- [ ] **Advanced Analytics**: Machine learning-based anomaly detection
-- [ ] **Mobile App**: Native mobile application for monitoring
-- [ ] **Alert System**: Configurable alerting and notifications
-- [ ] **Integration APIs**: Integration with popular monitoring tools
-- [ ] **Cloud Deployment**: Docker containers and Kubernetes deployment
-- [ ] **Advanced Security**: Role-based access control and audit logging
+### 🔗 Links
+- **🐛 Issues**: [GitHub Issues](https://github.com/mightywomble/networkdiscovery/issues)
+- **📖 Documentation**: [Project Wiki](https://github.com/mightywomble/networkdiscovery/wiki)
+- **💬 Discussions**: [GitHub Discussions](https://github.com/mightywomble/networkdiscovery/discussions)
+- **🔄 Updates**: [Release Notes](https://github.com/mightywomble/networkdiscovery/releases)
 
-### Version History
-- **v1.6.4**: Automatic agent versioning system, enhanced data structures, UI improvements
-  - Git hook-based auto-versioning with build date tracking
-  - Enhanced agent data modal with Summary, Network Scans, and Test Results tabs
-  - Improved test results formatting with multiline support and proper styling
-  - Agent version fallback compatibility for legacy and new data structures
-  - Real-time progress monitoring for agent operations
-  - Version Summary dashboard with bulk update capabilities
-  - Database cleanup tools for agent management
-- **v1.5.0**: Agent data structure improvements, enhanced network analysis
-- **v1.4.0**: Enhanced agent data display, improved log formatting
-- **v1.3.0**: Agent management system, real-time monitoring
-- **v1.2.0**: Network topology visualization
-- **v1.1.0**: Multi-host scanning capabilities
-- **v1.0.0**: Initial release with basic monitoring
+### 🆘 Getting Help
+
+#### Before Opening an Issue
+1. **Check Documentation**: Review README and wiki
+2. **Search Existing Issues**: Look for similar problems
+3. **Check Logs**: Include relevant log files
+4. **Test Environment**: Verify on clean installation
+
+#### Providing Information
+```markdown
+**Environment:**
+- OS: Ubuntu 20.04
+- Python: 3.8.10
+- NetworkMap Version: 2.1.0
+- Browser: Chrome 96
+
+**Issue Description:**
+Brief description of the problem
+
+**Steps to Reproduce:**
+1. Step one
+2. Step two
+3. Step three
+
+**Expected Behavior:**
+What should happen
+
+**Actual Behavior:**
+What actually happens
+
+**Logs:**
+```
+[Include relevant logs here]
+```
+```
+
+### 🏆 Contributors
+
+We thank all the contributors who have helped make NetworkMap better:
+
+- **🧑‍💻 Core Maintainers**: [@mightywomble](https://github.com/mightywomble)
+- **🎨 UI/UX Contributors**: Community designers and developers
+- **🐛 Bug Reporters**: Users who help identify and resolve issues
+- **📝 Documentation**: Contributors who improve docs and examples
+- **🔧 Feature Contributors**: Developers adding new functionality
+
+---
+
+## 📄 License
+
+This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) file for details.
+
+```
+MIT License
+
+Copyright (c) 2025 NetworkMap Project
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+```
 
 ---
 
 <div align="center">
 
-**Made with ❤️ for network administrators and DevOps engineers worldwide**
+## 🎉 Ready to Transform Your Network Monitoring?
 
-[![GitHub stars](https://img.shields.io/github/stars/mightywomble/networktool?style=social)](https://github.com/mightywomble/networktool/stargazers)
-[![GitHub forks](https://img.shields.io/github/forks/mightywomble/networktool?style=social)](https://github.com/mightywomble/networktool/network/members)
+**NetworkMap v2.1.0** brings AI-powered intelligence to network management with a beautiful, modern interface that makes complex network analysis accessible to everyone.
+
+[![Get Started](https://img.shields.io/badge/🚀_Get_Started-Quick_Start_Guide-blue?style=for-the-badge)](##-quick-start)
+[![View Demo](https://img.shields.io/badge/👀_View_Demo-Live_Examples-green?style=for-the-badge)](#)
+[![Join Community](https://img.shields.io/badge/💬_Join_Community-GitHub_Discussions-purple?style=for-the-badge)](https://github.com/mightywomble/networkdiscovery/discussions)
+
+**Made with ❤️ for network administrators, DevOps engineers, and IT professionals worldwide**
+
+[![GitHub stars](https://img.shields.io/github/stars/mightywomble/networkdiscovery?style=social)](https://github.com/mightywomble/networkdiscovery/stargazers)
+[![GitHub forks](https://img.shields.io/github/forks/mightywomble/networkdiscovery?style=social)](https://github.com/mightywomble/networkdiscovery/network/members)
+[![GitHub watchers](https://img.shields.io/github/watchers/mightywomble/networkdiscovery?style=social)](https://github.com/mightywomble/networkdiscovery/watchers)
 
 </div>
