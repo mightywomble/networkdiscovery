@@ -1235,7 +1235,13 @@ function displayScanError(error) {
 }
 
 function showFinalScanResults(data) {
+    console.log('=== showFinalScanResults called ===');
+    console.log('Raw data received:', data);
+    
     const { hosts, current_phase, overall_progress, scan_summary } = data;
+    
+    console.log('Extracted hosts:', hosts);
+    console.log('Current phase:', current_phase);
     
     // Store scan data globally for host details functionality
     currentScanData = {
@@ -1298,7 +1304,34 @@ function showFinalScanResults(data) {
         </div>
     `;
     
-    document.getElementById('scanResult').innerHTML = resultHtml;
+    console.log('About to set innerHTML for scanResult');
+    console.log('resultHtml length:', resultHtml.length);
+    console.log('First 500 chars of resultHtml:', resultHtml.substring(0, 500));
+    
+    const scanResultElement = document.getElementById('scanResult');
+    console.log('scanResult element found:', scanResultElement);
+    
+    if (scanResultElement) {
+        scanResultElement.innerHTML = resultHtml;
+        console.log('innerHTML set successfully');
+        
+        // Check for the host results container after setting HTML
+        setTimeout(() => {
+            const hostResultsContainer = scanResultElement.querySelector('.pf-c-card__body');
+            console.log('Host results container found:', hostResultsContainer);
+            
+            const hostCards = scanResultElement.querySelectorAll('.nm-host-scan-card');
+            console.log('Number of host cards found in DOM:', hostCards.length);
+            
+            if (hostCards.length > 0) {
+                console.log('First host card:', hostCards[0]);
+                console.log('First host card parent:', hostCards[0].parentElement);
+                console.log('Parent element classes:', hostCards[0].parentElement.className);
+            }
+        }, 100);
+    } else {
+        console.error('scanResult element not found!');
+    }
     
     // Show export button
     const exportButton = document.querySelector('.scan-export-button');
@@ -1424,9 +1457,14 @@ function generateInteractiveHostResults(hosts) {
 }
 
 function generateInteractiveHostResultsAsCards(hosts) {
+    console.log('generateInteractiveHostResultsAsCards called with hosts:', hosts);
+    
     if (!hosts || Object.keys(hosts).length === 0) {
+        console.log('No hosts provided or empty hosts object');
         return '<p class="pf-u-color-200">No host results available.</p>';
     }
+    
+    console.log('Number of hosts to generate cards for:', Object.keys(hosts).length);
     
     // Don't create a pf-l-gallery wrapper here - it already exists in the parent container
     let html = '';
