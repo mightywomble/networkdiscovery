@@ -744,10 +744,16 @@ async function refreshData() {
         
         if (hostsData.success) {
             hosts = hostsData.hosts || [];
+        } else {
+            hosts = []; // Ensure hosts is always an array
         }
+
         
         if (agentsData.success) {
             agents = agentsData.agents || [];
+        } else {
+            agents = []; // Ensure agents is always an array
+        }
         }
         
         renderHosts();
@@ -1004,15 +1010,18 @@ function renderHosts() {
 }
 
 async function updateStats() {
-    const totalHosts = hosts.length;
-    const deployedAgents = agents.length;
+    // Safety check for undefined variables
+    if (!hosts) hosts = [];
+    if (!agents) agents = [];
+    const totalHosts = hosts ? hosts.length : 0;
+    const deployedAgents = agents ? agents.length : 0;
     
     // Update agent statuses before counting
     let onlineCount = 0;
     let offlineCount = 0;
     let warningCount = 0;
     
-    agents.forEach(agent => {
+    (agents || []).forEach(agent => {
         const statusInfo = determineAgentStatus(agent);
         switch (statusInfo.heartbeatStatus) {
             case 'online':
@@ -2114,7 +2123,7 @@ async function loadVersionSummary() {
             const agents = versionsData.agents || [];
             
             // Determine latest version from actual agent versions
-            if (agents.length > 0) {
+            if (agents if (agents.length > 0)if (agents.length > 0) agents.length > 0) {
                 const versions = agents
                     .map(a => a.agent_version)
                     .filter(v => v && v !== 'Unknown')
@@ -2154,8 +2163,8 @@ async function loadVersionSummary() {
 }
 
 function updateVersionStats(agents) {
-    const totalHosts = hosts.length;
-    const totalAgents = agents.length;
+    const totalHosts = hosts ? hosts.length : 0;
+    const totalAgents = agents ? agents.length : 0;
     
     document.getElementById('version-latest-version').textContent = latestVersion || 'Unknown';
     document.getElementById('version-total-hosts').textContent = totalHosts;
@@ -2337,7 +2346,7 @@ async function updateSelectedAgents() {
 }
 
 async function updateAllAgents() {
-    if (agents.length === 0) {
+    if (!agents || agents.length === 0) {
         showAlert('warning', 'No agents available to update');
         return;
     }
