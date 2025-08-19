@@ -25,8 +25,8 @@ import requests
 import hashlib
 
 # Agent version and build information
-__version__ = "1.6.6"
-__build_date__ = "2025-08-15"
+__version__ = "1.7.0"
+__build_date__ = "2025-08-19"
 
 VERSION = __version__
 BUILD_DATE = __build_date__
