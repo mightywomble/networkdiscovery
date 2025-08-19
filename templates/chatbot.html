@@ -3,8 +3,8 @@
 {% block title %}AI Network Assistant{% endblock %}
 
 {% block extra_head %}
-    <!-- Code syntax highlighting -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css">
+    <!-- Code syntax highlighting - Dark theme -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css">
     
     <style>
         :root {
@@ -469,21 +469,23 @@
         
         /* Enhanced message content styles */
         .code-block {
-            background: #f8f9fa;
-            border: 1px solid #dee2e6;
-            border-radius: 6px;
+            background: #2d3748;
+            border: 1px solid #4a5568;
+            border-radius: 8px;
             margin: 0.75rem 0;
             overflow: hidden;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
         }
         
         .code-block pre {
             margin: 0;
             padding: 1rem;
             overflow-x: auto;
-            background: transparent;
-            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+            background: #1a202c;
+            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', 'Fira Code', 'Consolas', monospace;
             font-size: 0.875rem;
-            line-height: 1.4;
+            line-height: 1.6;
+            color: #e2e8f0;
         }
         
         .code-block code {
@@ -491,6 +493,7 @@
             padding: 0;
             border: none;
             font-family: inherit;
+            color: #e2e8f0;
         }
         
         .pf-c-code.pf-m-inline {
@@ -564,20 +567,21 @@
         }
         
         .code-header {
-            background: #f1f3f4;
+            background: #2d3748;
             padding: 0.5rem 1rem;
-            border-bottom: 1px solid #dee2e6;
+            border-bottom: 1px solid #4a5568;
             display: flex;
             justify-content: space-between;
             align-items: center;
             font-size: 0.875rem;
             font-weight: 500;
+            color: #a0aec0;
         }
         
         .copy-code-btn {
             background: none;
             border: none;
-            color: #6c757d;
+            color: #a0aec0;
             cursor: pointer;
             padding: 0.25rem 0.5rem;
             border-radius: 4px;
@@ -585,8 +589,41 @@
         }
         
         .copy-code-btn:hover {
-            background: #e9ecef;
-            color: var(--pf-global--primary-color--100);
+            background: rgba(255, 255, 255, 0.1);
+            color: #ffffff;
+        }
+        
+        /* Bash syntax highlighting overrides for dark theme */
+        .code-block .language-bash .token.comment {
+            color: #6a737d;
+        }
+        
+        .code-block .language-bash .token.string {
+            color: #9ecbff;
+        }
+        
+        .code-block .language-bash .token.keyword {
+            color: #f97583;
+        }
+        
+        .code-block .language-bash .token.function {
+            color: #b392f0;
+        }
+        
+        .code-block .language-bash .token.builtin {
+            color: #79b8ff;
+        }
+        
+        .code-block .language-bash .token.variable {
+            color: #ffab70;
+        }
+        
+        .code-block .language-bash .token.operator {
+            color: #f97583;
+        }
+        
+        .code-block .language-bash .token.number {
+            color: #79b8ff;
         }
     </style>
 {% endblock %}
