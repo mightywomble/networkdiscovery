@@ -1298,6 +1298,7 @@ function showFinalScanResults(data) {
         </div>
     `;
     
+    console.log("About to set innerHTML, resultHtml length:", resultHtml.length);
     document.getElementById('scanResult').innerHTML = resultHtml;
     
     // Show export button
@@ -1406,7 +1407,7 @@ function generateInteractiveHostResults(hosts) {
                         ${isSuccess ? `<i class="fas fa-eye pf-u-mr-xs" style="opacity: 0.5;"></i>` : ''}
                         ${hostname}
                     </strong>
-                    ${completed_phases ? `<br><small class="pf-u-color-200">${completed_phases.length}/6 phases ${isSuccess ? '• Click to view details' : ''}</small>` : ''}
+                    ${completed_phases ? `<br><small class="pf-u-color-200">${completed_phases.length}/6 phases ${isSuccess ? '• Click to view details below' : ''}</small>` : ''}
                 </div>
                 <span class="pf-c-label pf-m-${statusClass}">
                     <span class="pf-c-label__content">
@@ -1428,7 +1429,7 @@ function generateInteractiveHostResultsAsCards(hosts) {
         return '<p class="pf-u-color-200">No host results available.</p>';
     }
     
-    let html = '<div class="pf-l-gallery pf-m-gutter" style="--pf-l-gallery--GridTemplateColumns--min: 300px;">';
+    let html = '<div class="pf-l-gallery pf-m-gutter" style="--pf-l-gallery--GridTemplateColumns--min: 250px;">';
     
     Object.entries(hosts).forEach(([hostname, hostData]) => {
         const { status, completed_phases, error } = hostData;
@@ -1437,7 +1438,8 @@ function generateInteractiveHostResultsAsCards(hosts) {
         const statusIcon = isSuccess ? 'check' : 'times';
         
         html += `
-            <div class="pf-c-card nm-host-result-card ${isSuccess ? 'clickable' : ''}" 
+            <div class="pf-l-gallery__item">
+                <div class="pf-c-card ${isSuccess ? 'clickable' : ''}" 
                  ${isSuccess ? `onclick="showHostScanDetails('${hostname}')" style="cursor: pointer;"` : ''}
                  ${isSuccess ? `onmouseover="this.style.borderColor='var(--pf-global--primary-color--100)'; this.style.boxShadow='0 2px 4px rgba(0,0,0,0.1)';" onmouseout="this.style.borderColor=''; this.style.boxShadow='none';"` : ''}
                 <div class="pf-c-card__body pf-u-p-md">
@@ -1453,7 +1455,7 @@ function generateInteractiveHostResultsAsCards(hosts) {
                         </span>
                     </div>
                     ${completed_phases ? `<div class="pf-u-font-size-sm pf-u-color-200 pf-u-mb-xs">${completed_phases.length}/6 phases complete</div>` : ''}
-                    ${isSuccess ? `<div class="pf-u-font-size-sm pf-u-primary-color-100">Click to view details</div>` : ''}
+                    ${isSuccess ? `<div class="pf-u-font-size-sm pf-u-primary-color-100">Click to view details below</div>` : ''}
                     ${error ? `<div class="pf-u-font-size-sm pf-u-danger-color-100">Error: ${error}</div>` : ''}
                 </div>
             </div>
@@ -2667,7 +2669,7 @@ function showFinalInstallationResults(data) {
                 </div>
             </div>
             <div class="pf-c-card__body">
-                <div class="pf-l-gallery pf-m-gutter" style="--pf-l-gallery--GridTemplateColumns--min: 300px;">
+                <div class="pf-l-gallery pf-m-gutter">
     `;
     
     Object.entries(hosts).forEach(([hostname, hostData]) => {
@@ -2729,7 +2731,8 @@ function showFinalInstallationResults(data) {
         const completionPercentage = totalTools > 0 ? Math.round((installedToolsCount / totalTools) * 100) : 0;
         
         resultHtml += `
-            <div class="pf-c-card nm-host-result-card ${isSuccess ? 'nm-success-card' : 'nm-error-card'}" style="border-left: 4px solid ${isSuccess ? 'var(--pf-global--success-color--100)' : 'var(--pf-global--danger-color--100)'}; min-height: 280px;">
+            <div class="pf-l-gallery__item">
+                <div class="pf-c-card ${isSuccess ? 'nm-success-card' : 'nm-error-card'}" style="border-left: 4px solid ${isSuccess ? 'var(--pf-global--success-color--100)' : 'var(--pf-global--danger-color--100)'}; min-height: 280px;">
                 <div class="pf-c-card__header">
                     <div class="pf-c-card__header-main">
                         <div class="pf-u-display-flex pf-u-justify-content-space-between pf-u-align-items-center">
