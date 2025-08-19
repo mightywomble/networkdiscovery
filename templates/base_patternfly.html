@@ -421,6 +421,12 @@
                                 </li>
                             </ul>
                         </li>
+                        <li class="nm-nav-item">
+                            <a href="{{ url_for('ai_chatbot') }}" class="nm-nav-link {% if request.endpoint == 'ai_chatbot' %}active{% endif %}">
+                                <i class="fas fa-robot"></i>
+                                <span>AI Chatbot</span>
+                            </a>
+                        </li>
                     </ul>
                 </div>
                 
