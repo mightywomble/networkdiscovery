@@ -751,7 +751,7 @@ async function refreshData() {
         }
         
         renderHosts();
-        updateStats();
+        await updateStats();
         updateLogAgentSelect();
         
     } catch (error) {
@@ -1100,7 +1100,7 @@ async function updateVersionStats() {
     }
 }
 
-function toggleHostSelection(hostId, event) {
+async function toggleHostSelection(hostId, event) {
     if (event) event.stopPropagation();
     
     if (selectedHosts.has(hostId)) {
@@ -1110,11 +1110,11 @@ function toggleHostSelection(hostId, event) {
     }
     
     renderHosts();
-    updateStats();
+    await updateStats();
     updateActionButtons();
 }
 
-function selectAllHosts() {
+async function selectAllHosts() {
     if (selectedHosts.size === hosts.length) {
         // Unselect all
         selectedHosts.clear();
@@ -1125,7 +1125,7 @@ function selectAllHosts() {
     }
     
     renderHosts();
-    updateStats();
+    await updateStats();
     updateActionButtons();
     updateSelectAllButton();
 }
