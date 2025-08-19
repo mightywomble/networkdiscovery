@@ -218,7 +218,7 @@
 
 <!-- Agent Statistics -->
 <section class="pf-c-page__main-section" style="padding-top: 0;">
-    <div class="pf-l-gallery pf-m-gutter" style="grid-template-columns: repeat(6, 1fr);">
+    <div class="pf-l-gallery pf-m-gutter" style="grid-template-columns: repeat(7, 1fr);">
         <div class="pf-c-card nm-stat-card">
             <div class="pf-c-card__body pf-u-text-align-center">
                 <div class="nm-stat-value" style="color: var(--pf-global--primary-color--100)" id="total-hosts">-</div>
@@ -1046,7 +1046,7 @@ async function updateVersionStats() {
         const versionsData = await versionsResponse.json();
         
         let currentDeployedVersion = '-';
-        let latestAvailableVersion = '-';
+        let latestAvailableVersion = versionsData.server_version || '-';
         
         if (versionsData.success && versionsData.agents && versionsData.agents.length > 0) {
             const agentVersions = versionsData.agents
@@ -1061,30 +1061,7 @@ async function updateVersionStats() {
                 });
                 
                 // Get the version with the highest count
-                currentDeployedVersion = Object.keys(versionCounts)
-                    .reduce((a, b) => versionCounts[a] > versionCounts[b] ? a : b);
-                
-                // Find the latest version (highest semantic version)
-                const versions = agentVersions
-                    .map(v => {
-                        const parts = v.split('.').map(n => parseInt(n) || 0);
-                        return { version: v, parts: parts };
-                    })
-                    .sort((a, b) => {
-                        // Sort by semantic version (descending)
-                        for (let i = 0; i < Math.max(a.parts.length, b.parts.length); i++) {
-                            const aPart = a.parts[i] || 0;
-                            const bPart = b.parts[i] || 0;
-                            if (aPart !== bPart) {
-                                return bPart - aPart;
-                            }
-                        }
-                        return 0;
-                    });
-                
-                if (versions.length > 0) {
-                    latestAvailableVersion = versions[0].version;
-                }
+                currentDeployedVersion = Object.keys(versionCounts).reduce((a, b) => versionCounts[a] > versionCounts[b] ? a : b);
             }
         }
         
@@ -2110,6 +2087,9 @@ async function loadVersionSummary() {
         const versionsResponse = await fetch('/api/agent/versions');
         const versionsData = await versionsResponse.json();
         
+        // Set latest available version from server version
+        const latestAvailableVersion = versionsData.server_version || "-";
+        
         if (versionsData.success) {
             const agents = versionsData.agents || [];
             
@@ -2142,7 +2122,7 @@ async function loadVersionSummary() {
             }
             
             await displayVersionSummary(agents);
-            updateVersionStats(agents);
+            await updateVersionStats();
         } else {
             document.getElementById('version-summary-content').innerHTML = 
                 `<div class="pf-c-alert pf-m-danger pf-m-inline"><div class="pf-c-alert__icon"><i class="fas fa-exclamation-circle"></i></div><p class="pf-c-alert__title">Failed to load version data: ${versionsData.error}</p></div>`;
@@ -2153,14 +2133,6 @@ async function loadVersionSummary() {
     }
 }
 
-function updateVersionStats(agents) {
-    const totalHosts = (hosts || []).length;
-    const totalAgents = (agents || []).length;
-    
-    document.getElementById('version-latest-version').textContent = latestVersion || 'Unknown';
-    document.getElementById('version-total-hosts').textContent = totalHosts;
-    document.getElementById('version-total-agents').textContent = totalAgents;
-}
 
 function displayVersionSummary(versions) {
     if (!versions || versions.length === 0) {
