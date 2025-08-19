@@ -100,6 +100,9 @@ class ChatbotController:
             conversation['state'] = self.CONVERSATION_STATES['awaiting_request']
             conversation['updated_at'] = datetime.now().isoformat()
             
+            # Save conversation with welcome message
+            self._save_conversation(conversation)
+            
             logger.info(f"Started new conversation: {conversation_id}")
             
             return {
@@ -131,10 +134,15 @@ class ChatbotController:
         try:
             conversation = self.active_conversations.get(conversation_id)
             if not conversation:
-                return {
-                    'success': False,
-                    'error': 'Conversation not found'
-                }
+                # Try to load from database
+                conversation = self.db.get_chatbot_conversation(conversation_id)
+                if conversation:
+                    self.active_conversations[conversation_id] = conversation
+                else:
+                    return {
+                        'success': False,
+                        'error': 'Conversation not found'
+                    }
             
             # Add user message to conversation
             user_msg = {
@@ -738,9 +746,8 @@ What would you like me to help you with today?"""
     def _save_conversation(self, conversation: Dict):
         """Save conversation to database"""
         try:
-            # Implementation would save to the chatbot_conversations table
-            # For now, we'll just log it
-            logger.info(f"Saving conversation {conversation['id']} to database")
+            self.db.save_chatbot_conversation(conversation)
+            logger.info(f"Saved conversation {conversation['id']} to database")
             
         except Exception as e:
             logger.error(f"Error saving conversation: {e}")
