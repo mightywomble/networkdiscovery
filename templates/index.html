@@ -1407,7 +1407,7 @@ function generateInteractiveHostResults(hosts) {
                         ${isSuccess ? `<i class="fas fa-eye pf-u-mr-xs" style="opacity: 0.5;"></i>` : ''}
                         ${hostname}
                     </strong>
-                    ${completed_phases ? `<br><small class="pf-u-color-200">${completed_phases.length}/6 phases ${isSuccess ? '• Click to view details' : ''}</small>` : ''}
+                    ${completed_phases ? `<br><small class="pf-u-color-200">${completed_phases.length}/6 phases ${isSuccess ? '• Click to view details below' : ''}</small>` : ''}
                 </div>
                 <span class="pf-c-label pf-m-${statusClass}">
                     <span class="pf-c-label__content">
@@ -1455,7 +1455,7 @@ function generateInteractiveHostResultsAsCards(hosts) {
                         </span>
                     </div>
                     ${completed_phases ? `<div class="pf-u-font-size-sm pf-u-color-200 pf-u-mb-xs">${completed_phases.length}/6 phases complete</div>` : ''}
-                    ${isSuccess ? `<div class="pf-u-font-size-sm pf-u-primary-color-100">Click to view details</div>` : ''}
+                    ${isSuccess ? `<div class="pf-u-font-size-sm pf-u-primary-color-100">Click to view details below</div>` : ''}
                     ${error ? `<div class="pf-u-font-size-sm pf-u-danger-color-100">Error: ${error}</div>` : ''}
                 </div>
             </div>
