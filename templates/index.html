@@ -1254,14 +1254,23 @@ function showFinalScanResults(data) {
     
     console.log('Final scan results stored in currentScanData:', currentScanData);
     
-    const progressContainer = document.querySelector('.scan-progress');
-    const resultContainer = document.querySelector('.scan-result');
-    const loadingSpinner = document.querySelector('.scan-loading-spinner');
+    console.log('=== About to query container elements ===');
     
-    console.log('Container elements found:');
+    const progressContainer = document.querySelector('.scan-progress');
+    console.log('progressContainer found:', progressContainer);
+    
+    const resultContainer = document.querySelector('.scan-result');
+    console.log('resultContainer found:', resultContainer);
+    
+    const loadingSpinner = document.querySelector('.scan-loading-spinner');
+    console.log('loadingSpinner found:', loadingSpinner);
+    
+    console.log('Container elements summary:');
     console.log('- progressContainer:', progressContainer);
     console.log('- resultContainer:', resultContainer);
     console.log('- loadingSpinner:', loadingSpinner);
+    
+    console.log('=== About to hide/show containers ===');
     
     // Hide progress and loading spinner, show results
     if (progressContainer) progressContainer.style.display = 'none';
