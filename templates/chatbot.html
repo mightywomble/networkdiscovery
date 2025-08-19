@@ -1,14 +1,8 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Network Assistant | NetworkMap</title>
-    
-    <!-- PatternFly CSS -->
-    <link rel="stylesheet" href="https://unpkg.com/@patternfly/patternfly/patternfly.css">
-    <!-- Font Awesome for icons -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+{% extends "base_patternfly.html" %}
+
+{% block title %}AI Network Assistant{% endblock %}
+
+{% block extra_head %}
     <!-- Code syntax highlighting -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css">
     
@@ -473,48 +467,9 @@
             }
         }
     </style>
-</head>
-<body>
-    <!-- Main page container -->
-    <div class="pf-c-page">
-        <!-- Header -->
-        <header class="pf-c-page__header">
-            <div class="pf-c-page__header-brand">
-                <a href="/" class="pf-c-page__header-brand-link">
-                    <div class="pf-c-brand">
-                        <i class="fas fa-network-wired" style="font-size: 1.5rem; color: #0066cc; margin-right: 0.5rem;"></i>
-                        <span style="font-size: 1.25rem; font-weight: 600;">NetworkMap</span>
-                    </div>
-                </a>
-            </div>
-            <div class="pf-c-page__header-tools">
-                <nav class="pf-c-nav pf-m-horizontal">
-                    <ul class="pf-c-nav__list">
-                        <li class="pf-c-nav__item">
-                            <a href="/" class="pf-c-nav__link">Dashboard</a>
-                        </li>
-                        <li class="pf-c-nav__item">
-                            <a href="/hosts" class="pf-c-nav__link">Hosts</a>
-                        </li>
-                        <li class="pf-c-nav__item">
-                            <a href="/network_map" class="pf-c-nav__link">Network Map</a>
-                        </li>
-                        <li class="pf-c-nav__item">
-                            <a href="/ai_chatbot" class="pf-c-nav__link pf-m-current">AI Assistant</a>
-                        </li>
-                        <li class="pf-c-nav__item">
-                            <a href="/ai_reports" class="pf-c-nav__link">AI Reports</a>
-                        </li>
-                        <li class="pf-c-nav__item">
-                            <a href="/settings" class="pf-c-nav__link">Settings</a>
-                        </li>
-                    </ul>
-                </nav>
-            </div>
-        </header>
+{% endblock %}
 
-        <!-- Main content -->
-        <main class="pf-c-page__main" style="padding: 1rem;">
+{% block content %}
             <div class="chat-container">
                 <!-- Chat header -->
                 <div class="chat-header">
@@ -617,11 +572,9 @@
                     </div>
                 </div>
             </div>
-        </main>
-    </div>
+{% endblock %}
 
-    <!-- PatternFly JavaScript -->
-    <script src="https://unpkg.com/@patternfly/patternfly/patternfly.js"></script>
+{% block extra_js %}
     <!-- Code syntax highlighting -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-core.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-bash.min.js"></script>
@@ -1190,5 +1143,4 @@ What would you like me to help you with today?`);
             return div.innerHTML;
         }
     </script>
-</body>
-</html>
+{% endblock %}
