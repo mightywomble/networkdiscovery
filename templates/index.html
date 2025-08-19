@@ -1428,7 +1428,7 @@ function generateInteractiveHostResultsAsCards(hosts) {
         return '<p class="pf-u-color-200">No host results available.</p>';
     }
     
-    let html = '<div class="pf-l-gallery pf-m-gutter">';
+    let html = '<div class="pf-l-gallery pf-m-gutter" style="--pf-l-gallery--GridTemplateColumns--min: 300px;">';
     
     Object.entries(hosts).forEach(([hostname, hostData]) => {
         const { status, completed_phases, error } = hostData;
@@ -1438,8 +1438,8 @@ function generateInteractiveHostResultsAsCards(hosts) {
         
         html += `
             <div class="pf-c-card nm-host-result-card ${isSuccess ? 'clickable' : ''}" 
-                 ${isSuccess ? `onclick="showHostScanDetails('${hostname}')" style="cursor: pointer; border: 2px solid var(--pf-global--BorderColor--100);"` : ''}
-                 ${isSuccess ? `onmouseover="this.style.borderColor='var(--pf-global--primary-color--100)'; this.style.boxShadow='0 2px 4px rgba(0,0,0,0.1)';" onmouseout="this.style.borderColor='var(--pf-global--BorderColor--100)'; this.style.boxShadow='none';"` : ''}
+                 ${isSuccess ? `onclick="showHostScanDetails('${hostname}')" style="cursor: pointer;"` : ''}
+                 ${isSuccess ? `onmouseover="this.style.borderColor='var(--pf-global--primary-color--100)'; this.style.boxShadow='0 2px 4px rgba(0,0,0,0.1)';" onmouseout="this.style.borderColor=''; this.style.boxShadow='none';"` : ''}
                 <div class="pf-c-card__body pf-u-p-md">
                     <div class="pf-u-display-flex pf-u-justify-content-space-between pf-u-align-items-center pf-u-mb-sm">
                         <div class="pf-u-display-flex pf-u-align-items-center">
