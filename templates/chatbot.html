@@ -817,16 +817,16 @@
 
         // Handle bot response
         function handleBotResponse(data) {
-            const { response, state, script_content, validation_result, execution_result } = data;
+            const { message, script_data, validation_data, execution_result } = data;
             
             // Add the bot's response message
-            if (response) {
-                addMessage('bot', response);
+            if (message && message.content) {
+                addMessage('bot', message.content);
             }
 
             // Show script if generated
-            if (script_content) {
-                addScriptBlock(script_content, validation_result, state);
+            if (script_data && script_data.script) {
+                addScriptBlock(script_data.script, validation_data, data.conversation_state);
             }
 
             // Show execution results if available

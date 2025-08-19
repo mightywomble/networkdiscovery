@@ -188,6 +188,11 @@ class ChatbotController:
         if current_state == self.CONVERSATION_STATES['awaiting_request']:
             return self._handle_command_request(conversation, user_message)
         
+        elif current_state == self.CONVERSATION_STATES['initial']:
+            # Handle initial state as a command request - user is ready to give commands
+            conversation['state'] = self.CONVERSATION_STATES['awaiting_request']
+            return self._handle_command_request(conversation, user_message)
+        
         elif current_state == self.CONVERSATION_STATES['script_validated']:
             return self._handle_validation_response(conversation, user_message)
         
