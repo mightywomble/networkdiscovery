@@ -998,7 +998,7 @@
             let codeBlockIndex = 0;
             
             // Extract and preserve code blocks (including bash)
-            content = content.replace(/```(\w+)?\n([\s\S]*?)\n```/g, (match, language, code) => {
+            content = content.replace(/```(\w+)?\s*([\s\S]*?)```/g, (match, language, code) => {
                 const placeholder = `__CODE_BLOCK_${codeBlockIndex}__`;
                 codeBlocks[codeBlockIndex] = {
                     language: language || '',
