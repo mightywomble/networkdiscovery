@@ -1245,6 +1245,8 @@ function showFinalScanResults(data) {
         overall_progress: overall_progress
     };
     
+    console.log('Final scan results stored in currentScanData:', currentScanData);
+    
     const progressContainer = document.querySelector('.scan-progress');
     const resultContainer = document.querySelector('.scan-result');
     const loadingSpinner = document.querySelector('.scan-loading-spinner');
@@ -1436,8 +1438,8 @@ function generateInteractiveHostResultsAsCards(hosts) {
         
         html += `
             <div class="pf-c-card nm-host-result-card ${isSuccess ? 'clickable' : ''}" 
-                 ${isSuccess ? `onclick="showHostScanDetails('${hostname}')" style="cursor: pointer;"` : ''}
-                 ${isSuccess ? `onmouseover="this.style.borderColor='var(--pf-global--primary-color--100)'" onmouseout="this.style.borderColor='var(--pf-global--BorderColor--100)'"` : ''}>
+                 ${isSuccess ? `onclick="showHostScanDetails('${hostname}')" style="cursor: pointer; border: 2px solid var(--pf-global--BorderColor--100);"` : ''}
+                 ${isSuccess ? `onmouseover="this.style.borderColor='var(--pf-global--primary-color--100)'; this.style.boxShadow='0 2px 4px rgba(0,0,0,0.1)';" onmouseout="this.style.borderColor='var(--pf-global--BorderColor--100)'; this.style.boxShadow='none';"` : ''}
                 <div class="pf-c-card__body pf-u-p-md">
                     <div class="pf-u-display-flex pf-u-justify-content-space-between pf-u-align-items-center pf-u-mb-sm">
                         <div class="pf-u-display-flex pf-u-align-items-center">
@@ -1468,8 +1470,15 @@ function generateInteractiveHostResultsAsCards(hosts) {
 let currentScanData = null;
 
 function showHostScanDetails(hostname) {
+    console.log('showHostScanDetails called for:', hostname);
+    console.log('currentScanData:', currentScanData);
+    
     if (!currentScanData || !currentScanData.hosts || !currentScanData.hosts[hostname]) {
         console.error('No scan data available for host:', hostname);
+        console.error('currentScanData:', currentScanData);
+        
+        // Show an alert to the user
+        alert(`Unable to view details for ${hostname}. Scan data may not be available yet or the scan may not have completed properly.`);
         return;
     }
     
