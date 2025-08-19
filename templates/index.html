@@ -1235,14 +1235,7 @@ function displayScanError(error) {
 }
 
 function showFinalScanResults(data) {
-    console.log('=== showFinalScanResults called [VERSION 2025-08-19-v2] ===');
-    console.log('Raw data received:', data);
-    
     const { hosts, current_phase, overall_progress, scan_summary } = data;
-    
-    console.log('Extracted hosts:', hosts);
-    console.log('Current phase:', current_phase);
-    console.log('Overall progress:', overall_progress);
     
     // Store scan data globally for host details functionality
     currentScanData = {
@@ -1254,23 +1247,9 @@ function showFinalScanResults(data) {
     
     console.log('Final scan results stored in currentScanData:', currentScanData);
     
-    console.log('=== About to query container elements ===');
-    
     const progressContainer = document.querySelector('.scan-progress');
-    console.log('progressContainer found:', progressContainer);
-    
     const resultContainer = document.querySelector('.scan-result');
-    console.log('resultContainer found:', resultContainer);
-    
     const loadingSpinner = document.querySelector('.scan-loading-spinner');
-    console.log('loadingSpinner found:', loadingSpinner);
-    
-    console.log('Container elements summary:');
-    console.log('- progressContainer:', progressContainer);
-    console.log('- resultContainer:', resultContainer);
-    console.log('- loadingSpinner:', loadingSpinner);
-    
-    console.log('=== About to hide/show containers ===');
     
     // Hide progress and loading spinner, show results
     if (progressContainer) progressContainer.style.display = 'none';
@@ -1319,34 +1298,8 @@ function showFinalScanResults(data) {
         </div>
     `;
     
-    console.log('About to set innerHTML for scanResult');
-    console.log('resultHtml length:', resultHtml.length);
-    console.log('First 500 chars of resultHtml:', resultHtml.substring(0, 500));
-    
-    const scanResultElement = document.getElementById('scanResult');
-    console.log('scanResult element found:', scanResultElement);
-    
-    if (scanResultElement) {
-        scanResultElement.innerHTML = resultHtml;
-        console.log('innerHTML set successfully');
-        
-        // Check for the host results container after setting HTML
-        setTimeout(() => {
-            const hostResultsContainer = scanResultElement.querySelector('.pf-c-card__body');
-            console.log('Host results container found:', hostResultsContainer);
-            
-            const hostCards = scanResultElement.querySelectorAll('.nm-host-scan-card');
-            console.log('Number of host cards found in DOM:', hostCards.length);
-            
-            if (hostCards.length > 0) {
-                console.log('First host card:', hostCards[0]);
-                console.log('First host card parent:', hostCards[0].parentElement);
-                console.log('Parent element classes:', hostCards[0].parentElement.className);
-            }
-        }, 100);
-    } else {
-        console.error('scanResult element not found!');
-    }
+    console.log("About to set innerHTML, resultHtml length:", resultHtml.length);
+    document.getElementById('scanResult').innerHTML = resultHtml;
     
     // Show export button
     const exportButton = document.querySelector('.scan-export-button');
@@ -1472,62 +1425,44 @@ function generateInteractiveHostResults(hosts) {
 }
 
 function generateInteractiveHostResultsAsCards(hosts) {
-    console.log('generateInteractiveHostResultsAsCards called with hosts:', hosts);
-    
     if (!hosts || Object.keys(hosts).length === 0) {
-        console.log('No hosts provided or empty hosts object');
         return '<p class="pf-u-color-200">No host results available.</p>';
     }
     
-    console.log('Number of hosts to generate cards for:', Object.keys(hosts).length);
-    
-    // Don't create a pf-l-gallery wrapper here - it already exists in the parent container
-    let html = '';
+    let html = '<div class="pf-l-gallery pf-m-gutter" style="--pf-l-gallery--GridTemplateColumns--min: 250px;">';
     
     Object.entries(hosts).forEach(([hostname, hostData]) => {
-        const { status, completed_phases, error, progress, current_action } = hostData;
+        const { status, completed_phases, error } = hostData;
         const isSuccess = status === 'complete';
         const statusClass = isSuccess ? 'success' : 'danger';
-        const statusIcon = isSuccess ? 'check' : 'exclamation-triangle';
-        const statusText = isSuccess ? 'Complete' : 'Error';
-        const completedCount = completed_phases ? completed_phases.length : 0;
-        const totalPhases = 6;
+        const statusIcon = isSuccess ? 'check' : 'times';
         
-        // Use the exact same structure as updateHostScanStatusCards
         html += `
-            <div class="pf-c-card nm-host-scan-card ${isSuccess ? 'clickable' : ''}" 
+            <div class="pf-l-gallery__item">
+                <div class="pf-c-card ${isSuccess ? 'clickable' : ''}" 
                  ${isSuccess ? `onclick="showHostScanDetails('${hostname}')" style="cursor: pointer;"` : ''}
-                 ${isSuccess ? `onmouseover="this.style.borderColor='var(--pf-global--primary-color--100)'" onmouseout="this.style.borderColor='var(--pf-global--BorderColor--100)'"` : ''}>
-                <div class="pf-c-card__body pf-u-p-sm">
+                 ${isSuccess ? `onmouseover="this.style.borderColor='var(--pf-global--primary-color--100)'; this.style.boxShadow='0 2px 4px rgba(0,0,0,0.1)';" onmouseout="this.style.borderColor=''; this.style.boxShadow='none';"` : ''}
+                <div class="pf-c-card__body pf-u-p-md">
                     <div class="pf-u-display-flex pf-u-justify-content-space-between pf-u-align-items-center pf-u-mb-sm">
                         <div class="pf-u-display-flex pf-u-align-items-center">
-                            <i class="fas fa-${statusIcon} pf-u-mr-sm"></i>
-                            <span class="pf-u-font-weight-bold pf-u-font-size-sm">${hostname}</span>
+                            ${isSuccess ? `<i class="fas fa-eye pf-u-mr-sm" style="opacity: 0.5;"></i>` : ''}
+                            <span class="pf-u-font-weight-bold">${hostname}</span>
                         </div>
                         <span class="pf-c-label pf-m-${statusClass}">
-                            <span class="pf-c-label__content">${statusText}</span>
+                            <span class="pf-c-label__content">
+                                <i class="fas fa-${statusIcon}"></i>
+                            </span>
                         </span>
                     </div>
-                    
-                    <!-- Custom progress bar implementation -->
-                    <div class="nm-custom-progress-container" style="height: 8px; width: 100%; background-color: #EDEDED; border-radius: 4px; margin-bottom: 0.5rem; overflow: hidden;">
-                        <div role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="100"
-                             class="nm-custom-progress-bar"
-                             style="height: 100%; width: 100%; 
-                                    background-color: ${statusClass === 'success' ? '#3E8635' : '#C9190B'};"
-                             title="Scan completed">
-                        </div>
-                    </div>
-                    
-                    <div class="pf-u-font-size-sm pf-u-color-200 pf-u-mb-xs">${isSuccess ? 'Scan completed successfully' : (current_action || 'Scan failed')}</div>
-                    <div class="pf-u-font-size-sm">Phases: ${completedCount}/${totalPhases}</div>
-                    ${isSuccess ? `<div class="pf-u-font-size-sm pf-u-primary-color-100 pf-u-mt-xs">Click to view details</div>` : ''}
-                    ${error ? `<div class="pf-u-font-size-sm pf-u-danger-color-100 pf-u-mt-xs">Error: ${error}</div>` : ''}
+                    ${completed_phases ? `<div class="pf-u-font-size-sm pf-u-color-200 pf-u-mb-xs">${completed_phases.length}/6 phases complete</div>` : ''}
+                    ${isSuccess ? `<div class="pf-u-font-size-sm pf-u-primary-color-100">Click to view details</div>` : ''}
+                    ${error ? `<div class="pf-u-font-size-sm pf-u-danger-color-100">Error: ${error}</div>` : ''}
                 </div>
             </div>
         `;
     });
     
+    html += '</div>';
     html += '<div class="pf-u-font-size-sm pf-u-color-200 pf-u-mt-md pf-u-text-align-center"><i class="fas fa-info-circle pf-u-mr-xs"></i>Click on a successful host card to view detailed scan results</div>';
     
     return html;
@@ -2734,7 +2669,7 @@ function showFinalInstallationResults(data) {
                 </div>
             </div>
             <div class="pf-c-card__body">
-                <div class="pf-l-gallery pf-m-gutter" style="--pf-l-gallery--GridTemplateColumns--min: 300px;">
+                <div class="pf-l-gallery pf-m-gutter">
     `;
     
     Object.entries(hosts).forEach(([hostname, hostData]) => {
@@ -2796,7 +2731,8 @@ function showFinalInstallationResults(data) {
         const completionPercentage = totalTools > 0 ? Math.round((installedToolsCount / totalTools) * 100) : 0;
         
         resultHtml += `
-            <div class="pf-c-card nm-host-result-card ${isSuccess ? 'nm-success-card' : 'nm-error-card'}" style="border-left: 4px solid ${isSuccess ? 'var(--pf-global--success-color--100)' : 'var(--pf-global--danger-color--100)'}; min-height: 280px;">
+            <div class="pf-l-gallery__item">
+                <div class="pf-c-card ${isSuccess ? 'nm-success-card' : 'nm-error-card'}" style="border-left: 4px solid ${isSuccess ? 'var(--pf-global--success-color--100)' : 'var(--pf-global--danger-color--100)'}; min-height: 280px;">
                 <div class="pf-c-card__header">
                     <div class="pf-c-card__header-main">
                         <div class="pf-u-display-flex pf-u-justify-content-space-between pf-u-align-items-center">
