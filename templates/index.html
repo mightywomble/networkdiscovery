@@ -1242,6 +1242,7 @@ function showFinalScanResults(data) {
     
     console.log('Extracted hosts:', hosts);
     console.log('Current phase:', current_phase);
+    console.log('Overall progress:', overall_progress);
     
     // Store scan data globally for host details functionality
     currentScanData = {
@@ -1256,6 +1257,11 @@ function showFinalScanResults(data) {
     const progressContainer = document.querySelector('.scan-progress');
     const resultContainer = document.querySelector('.scan-result');
     const loadingSpinner = document.querySelector('.scan-loading-spinner');
+    
+    console.log('Container elements found:');
+    console.log('- progressContainer:', progressContainer);
+    console.log('- resultContainer:', resultContainer);
+    console.log('- loadingSpinner:', loadingSpinner);
     
     // Hide progress and loading spinner, show results
     if (progressContainer) progressContainer.style.display = 'none';
