@@ -1661,6 +1661,124 @@ class Database:
                 settings_list.append(settings)
             return settings_list
     
+    # Chatbot database methods
+    def save_chatbot_conversation(self, conversation):
+        """Save or update chatbot conversation"""
+        with self.get_connection() as conn:
+            metadata = json.dumps(conversation) if isinstance(conversation, dict) else '{}'
+            
+            # Check if conversation exists
+            cursor = conn.execute('SELECT id FROM chatbot_conversations WHERE id = ?', (conversation['id'],))
+            if cursor.fetchone():
+                # Update existing conversation
+                conn.execute('''
+                    UPDATE chatbot_conversations 
+                    SET state = ?, updated_at = ?, metadata = ?
+                    WHERE id = ?
+                ''', (
+                    conversation.get('state', 'initial'),
+                    conversation.get('updated_at', datetime.now().isoformat()),
+                    metadata,
+                    conversation['id']
+                ))
+            else:
+                # Insert new conversation
+                conn.execute('''
+                    INSERT INTO chatbot_conversations (id, user_id, state, created_at, updated_at, metadata)
+                    VALUES (?, ?, ?, ?, ?, ?)
+                ''', (
+                    conversation['id'],
+                    conversation.get('user_id'),
+                    conversation.get('state', 'initial'),
+                    conversation.get('created_at', datetime.now().isoformat()),
+                    conversation.get('updated_at', datetime.now().isoformat()),
+                    metadata
+                ))
+            
+            # Save messages
+            for message in conversation.get('messages', []):
+                self.save_chatbot_message(message, conversation['id'])
+            
+            conn.commit()
+    
+    def save_chatbot_message(self, message, conversation_id):
+        """Save a chatbot message"""
+        with self.get_connection() as conn:
+            metadata = json.dumps(message.get('metadata', {}))
+            
+            # Check if message exists
+            cursor = conn.execute('SELECT id FROM chatbot_messages WHERE id = ?', (message['id'],))
+            if cursor.fetchone():
+                # Update existing message
+                conn.execute('''
+                    UPDATE chatbot_messages 
+                    SET content = ?, metadata = ?
+                    WHERE id = ?
+                ''', (
+                    message.get('content', ''),
+                    metadata,
+                    message['id']
+                ))
+            else:
+                # Insert new message
+                conn.execute('''
+                    INSERT INTO chatbot_messages (id, conversation_id, message_type, content, timestamp, metadata)
+                    VALUES (?, ?, ?, ?, ?, ?)
+                ''', (
+                    message['id'],
+                    conversation_id,
+                    message.get('type', 'bot'),
+                    message.get('content', ''),
+                    message.get('timestamp', datetime.now().isoformat()),
+                    metadata
+                ))
+            
+            conn.commit()
+    
+    def get_chatbot_conversation(self, conversation_id):
+        """Get a chatbot conversation by ID"""
+        with self.get_connection() as conn:
+            # Get conversation
+            cursor = conn.execute('SELECT * FROM chatbot_conversations WHERE id = ?', (conversation_id,))
+            conversation_row = cursor.fetchone()
+            
+            if not conversation_row:
+                return None
+            
+            # Get messages
+            cursor = conn.execute('''
+                SELECT * FROM chatbot_messages 
+                WHERE conversation_id = ? 
+                ORDER BY timestamp
+            ''', (conversation_id,))
+            message_rows = cursor.fetchall()
+            
+            # Convert to dict
+            conversation = dict(conversation_row)
+            
+            # Parse metadata
+            try:
+                metadata = json.loads(conversation.get('metadata', '{}'))
+                conversation.update(metadata)
+            except:
+                conversation['metadata'] = {}
+            
+            # Add messages
+            conversation['messages'] = []
+            for message_row in message_rows:
+                message = dict(message_row)
+                
+                # Parse metadata
+                try:
+                    message_metadata = json.loads(message.get('metadata', '{}'))
+                    message['metadata'] = message_metadata
+                except:
+                    message['metadata'] = {}
+                
+                conversation['messages'].append(message)
+            
+            return conversation
+    
     # Helper methods
     def _format_bytes(self, bytes_value):
         """Format bytes into human-readable format"""
