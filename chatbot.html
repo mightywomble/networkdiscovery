@@ -1,0 +1,1490 @@
+{% extends "base_patternfly.html" %}
+
+{% block title %}AI Network Assistant{% endblock %}
+
+{% block extra_head %}
+    <!-- Code syntax highlighting - Dark theme -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css">
+    
+    <style>
+        :root {
+            --pf-global--primary-color--100: #0066cc;
+            --pf-global--success-color--100: #3e8635;
+            --pf-global--danger-color--100: #c9190b;
+            --pf-global--warning-color--100: #f0ab00;
+            --pf-global--info-color--100: #2b9af3;
+        }
+        
+        .chat-container {
+            height: calc(100vh - 140px);
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .chat-header {
+            background: linear-gradient(135deg, var(--pf-global--primary-color--100), #004080);
+            color: white;
+            padding: 1.5rem;
+            border-radius: 8px 8px 0 0;
+        }
+        
+        .chat-header h1 {
+            color: white;
+            margin: 0;
+            font-size: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .chat-header .subtitle {
+            margin-top: 0.5rem;
+            opacity: 0.9;
+            font-size: 0.9rem;
+        }
+        
+        .chat-body {
+            flex: 1;
+            display: flex;
+            gap: 1rem;
+            padding: 1rem;
+            background-color: #f5f5f5;
+            min-height: 0; /* Important for flex scrolling */
+        }
+        
+        .chat-sidebar {
+            width: 280px;
+            background: white;
+            border-radius: 8px;
+            padding: 1rem;
+            border: 1px solid #d2d2d2;
+            height: fit-content;
+        }
+        
+        .chat-main {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background: white;
+            border-radius: 8px;
+            border: 1px solid #d2d2d2;
+            min-height: 0; /* Important for flex scrolling */
+        }
+        
+        .conversation-area {
+            flex: 1;
+            overflow-y: auto;
+            padding: 1rem;
+            background-color: #fafafa;
+            min-height: 300px;
+        }
+        
+        .message-group {
+            margin-bottom: 1.5rem;
+        }
+        
+        .message {
+            display: flex;
+            gap: 0.75rem;
+            margin-bottom: 1rem;
+            animation: fadeInUp 0.3s ease-out;
+        }
+        
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .message.user {
+            flex-direction: row-reverse;
+        }
+        
+        .message-avatar {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            flex-shrink: 0;
+        }
+        
+        .message.user .message-avatar {
+            background: var(--pf-global--primary-color--100);
+        }
+        
+        .message.bot .message-avatar {
+            background: var(--pf-global--success-color--100);
+        }
+        
+        .message-content {
+            flex: 1;
+            max-width: 70%;
+        }
+        
+        .message-bubble {
+            padding: 0.75rem 1rem;
+            border-radius: 12px;
+            position: relative;
+            word-wrap: break-word;
+        }
+        
+        .message.user .message-bubble {
+            background: var(--pf-global--primary-color--100);
+            color: white;
+            border-bottom-right-radius: 4px;
+        }
+        
+        .message.bot .message-bubble {
+            background: white;
+            border: 1px solid #d2d2d2;
+            border-bottom-left-radius: 4px;
+        }
+        
+        .message-time {
+            font-size: 0.75rem;
+            color: #6a6e73;
+            margin-top: 0.25rem;
+        }
+        
+        .message.user .message-time {
+            text-align: right;
+            color: rgba(255, 255, 255, 0.8);
+        }
+        
+        /* Script block - Dark terminal theme with higher specificity */
+        .message-content .script-block {
+            background: #1a1a1a !important;
+            border: 1px solid #333333 !important;
+            border-radius: 8px !important;
+            margin: 1rem 0 !important;
+            overflow: hidden !important;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3) !important;
+        }
+        
+        .message-content .script-header {
+            background: #262626 !important;
+            padding: 0.5rem 1rem !important;
+            border-bottom: 1px solid #404040 !important;
+            display: flex !important;
+            justify-content: space-between !important;
+            align-items: center !important;
+            font-size: 0.875rem !important;
+            font-weight: 500 !important;
+            color: #ffffff !important;
+        }
+        
+        .message-content .script-content {
+            padding: 0 !important;
+            margin: 0 !important;
+            background: #0d1117 !important;
+        }
+        
+        .message-content .script-content pre {
+            margin: 0 !important;
+            padding: 1rem !important;
+            overflow-x: auto !important;
+            background: #0d1117 !important;
+            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', 'Fira Code', 'Consolas', monospace !important;
+            font-size: 0.875rem !important;
+            line-height: 1.6 !important;
+            color: #e6edf3 !important;
+        }
+        
+        .message-content .script-content code {
+            background: transparent !important;
+            padding: 0 !important;
+            border: none !important;
+            font-family: inherit !important;
+            color: #e6edf3 !important;
+        }
+        
+        .validation-panel {
+            margin: 1rem 0;
+            border-radius: 6px;
+            overflow: hidden;
+        }
+        
+        .validation-header {
+            padding: 0.75rem 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-weight: 500;
+        }
+        
+        .validation-content {
+            padding: 1rem;
+            background: white;
+        }
+        
+        .validation-safe .validation-header {
+            background: #f3f9f4;
+            color: var(--pf-global--success-color--100);
+            border: 1px solid #b9d7b9;
+        }
+        
+        .validation-warning .validation-header {
+            background: #fdf4e7;
+            color: var(--pf-global--warning-color--100);
+            border: 1px solid #f0ab00;
+        }
+        
+        .validation-danger .validation-header {
+            background: #faeae8;
+            color: var(--pf-global--danger-color--100);
+            border: 1px solid #c9190b;
+        }
+        
+        .action-buttons {
+            display: flex;
+            gap: 0.5rem;
+            margin-top: 1rem;
+            flex-wrap: wrap;
+        }
+        
+        .input-area {
+            padding: 1rem;
+            border-top: 1px solid #d2d2d2;
+            background: white;
+            border-radius: 0 0 8px 8px;
+        }
+        
+        .input-form {
+            display: flex;
+            gap: 0.5rem;
+            align-items: flex-end;
+        }
+        
+        .message-input {
+            flex: 1;
+            resize: vertical;
+            min-height: 44px;
+            max-height: 120px;
+        }
+        
+        .send-button {
+            height: 44px;
+            min-width: 100px;
+        }
+        
+        .host-selector {
+            margin-bottom: 1rem;
+        }
+        
+        .host-list {
+            max-height: 200px;
+            overflow-y: auto;
+            border: 1px solid #d2d2d2;
+            border-radius: 4px;
+            background: white;
+        }
+        
+        .host-item {
+            padding: 0.5rem;
+            border-bottom: 1px solid #f0f0f0;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .host-item:hover {
+            background-color: #f5f5f5;
+        }
+        
+        .host-item.selected {
+            background-color: #e7f3ff;
+            border-left: 3px solid var(--pf-global--primary-color--100);
+        }
+        
+        .host-status {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+        
+        .host-status.online {
+            background-color: var(--pf-global--success-color--100);
+        }
+        
+        .host-status.offline {
+            background-color: #6a6e73;
+        }
+        
+        .conversation-status {
+            padding: 0.75rem 1rem;
+            background: #f0f8ff;
+            border-left: 4px solid var(--pf-global--info-color--100);
+            margin-bottom: 1rem;
+            border-radius: 0 4px 4px 0;
+        }
+        
+        .typing-indicator {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 1rem;
+            font-style: italic;
+            color: #6a6e73;
+        }
+        
+        .typing-dots {
+            display: flex;
+            gap: 2px;
+        }
+        
+        .typing-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background-color: #6a6e73;
+            animation: typing 1.4s infinite ease-in-out;
+        }
+        
+        .typing-dot:nth-child(1) { animation-delay: -0.32s; }
+        .typing-dot:nth-child(2) { animation-delay: -0.16s; }
+        
+        @keyframes typing {
+            0%, 80%, 100% {
+                transform: scale(0.8);
+                opacity: 0.5;
+            }
+            40% {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+        
+        .execution-status {
+            padding: 1rem;
+            margin: 1rem 0;
+            border-radius: 6px;
+            border-left: 4px solid;
+        }
+        
+        .execution-status.running {
+            background: #e7f3ff;
+            border-color: var(--pf-global--info-color--100);
+        }
+        
+        .execution-status.success {
+            background: #f3f9f4;
+            border-color: var(--pf-global--success-color--100);
+        }
+        
+        .execution-status.error {
+            background: #faeae8;
+            border-color: var(--pf-global--danger-color--100);
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: 3rem 1rem;
+            color: #6a6e73;
+        }
+        
+        .empty-state i {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            color: #d2d2d2;
+        }
+        
+        .new-conversation-btn {
+            width: 100%;
+            margin-bottom: 1rem;
+        }
+        
+        .quick-actions {
+            margin-top: 1rem;
+        }
+        
+        .quick-action-btn {
+            width: 100%;
+            margin-bottom: 0.5rem;
+            text-align: left;
+            justify-content: flex-start;
+        }
+        
+        /* Responsive design */
+        @media (max-width: 768px) {
+            .chat-body {
+                flex-direction: column;
+            }
+            
+            .chat-sidebar {
+                width: 100%;
+                order: 2;
+            }
+            
+            .chat-main {
+                order: 1;
+            }
+            
+            .input-form {
+                flex-direction: column;
+                gap: 0.75rem;
+            }
+            
+            .send-button {
+                width: 100%;
+            }
+        }
+        
+        /* Loading spinner */
+        .loading-spinner {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid #f3f3f3;
+            border-top: 2px solid var(--pf-global--primary-color--100);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        /* Copy button styles */
+        .copy-btn {
+            opacity: 0.7;
+            transition: opacity 0.2s;
+            background: none;
+            border: none;
+            color: #a0aec0;
+            cursor: pointer;
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+        }
+        
+        .copy-btn:hover {
+            opacity: 1;
+            background: rgba(255, 255, 255, 0.1);
+            color: #ffffff;
+        }
+        
+        /* Notification styles */
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            max-width: 400px;
+            z-index: 1000;
+            animation: slideInRight 0.3s ease-out;
+        }
+        
+        @keyframes slideInRight {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+        
+        /* Enhanced message content styles - Dark terminal theme */
+        .message-bubble .code-block,
+        .message-content .code-block {
+            background: #1a1a1a !important;
+            border: 1px solid #333333 !important;
+            border-radius: 8px !important;
+            margin: 0.75rem 0 !important;
+            overflow: hidden !important;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3) !important;
+        }
+        
+        .message-bubble .code-block pre,
+        .message-content .code-block pre {
+            margin: 0 !important;
+            padding: 1rem !important;
+            overflow-x: auto !important;
+            background: #0d1117 !important;
+            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', 'Fira Code', 'Consolas', monospace !important;
+            font-size: 0.875rem !important;
+            line-height: 1.6 !important;
+            color: #e6edf3 !important;
+        }
+        
+        .message-bubble .code-block code,
+        .message-content .code-block code {
+            background: transparent !important;
+            padding: 0 !important;
+            border: none !important;
+            font-family: inherit !important;
+            color: #e6edf3 !important;
+        }
+        
+        .pf-c-code.pf-m-inline {
+            background: #f1f3f4;
+            padding: 0.125rem 0.375rem;
+            border-radius: 3px;
+            font-size: 0.875em;
+            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+        }
+        
+        .bullet-point {
+            margin: 0.25rem 0;
+            padding-left: 1rem;
+        }
+        
+        .numbered-point {
+            margin: 0.25rem 0;
+            padding-left: 1rem;
+        }
+        
+        .message-bubble h1,
+        .message-bubble h2,
+        .message-bubble h3 {
+            margin: 0.75rem 0 0.5rem 0;
+            color: inherit;
+        }
+        
+        .message-bubble h1:first-child,
+        .message-bubble h2:first-child,
+        .message-bubble h3:first-child {
+            margin-top: 0;
+        }
+        
+        .message-bubble strong {
+            font-weight: 600;
+        }
+        
+        .message-bubble em {
+            font-style: italic;
+        }
+        
+        .message-bubble .pf-c-button.pf-m-link.pf-m-inline {
+            padding: 0;
+            color: #0066cc;
+            text-decoration: underline;
+            background: transparent;
+            border: none;
+            font-size: inherit;
+            vertical-align: baseline;
+        }
+        
+        .message-bubble .pf-c-button.pf-m-link.pf-m-inline:hover {
+            color: #004080;
+            text-decoration: underline;
+        }
+        
+        /* Message content blocks styling */
+        .content-block {
+            background: white;
+            border: 2px solid var(--pf-global--primary-color--100);
+            border-radius: 8px;
+            margin: 0.75rem 0;
+            padding: 1rem;
+        }
+        
+        .content-block h1,
+        .content-block h2,
+        .content-block h3 {
+            margin-top: 0;
+            color: var(--pf-global--primary-color--100);
+        }
+        
+        .message-bubble .code-header,
+        .message-content .code-header {
+            background: #262626 !important;
+            padding: 0.5rem 1rem !important;
+            border-bottom: 1px solid #404040 !important;
+            display: flex !important;
+            justify-content: space-between !important;
+            align-items: center !important;
+            font-size: 0.875rem !important;
+            font-weight: 500 !important;
+            color: #ffffff !important;
+        }
+        
+        .message-bubble .copy-code-btn,
+        .message-content .copy-code-btn {
+            background: none !important;
+            border: none !important;
+            color: #ffffff !important;
+            cursor: pointer !important;
+            padding: 0.25rem 0.5rem !important;
+            border-radius: 4px !important;
+            transition: all 0.2s !important;
+        }
+        
+        .message-bubble .copy-code-btn:hover,
+        .message-content .copy-code-btn:hover {
+            background: rgba(255, 255, 255, 0.2) !important;
+            color: #ffffff !important;
+        }
+        
+        /* Bash syntax highlighting overrides for dark theme */
+        .code-block .language-bash .token.comment {
+            color: #6a737d;
+        }
+        
+        .code-block .language-bash .token.string {
+            color: #9ecbff;
+        }
+        
+        .code-block .language-bash .token.keyword {
+            color: #f97583;
+        }
+        
+        .code-block .language-bash .token.function {
+            color: #b392f0;
+        }
+        
+        .code-block .language-bash .token.builtin {
+            color: #79b8ff;
+        }
+        
+        .code-block .language-bash .token.variable {
+            color: #ffab70;
+        }
+        
+        .code-block .language-bash .token.operator {
+            color: #f97583;
+        }
+        
+        .code-block .language-bash .token.number {
+            color: #79b8ff;
+        }
+    </style>
+{% endblock %}
+
+{% block content %}
+            <div class="chat-container">
+                <!-- Chat header -->
+                <div class="chat-header">
+                    <h1>
+                        <i class="fas fa-robot"></i>
+                        AI Network Assistant
+                    </h1>
+                    <div class="subtitle">
+                        Generate and execute network administration commands using natural language
+                    </div>
+                </div>
+
+                <!-- Chat body -->
+                <div class="chat-body">
+                    <!-- Sidebar -->
+                    <div class="chat-sidebar">
+                        <!-- New conversation button -->
+                        <button class="pf-c-button pf-m-primary new-conversation-btn" id="newConversationBtn">
+                            <i class="fas fa-plus"></i>
+                            New Conversation
+                        </button>
+
+                        <!-- Host selector -->
+                        <div class="host-selector">
+                            <h3 class="pf-c-title pf-m-md">Select Hosts</h3>
+                            <p class="pf-c-content" style="font-size: 0.875rem; margin-bottom: 0.5rem;">
+                                Choose which hosts to target for command execution:
+                            </p>
+                            <div class="host-list" id="hostList">
+                                <!-- Hosts will be loaded here -->
+                            </div>
+                            <div style="margin-top: 0.5rem; font-size: 0.75rem; color: #6a6e73;">
+                                <span id="selectedHostsCount">0</span> host(s) selected
+                            </div>
+                        </div>
+
+                        <!-- Quick actions -->
+                        <div class="quick-actions">
+                            <h3 class="pf-c-title pf-m-md">Quick Actions</h3>
+                            <button class="pf-c-button pf-m-secondary quick-action-btn" onclick="insertQuickAction('Check system status and uptime')">
+                                <i class="fas fa-heartbeat"></i>
+                                System Status
+                            </button>
+                            <button class="pf-c-button pf-m-secondary quick-action-btn" onclick="insertQuickAction('List all network interfaces and their configurations')">
+                                <i class="fas fa-network-wired"></i>
+                                Network Interfaces
+                            </button>
+                            <button class="pf-c-button pf-m-secondary quick-action-btn" onclick="insertQuickAction('Show all active network connections')">
+                                <i class="fas fa-link"></i>
+                                Active Connections
+                            </button>
+                            <button class="pf-c-button pf-m-secondary quick-action-btn" onclick="insertQuickAction('Check disk usage and available space')">
+                                <i class="fas fa-hdd"></i>
+                                Disk Usage
+                            </button>
+                            <button class="pf-c-button pf-m-secondary quick-action-btn" onclick="insertQuickAction('Show running processes and resource usage')">
+                                <i class="fas fa-tasks"></i>
+                                Process Monitor
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Main chat area -->
+                    <div class="chat-main">
+                        <!-- Conversation area -->
+                        <div class="conversation-area" id="conversationArea">
+                            <!-- Welcome message -->
+                            <div class="empty-state" id="emptyState">
+                                <i class="fas fa-robot"></i>
+                                <h3>Welcome to AI Network Assistant</h3>
+                                <p>Ask me to help you with network administration tasks. I can generate safe bash scripts and execute them on your selected hosts.</p>
+                                <p><strong>Examples:</strong></p>
+                                <ul style="text-align: left; display: inline-block; margin-top: 1rem;">
+                                    <li>"Check the network configuration on all servers"</li>
+                                    <li>"Show me which processes are using the most CPU"</li>
+                                    <li>"Find all listening ports and their associated services"</li>
+                                    <li>"Update system packages and restart services if needed"</li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <!-- Input area -->
+                        <div class="input-area">
+                            <form class="input-form" id="messageForm">
+                                <div style="flex: 1;">
+                                    <textarea 
+                                        class="pf-c-form-control message-input" 
+                                        id="messageInput" 
+                                        placeholder="Describe what you'd like to do on your network hosts..."
+                                        rows="2"
+                                        required
+                                    ></textarea>
+                                </div>
+                                <button type="submit" class="pf-c-button pf-m-primary send-button" id="sendButton">
+                                    <i class="fas fa-paper-plane"></i>
+                                    Send
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+{% endblock %}
+
+{% block scripts %}
+    <!-- Code syntax highlighting -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-core.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-bash.min.js"></script>
+
+    <!-- Chatbot JavaScript -->
+    <script>/* Cache buster: v1.0.3 */
+        // Global variables
+        let currentConversationId = null;
+        let selectedHosts = [];
+        let isTyping = false;
+
+        // Initialize the chatbot when DOM is loaded
+        document.addEventListener('DOMContentLoaded', function() {
+            loadHosts();
+            setupEventListeners();
+            startNewConversation();
+        });
+
+        // Setup event listeners
+        function setupEventListeners() {
+            // Message form submission
+            document.getElementById('messageForm').addEventListener('submit', function(e) {
+                e.preventDefault();
+                sendMessage();
+            });
+
+            // Auto-resize textarea
+            const messageInput = document.getElementById('messageInput');
+            messageInput.addEventListener('input', function() {
+                this.style.height = 'auto';
+                this.style.height = Math.min(this.scrollHeight, 120) + 'px';
+            });
+
+            // Enter to send (Shift+Enter for new line)
+            messageInput.addEventListener('keydown', function(e) {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    if (!isTyping && this.value.trim()) {
+                        sendMessage();
+                    }
+                }
+            });
+
+            // New conversation button
+            document.getElementById('newConversationBtn').addEventListener('click', startNewConversation);
+        }
+
+        // Load available hosts
+        async function loadHosts() {
+            try {
+                const response = await fetch('/api/hosts');
+                const data = await response.json();
+                
+                if (data.success) {
+                    displayHosts(data.hosts);
+                } else {
+                    console.error('Failed to load hosts:', data.error);
+                    showNotification('Failed to load hosts', 'danger');
+                }
+            } catch (error) {
+                console.error('Error loading hosts:', error);
+                showNotification('Error loading hosts', 'danger');
+            }
+        }
+
+        // Display hosts in the sidebar
+        function displayHosts(hosts) {
+            const hostList = document.getElementById('hostList');
+            
+            if (hosts.length === 0) {
+                hostList.innerHTML = `
+                    <div class="pf-c-empty-state pf-m-sm">
+                        <div class="pf-c-empty-state__content">
+                            <i class="fas fa-server pf-c-empty-state__icon" aria-hidden="true"></i>
+                            <h3 class="pf-c-title pf-m-md">No hosts configured</h3>
+                            <p>Add hosts to start using the AI assistant</p>
+                            <a href="/hosts" class="pf-c-button pf-m-primary pf-m-small">Add Hosts</a>
+                        </div>
+                    </div>
+                `;
+                return;
+            }
+
+            hostList.innerHTML = `
+                <div class="pf-l-gallery pf-m-gutter host-cards-grid">
+                    ${hosts.map(host => `
+                        <div class="pf-c-card nm-host-card host-card ${selectedHosts.some(h => h.id === host.id) ? 'selected' : ''}" 
+                             onclick="toggleHost(${host.id}, '${host.name}', '${host.ip_address}')" 
+                             id="host-card-${host.id}" 
+                             style="cursor: pointer; transition: all 0.2s ease;">
+                            <div class="pf-c-card__header">
+                                <div class="pf-c-card__header-main">
+                                    <div class="pf-u-display-flex pf-u-align-items-center">
+                                        <input type="checkbox" id="host-${host.id}" 
+                                               style="margin-right: 0.5rem;" 
+                                               ${selectedHosts.some(h => h.id === host.id) ? 'checked' : ''}>
+                                        <div class="nm-host-icon pf-u-mr-sm">
+                                            <i class="fas fa-server pf-u-primary-color-100"></i>
+                                        </div>
+                                        <div>
+                                            <h4 class="pf-c-card__title pf-u-font-size-md pf-u-mb-0">${host.name}</h4>
+                                            <div class="pf-u-font-size-sm pf-u-color-200">
+                                                <code class="pf-c-code pf-m-inline">${host.ip_address}</code>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="pf-c-card__actions">
+                                    <span class="pf-c-label nm-status-label status-${host.status || 'unknown'}">
+                                        <span class="pf-c-label__content">
+                                            ${host.status === 'online' ? 
+                                                '<i class="fas fa-check-circle pf-u-mr-xs"></i>Online' :
+                                                host.status === 'offline' ? 
+                                                '<i class="fas fa-times-circle pf-u-mr-xs"></i>Offline' :
+                                                host.status === 'ping_only' ? 
+                                                '<i class="fas fa-exclamation-circle pf-u-mr-xs"></i>Ping Only' :
+                                                '<i class="fas fa-question-circle pf-u-mr-xs"></i>Unknown'
+                                            }
+                                        </span>
+                                    </span>
+                                </div>
+                            </div>
+                            ${host.description ? `
+                                <div class="pf-c-card__body">
+                                    <div class="pf-u-font-size-sm pf-u-color-200">${host.description}</div>
+                                </div>
+                            ` : ''}
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+        }
+
+        // Toggle host selection
+        function toggleHost(hostId, hostName, hostIp) {
+            const checkbox = document.getElementById(`host-${hostId}`);
+            const hostCard = document.getElementById(`host-card-${hostId}`);
+            
+            checkbox.checked = !checkbox.checked;
+            
+            if (checkbox.checked) {
+                hostCard.classList.add('selected');
+                hostCard.style.borderColor = 'var(--pf-global--primary-color--100)';
+                hostCard.style.boxShadow = '0 2px 8px rgba(0, 102, 204, 0.2)';
+                selectedHosts.push({ id: hostId, name: hostName, ip_address: hostIp });
+            } else {
+                hostCard.classList.remove('selected');
+                hostCard.style.borderColor = '';
+                hostCard.style.boxShadow = '';
+                selectedHosts = selectedHosts.filter(h => h.id !== hostId);
+            }
+            
+            updateSelectedHostsCount();
+        }
+
+        // Update selected hosts count
+        function updateSelectedHostsCount() {
+            document.getElementById('selectedHostsCount').textContent = selectedHosts.length;
+        }
+
+        // Start a new conversation
+        async function startNewConversation() {
+            try {
+                const response = await fetch('/api/chatbot/start', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        user_id: 'web_user'
+                    })
+                });
+
+                const data = await response.json();
+                
+                if (data.success) {
+                    currentConversationId = data.conversation_id;
+                    clearConversation();
+                    showNotification('New conversation started', 'success');
+                } else {
+                    console.error('Failed to start conversation:', data.error);
+                    showNotification('Failed to start conversation', 'danger');
+                }
+            } catch (error) {
+                console.error('Error starting conversation:', error);
+                showNotification('Error starting conversation', 'danger');
+            }
+        }
+
+        // Send a message
+        async function sendMessage() {
+            const messageInput = document.getElementById('messageInput');
+            const message = messageInput.value.trim();
+            
+            if (!message || isTyping) return;
+            
+            if (!currentConversationId) {
+                await startNewConversation();
+                if (!currentConversationId) return;
+            }
+
+            // Clear input and show user message
+            messageInput.value = '';
+            messageInput.style.height = 'auto';
+            addMessage('user', message);
+            showTypingIndicator();
+
+            try {
+                const response = await fetch('/api/chatbot/message', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        conversation_id: currentConversationId,
+                        message: message,
+                        selected_hosts: selectedHosts.map(h => ({
+                            id: h.id,
+                            name: h.name,
+                            ip_address: h.ip_address
+                        }))
+                    })
+                });
+
+                const data = await response.json();
+                
+                hideTypingIndicator();
+                
+                if (data.success) {
+                    handleBotResponse(data);
+                } else {
+                    addMessage('bot', `Sorry, I encountered an error: ${data.error}`, 'error');
+                }
+            } catch (error) {
+                hideTypingIndicator();
+                console.error('Error sending message:', error);
+                addMessage('bot', 'Sorry, I encountered a network error. Please try again.', 'error');
+            }
+        }
+
+        // Handle bot response
+        function handleBotResponse(data) {
+            const { message, script_data, validation_data, execution_result } = data;
+            
+            // Add the bot's response message
+            if (message && message.content) {
+                addMessage('bot', message.content);
+            }
+
+            // Show script if generated
+            if (script_data && script_data.script) {
+                addScriptBlock(script_data.script, validation_data, data.conversation_state);
+            }
+
+            // Show execution results if available
+            if (execution_result) {
+                addExecutionResult(execution_result);
+            }
+        }
+
+        // Add a message to the conversation
+        function addMessage(sender, content, type = 'normal') {
+            const conversationArea = document.getElementById('conversationArea');
+            const emptyState = document.getElementById('emptyState');
+            
+            // Hide empty state
+            if (emptyState) {
+                emptyState.style.display = 'none';
+            }
+
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${sender}`;
+            
+            const avatarIcon = sender === 'user' ? 'fa-user' : 'fa-robot';
+            const avatarText = sender === 'user' ? 'U' : 'AI';
+            
+            messageDiv.innerHTML = `
+                <div class="message-avatar">
+                    <i class="fas ${avatarIcon}"></i>
+                </div>
+                <div class="message-content">
+                    <div class="message-bubble ${type}">
+                        ${formatMessageContent(content)}
+                    </div>
+                    <div class="message-time">
+                        ${new Date().toLocaleTimeString()}
+                    </div>
+                </div>
+            `;
+
+            conversationArea.appendChild(messageDiv);
+            scrollToBottom();
+        }
+
+        // Format message content with markdown-like rendering
+        function formatMessageContent(content) {
+            // First, handle code blocks before doing other replacements
+            const codeBlocks = [];
+            let codeBlockIndex = 0;
+            
+            // Extract and preserve code blocks (including bash)
+            // Handle both actual newlines and escaped \n characters
+            content = content.replace(/```(\w+)?[\s\n]*([\s\S]*?)```/g, (match, language, code) => {
+                const placeholder = `__CODE_BLOCK_${codeBlockIndex}__`;
+                // Convert literal \n to actual newlines if present
+                const processedCode = code.replace(/\\n/g, '\n').trim();
+                codeBlocks[codeBlockIndex] = {
+                    language: language || '',
+                    code: processedCode
+                };
+                codeBlockIndex++;
+                return placeholder;
+            });
+            
+            // Convert **bold** text
+            content = content.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+            
+            // Convert *italic* text
+            content = content.replace(/\*(.*?)\*/g, '<em>$1</em>');
+            
+            // Convert `inline code`
+            content = content.replace(/`([^`]+)`/g, '<code class="pf-c-code pf-m-inline">$1</code>');
+            
+            // Convert headers (### Header)
+            content = content.replace(/^### (.*$)/gm, '<h3 class="pf-c-title pf-m-lg">$1</h3>');
+            content = content.replace(/^## (.*$)/gm, '<h2 class="pf-c-title pf-m-xl">$1</h2>');
+            content = content.replace(/^# (.*$)/gm, '<h1 class="pf-c-title pf-m-2xl">$1</h1>');
+            
+            // Convert bullet points
+            content = content.replace(/^• (.*$)/gm, '<div class="bullet-point">• $1</div>');
+            content = content.replace(/^\* (.*$)/gm, '<div class="bullet-point">• $1</div>');
+            
+            // Convert numbered lists
+            content = content.replace(/^(\d+)\. (.*$)/gm, '<div class="numbered-point">$1. $2</div>');
+            
+            // Convert URLs to links
+            const urlRegex = /(https?:\/\/[^\s]+)/g;
+            content = content.replace(urlRegex, '<a href="$1" target="_blank" class="pf-c-button pf-m-link pf-m-inline">$1</a>');
+            
+            // Convert newlines to <br> (but preserve existing HTML)
+            content = content.replace(/\n/g, '<br>');
+            
+            // Restore code blocks
+            codeBlocks.forEach((block, index) => {
+                const placeholder = `__CODE_BLOCK_${index}__`;
+                const languageClass = block.language ? ` language-${block.language}` : '';
+                const codeHtml = `<div class="code-block" style="background: #1a1a1a !important; border: 1px solid #333333 !important; border-radius: 8px !important; margin: 0.75rem 0 !important; overflow: hidden !important; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3) !important;"><div class="code-header" style="background: #262626 !important; padding: 0.5rem 1rem !important; border-bottom: 1px solid #404040 !important; display: flex !important; justify-content: space-between !important; align-items: center !important; font-size: 0.875rem !important; font-weight: 500 !important; color: #ffffff !important;"><span><i class="fas fa-code"></i> ${block.language ? block.language.toUpperCase() + ' ' : ''}Code</span><button class="copy-code-btn" onclick="copyCodeBlock(this)" title="Copy code" style="background: none !important; border: none !important; color: #ffffff !important; cursor: pointer !important; padding: 0.25rem 0.5rem !important; border-radius: 4px !important;"><i class="fas fa-copy"></i></button></div><pre style="margin: 0 !important; padding: 1rem !important; overflow-x: auto !important; background: #0d1117 !important; font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', 'Fira Code', 'Consolas', monospace !important; font-size: 0.875rem !important; line-height: 1.6 !important; color: #e6edf3 !important;"><code class="${languageClass}" style="background: transparent !important; padding: 0 !important; border: none !important; font-family: inherit !important; color: #e6edf3 !important;">${escapeHtml(block.code)}</code></pre></div>`;
+                console.log('Created code block HTML:', codeHtml);
+                content = content.replace(placeholder, codeHtml);
+            });
+            
+            // Break content into sections based on headers and create styled blocks
+            content = formatIntoBlocks(content);
+            
+            return content;
+        }
+
+        // Add script block with validation
+        function addScriptBlock(script, validation, state) {
+            const conversationArea = document.getElementById('conversationArea');
+            
+            const scriptDiv = document.createElement('div');
+            scriptDiv.className = 'message bot';
+            
+            let validationClass = 'validation-safe';
+            let validationIcon = 'fa-check-circle';
+            let validationText = 'Safe to execute';
+            
+            if (validation) {
+                if (validation.risk_level === 'HIGH') {
+                    validationClass = 'validation-danger';
+                    validationIcon = 'fa-exclamation-triangle';
+                    validationText = 'High risk - Review carefully';
+                } else if (validation.risk_level === 'MEDIUM') {
+                    validationClass = 'validation-warning';
+                    validationIcon = 'fa-exclamation-circle';
+                    validationText = 'Medium risk - Use caution';
+                }
+            }
+
+            let actionButtons = '';
+            if (state === 'script_generated' || state === 'script_validated') {
+                actionButtons = `
+                    <div class="action-buttons">
+                        <button class="pf-c-button pf-m-primary" onclick="approveScript()">
+                            <i class="fas fa-check"></i>
+                            Execute Script
+                        </button>
+                        <button class="pf-c-button pf-m-secondary" onclick="rejectScript()">
+                            <i class="fas fa-times"></i>
+                            Cancel
+                        </button>
+                        <button class="pf-c-button pf-m-tertiary" onclick="copyScript(this)">
+                            <i class="fas fa-copy"></i>
+                            Copy
+                        </button>
+                    </div>
+                `;
+            }
+
+            scriptDiv.innerHTML = `
+                <div class="message-avatar">
+                    <i class="fas fa-robot"></i>
+                </div>
+                <div class="message-content">
+                    <div class="script-block" style="background: #1a1a1a !important; border: 1px solid #333333 !important; border-radius: 8px !important; margin: 1rem 0 !important; overflow: hidden !important; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3) !important;">
+                        <div class="script-header" style="background: #262626 !important; padding: 0.5rem 1rem !important; border-bottom: 1px solid #404040 !important; display: flex !important; justify-content: space-between !important; align-items: center !important; font-size: 0.875rem !important; font-weight: 500 !important; color: #ffffff !important;">
+                            <span><i class="fas fa-code"></i> Generated Script</span>
+                            <span class="copy-btn" onclick="copyScript(this)" title="Copy script" style="opacity: 0.7; transition: opacity 0.2s; background: none !important; border: none !important; color: #ffffff !important; cursor: pointer !important; padding: 0.25rem 0.5rem !important; border-radius: 4px !important;">
+                                <i class="fas fa-copy"></i>
+                            </span>
+                        </div>
+                        <div class="script-content" style="padding: 0 !important; margin: 0 !important; background: #0d1117 !important;"><pre style="margin: 0 !important; padding: 1rem !important; overflow-x: auto !important; background: #0d1117 !important; font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', 'Fira Code', 'Consolas', monospace !important; font-size: 0.875rem !important; line-height: 1.6 !important; color: #e6edf3 !important;"><code class="language-bash" style="background: transparent !important; padding: 0 !important; border: none !important; font-family: inherit !important; color: #e6edf3 !important;">${escapeHtml(script)}</code></pre></div>
+                    </div>
+                    
+                    ${validation ? `
+                        <div class="validation-panel ${validationClass}">
+                            <div class="validation-header">
+                                <i class="fas ${validationIcon}"></i>
+                                Security Analysis: ${validationText}
+                            </div>
+                            <div class="validation-content">
+                                <p><strong>Risk Level:</strong> ${validation.risk_level}</p>
+                                ${validation.explanation ? `<p><strong>Analysis:</strong> ${validation.explanation}</p>` : ''}
+                                ${validation.recommendations ? `
+                                    <p><strong>Recommendations:</strong></p>
+                                    <ul>
+                                        ${validation.recommendations.map(rec => `<li>${rec}</li>`).join('')}
+                                    </ul>
+                                ` : ''}
+                            </div>
+                        </div>
+                    ` : ''}
+                    
+                    ${actionButtons}
+                    
+                    <div class="message-time">
+                        ${new Date().toLocaleTimeString()}
+                    </div>
+                </div>
+            `;
+
+            conversationArea.appendChild(scriptDiv);
+            scrollToBottom();
+        }
+
+        // Add execution result
+        function addExecutionResult(result) {
+            const conversationArea = document.getElementById('conversationArea');
+            
+            const resultDiv = document.createElement('div');
+            resultDiv.className = 'message bot';
+            
+            let statusClass = result.status === 'success' ? 'success' : 'error';
+            let statusIcon = result.status === 'success' ? 'fa-check-circle' : 'fa-exclamation-circle';
+            let statusText = result.status === 'success' ? 'Execution Successful' : 'Execution Failed';
+
+            resultDiv.innerHTML = `
+                <div class="message-avatar">
+                    <i class="fas fa-robot"></i>
+                </div>
+                <div class="message-content">
+                    <div class="execution-status ${statusClass}">
+                        <h4><i class="fas ${statusIcon}"></i> ${statusText}</h4>
+                        ${result.summary ? `<p>${result.summary}</p>` : ''}
+                        
+                        ${result.host_results ? `
+                            <div style="margin-top: 1rem;">
+                                <h5>Host Results:</h5>
+                                ${Object.entries(result.host_results).map(([host, hostResult]) => `
+                                    <div style="margin: 0.5rem 0; padding: 0.5rem; background: rgba(0,0,0,0.05); border-radius: 4px;">
+                                        <strong>${host}:</strong> 
+                                        <span style="color: ${hostResult.success ? 'var(--pf-global--success-color--100)' : 'var(--pf-global--danger-color--100)'};">
+                                            ${hostResult.success ? 'Success' : 'Failed'}
+                                        </span>
+                                        ${hostResult.output ? `
+                                            <details style="margin-top: 0.5rem;">
+                                                <summary>View Output</summary>
+                                                <pre style="font-size: 0.75rem; margin-top: 0.5rem; white-space: pre-wrap;">${escapeHtml(hostResult.output)}</pre>
+                                            </details>
+                                        ` : ''}
+                                    </div>
+                                `).join('')}
+                            </div>
+                        ` : ''}
+                    </div>
+                    <div class="message-time">
+                        ${new Date().toLocaleTimeString()}
+                    </div>
+                </div>
+            `;
+
+            conversationArea.appendChild(resultDiv);
+            scrollToBottom();
+        }
+
+        // Approve script execution
+        async function approveScript() {
+            addMessage('user', '✓ Execute the script');
+            showTypingIndicator();
+
+            try {
+                const response = await fetch('/api/chatbot/message', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        conversation_id: currentConversationId,
+                        message: 'APPROVE_EXECUTION',
+                        selected_hosts: selectedHosts
+                    })
+                });
+
+                const data = await response.json();
+                hideTypingIndicator();
+                
+                if (data.success) {
+                    handleBotResponse(data);
+                } else {
+                    addMessage('bot', `Execution failed: ${data.error}`, 'error');
+                }
+            } catch (error) {
+                hideTypingIndicator();
+                console.error('Error approving script:', error);
+                addMessage('bot', 'Error executing script. Please try again.', 'error');
+            }
+        }
+
+        // Reject script execution
+        function rejectScript() {
+            addMessage('user', '✗ Cancel execution');
+            addMessage('bot', 'Script execution cancelled. How else can I help you?');
+        }
+
+        // Copy script to clipboard
+        async function copyScript(element) {
+            const scriptContent = element.closest('.script-block').querySelector('.script-content code').textContent;
+            
+            try {
+                await navigator.clipboard.writeText(scriptContent);
+                showNotification('Script copied to clipboard', 'success');
+                
+                // Temporarily change icon to indicate success
+                const icon = element.querySelector('i');
+                const originalClass = icon.className;
+                icon.className = 'fas fa-check';
+                setTimeout(() => {
+                    icon.className = originalClass;
+                }, 1500);
+            } catch (err) {
+                console.error('Failed to copy script:', err);
+                showNotification('Failed to copy script', 'danger');
+            }
+        }
+
+        // Show typing indicator
+        function showTypingIndicator() {
+            isTyping = true;
+            const conversationArea = document.getElementById('conversationArea');
+            const sendButton = document.getElementById('sendButton');
+            
+            // Disable send button
+            sendButton.disabled = true;
+            sendButton.innerHTML = '<div class="loading-spinner"></div> Processing...';
+            
+            // Add typing indicator
+            const typingDiv = document.createElement('div');
+            typingDiv.id = 'typingIndicator';
+            typingDiv.className = 'typing-indicator';
+            typingDiv.innerHTML = `
+                <div class="message-avatar" style="background: var(--pf-global--success-color--100);">
+                    <i class="fas fa-robot"></i>
+                </div>
+                <div>
+                    AI is thinking
+                    <div class="typing-dots">
+                        <div class="typing-dot"></div>
+                        <div class="typing-dot"></div>
+                        <div class="typing-dot"></div>
+                    </div>
+                </div>
+            `;
+            
+            conversationArea.appendChild(typingDiv);
+            scrollToBottom();
+        }
+
+        // Hide typing indicator
+        function hideTypingIndicator() {
+            isTyping = false;
+            const typingIndicator = document.getElementById('typingIndicator');
+            const sendButton = document.getElementById('sendButton');
+            
+            // Re-enable send button
+            sendButton.disabled = false;
+            sendButton.innerHTML = '<i class="fas fa-paper-plane"></i> Send';
+            
+            // Remove typing indicator
+            if (typingIndicator) {
+                typingIndicator.remove();
+            }
+        }
+
+        // Clear conversation
+        function clearConversation() {
+            const conversationArea = document.getElementById('conversationArea');
+            conversationArea.innerHTML = '';
+            
+            // Show welcome message
+            addMessage('bot', `Hello! I'm your AI Network Assistant. I can help you generate and execute network administration commands safely.
+
+Selected hosts: ${selectedHosts.length > 0 ? selectedHosts.map(h => h.name).join(', ') : 'None'}
+
+What would you like me to help you with today?`);
+        }
+
+        // Insert quick action text
+        function insertQuickAction(text) {
+            document.getElementById('messageInput').value = text;
+            document.getElementById('messageInput').focus();
+        }
+
+        // Scroll to bottom of conversation
+        function scrollToBottom() {
+            const conversationArea = document.getElementById('conversationArea');
+            setTimeout(() => {
+                conversationArea.scrollTop = conversationArea.scrollHeight;
+            }, 100);
+        }
+
+        // Show notification
+        function showNotification(message, type = 'info') {
+            const notification = document.createElement('div');
+            notification.className = `pf-c-alert pf-m-${type} notification`;
+            notification.innerHTML = `
+                <div class="pf-c-alert__icon">
+                    <i class="fas ${type === 'success' ? 'fa-check-circle' : type === 'danger' ? 'fa-exclamation-triangle' : 'fa-info-circle'}"></i>
+                </div>
+                <p class="pf-c-alert__title">${message}</p>
+                <div class="pf-c-alert__action">
+                    <button class="pf-c-button pf-m-plain" onclick="this.parentElement.parentElement.remove()">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+            `;
+            
+            document.body.appendChild(notification);
+            
+            // Auto-remove after 5 seconds
+            setTimeout(() => {
+                if (notification.parentElement) {
+                    notification.remove();
+                }
+            }, 5000);
+        }
+
+        // Escape HTML for security
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+        
+        // Copy code block to clipboard
+        async function copyCodeBlock(element) {
+            const codeContent = element.closest('.code-block').querySelector('code').textContent;
+            
+            try {
+                await navigator.clipboard.writeText(codeContent);
+                showNotification('Code copied to clipboard', 'success');
+                
+                // Temporarily change icon to indicate success
+                const icon = element.querySelector('i');
+                const originalClass = icon.className;
+                icon.className = 'fas fa-check';
+                setTimeout(() => {
+                    icon.className = originalClass;
+                }, 1500);
+            } catch (err) {
+                console.error('Failed to copy code:', err);
+                showNotification('Failed to copy code', 'danger');
+            }
+        }
+        
+        // Format content into styled blocks
+        function formatIntoBlocks(content) {
+            // Split content into sections based on headers
+            const sections = content.split(/(<h[1-3][^>]*>.*?<\/h[1-3]>)/gi);
+            let formattedContent = '';
+            let currentBlock = '';
+            
+            sections.forEach((section, index) => {
+                if (section.match(/^<h[1-3]/i)) {
+                    // If we have accumulated content, wrap it in a block
+                    if (currentBlock.trim()) {
+                        formattedContent += `<div class="content-block">${currentBlock}</div>`;
+                        currentBlock = '';
+                    }
+                    // Start new block with header
+                    currentBlock = section;
+                } else if (section.trim()) {
+                    currentBlock += section;
+                }
+            });
+            
+            // Add any remaining content
+            if (currentBlock.trim()) {
+                formattedContent += `<div class="content-block">${currentBlock}</div>`;
+            }
+            
+            // If no headers were found, wrap the entire content
+            if (!formattedContent && content.trim()) {
+                formattedContent = `<div class="content-block">${content}</div>`;
+            }
+            
+            return formattedContent || content;
+        }
+    </script>
+{% endblock %}
