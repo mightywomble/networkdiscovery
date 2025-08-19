@@ -957,6 +957,7 @@ function renderHosts() {
                                         <i class="${agentStatusIcon} pf-u-mr-xs"></i>
                                         ${agentStatus}
                                     </span>
+                                    ${agent && agent.agent_version ? `<span class="pf-c-label pf-m-blue pf-u-ml-sm"><i class="fas fa-code-branch pf-u-mr-xs"></i>v${agent.agent_version}</span>` : ""}
                                 </div>
                                 ${agent ? `
                                 <div class="nm-agent-detail">
