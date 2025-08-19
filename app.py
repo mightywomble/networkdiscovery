@@ -4696,6 +4696,168 @@ def ai_reports():
     """Render the AI Reports page"""
     return render_template('ai_reports.html')
 
+# Chatbot routes
+@app.route('/ai_chatbot')
+def ai_chatbot():
+    """Render the AI Chatbot page"""
+    return render_template('chatbot.html')
+
+@app.route('/api/chatbot/start', methods=['POST'])
+def start_chatbot_conversation():
+    """Start a new chatbot conversation"""
+    try:
+        from chatbot_controller import ChatbotController
+        
+        # Initialize chatbot controller
+        chatbot = ChatbotController(db, host_manager)
+        
+        # Get user ID from session or request
+        user_id = request.json.get('user_id') if request.json else None
+        
+        # Start conversation
+        result = chatbot.start_conversation(user_id)
+        
+        return jsonify(result)
+        
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@app.route('/api/chatbot/message', methods=['POST'])
+def send_chatbot_message():
+    """Send a message to the chatbot"""
+    try:
+        from chatbot_controller import ChatbotController
+        
+        data = request.get_json() or {}
+        conversation_id = data.get('conversation_id')
+        user_message = data.get('message')
+        selected_hosts = data.get('selected_hosts', [])
+        
+        if not conversation_id or not user_message:
+            return jsonify({
+                'success': False,
+                'error': 'Missing conversation_id or message'
+            }), 400
+        
+        # Initialize chatbot controller
+        chatbot = ChatbotController(db, host_manager)
+        
+        # Process message
+        result = chatbot.process_user_message(conversation_id, user_message, selected_hosts)
+        
+        return jsonify(result)
+        
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@app.route('/api/chatbot/conversation/<conversation_id>', methods=['GET'])
+def get_chatbot_conversation(conversation_id):
+    """Get conversation history"""
+    try:
+        from chatbot_controller import ChatbotController
+        
+        # Initialize chatbot controller
+        chatbot = ChatbotController(db, host_manager)
+        
+        # Get conversation history
+        result = chatbot.get_conversation_history(conversation_id)
+        
+        return jsonify(result)
+        
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@app.route('/api/chatbot/execution/<conversation_id>/<execution_id>', methods=['GET'])
+def get_chatbot_execution_results(conversation_id, execution_id):
+    """Get detailed execution results"""
+    try:
+        from chatbot_controller import ChatbotController
+        
+        # Initialize chatbot controller
+        chatbot = ChatbotController(db, host_manager)
+        
+        # Get execution results
+        result = chatbot.get_execution_results(conversation_id, execution_id)
+        
+        return jsonify(result)
+        
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@app.route('/api/chatbot/validate_script', methods=['POST'])
+def validate_chatbot_script():
+    """Validate a bash script for safety"""
+    try:
+        from command_validator import CommandValidator
+        
+        data = request.get_json() or {}
+        script = data.get('script')
+        
+        if not script:
+            return jsonify({
+                'success': False,
+                'error': 'No script provided'
+            }), 400
+        
+        # Initialize validator
+        validator = CommandValidator()
+        
+        # Validate script
+        validation_result = validator.validate_script(script)
+        
+        return jsonify({
+            'success': True,
+            'validation': validation_result
+        })
+        
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@app.route('/api/chatbot/generate_script', methods=['POST'])
+def generate_chatbot_script():
+    """Generate a script from natural language request"""
+    try:
+        from ai_command_generator import AICommandGenerator
+        
+        data = request.get_json() or {}
+        user_request = data.get('request')
+        selected_hosts = data.get('selected_hosts', [])
+        
+        if not user_request:
+            return jsonify({
+                'success': False,
+                'error': 'No request provided'
+            }), 400
+        
+        # Initialize command generator
+        generator = AICommandGenerator(db)
+        
+        # Generate script
+        generation_result = generator.generate_script_from_request(user_request, selected_hosts)
+        
+        return jsonify(generation_result)
+        
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
 @app.route('/api/ai_reports/data_stats', methods=['GET'])
 def get_ai_reports_data_stats():
     """Get statistics about available data for AI analysis"""
