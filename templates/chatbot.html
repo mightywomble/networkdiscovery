@@ -466,6 +466,86 @@
                 opacity: 1;
             }
         }
+        
+        /* Enhanced message content styles */
+        .code-block {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 6px;
+            margin: 0.75rem 0;
+            overflow: hidden;
+        }
+        
+        .code-block pre {
+            margin: 0;
+            padding: 1rem;
+            overflow-x: auto;
+            background: transparent;
+            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+            font-size: 0.875rem;
+            line-height: 1.4;
+        }
+        
+        .code-block code {
+            background: transparent;
+            padding: 0;
+            border: none;
+            font-family: inherit;
+        }
+        
+        .pf-c-code.pf-m-inline {
+            background: #f1f3f4;
+            padding: 0.125rem 0.375rem;
+            border-radius: 3px;
+            font-size: 0.875em;
+            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+        }
+        
+        .bullet-point {
+            margin: 0.25rem 0;
+            padding-left: 1rem;
+        }
+        
+        .numbered-point {
+            margin: 0.25rem 0;
+            padding-left: 1rem;
+        }
+        
+        .message-bubble h1,
+        .message-bubble h2,
+        .message-bubble h3 {
+            margin: 0.75rem 0 0.5rem 0;
+            color: inherit;
+        }
+        
+        .message-bubble h1:first-child,
+        .message-bubble h2:first-child,
+        .message-bubble h3:first-child {
+            margin-top: 0;
+        }
+        
+        .message-bubble strong {
+            font-weight: 600;
+        }
+        
+        .message-bubble em {
+            font-style: italic;
+        }
+        
+        .message-bubble .pf-c-button.pf-m-link.pf-m-inline {
+            padding: 0;
+            color: #0066cc;
+            text-decoration: underline;
+            background: transparent;
+            border: none;
+            font-size: inherit;
+            vertical-align: baseline;
+        }
+        
+        .message-bubble .pf-c-button.pf-m-link.pf-m-inline:hover {
+            color: #004080;
+            text-decoration: underline;
+        }
     </style>
 {% endblock %}
 
@@ -869,13 +949,38 @@
             scrollToBottom();
         }
 
-        // Format message content
+        // Format message content with markdown-like rendering
         function formatMessageContent(content) {
+            // Convert **bold** text
+            content = content.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+            
+            // Convert *italic* text
+            content = content.replace(/\*(.*?)\*/g, '<em>$1</em>');
+            
+            // Convert `inline code`
+            content = content.replace(/`([^`]+)`/g, '<code class="pf-c-code pf-m-inline">$1</code>');
+            
+            // Convert ```code blocks```
+            content = content.replace(/```bash\n([\s\S]*?)\n```/g, '<div class="code-block"><pre><code class="language-bash">$1</code></pre></div>');
+            content = content.replace(/```([\s\S]*?)```/g, '<div class="code-block"><pre><code>$1</code></pre></div>');
+            
+            // Convert headers (### Header)
+            content = content.replace(/^### (.*$)/gm, '<h3 class="pf-c-title pf-m-lg">$1</h3>');
+            content = content.replace(/^## (.*$)/gm, '<h2 class="pf-c-title pf-m-xl">$1</h2>');
+            content = content.replace(/^# (.*$)/gm, '<h1 class="pf-c-title pf-m-2xl">$1</h1>');
+            
+            // Convert bullet points
+            content = content.replace(/^• (.*$)/gm, '<div class="bullet-point">• $1</div>');
+            content = content.replace(/^\* (.*$)/gm, '<div class="bullet-point">• $1</div>');
+            
+            // Convert numbered lists
+            content = content.replace(/^(\d+)\. (.*$)/gm, '<div class="numbered-point">$1. $2</div>');
+            
             // Convert URLs to links
             const urlRegex = /(https?:\/\/[^\s]+)/g;
-            content = content.replace(urlRegex, '<a href="$1" target="_blank">$1</a>');
+            content = content.replace(urlRegex, '<a href="$1" target="_blank" class="pf-c-button pf-m-link pf-m-inline">$1</a>');
             
-            // Convert newlines to <br>
+            // Convert newlines to <br> (but preserve existing HTML)
             content = content.replace(/\n/g, '<br>');
             
             return content;
