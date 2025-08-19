@@ -360,3 +360,93 @@ class HostManager:
                         })
         
         return connections
+    
+    def execute_script(self, host, script_content, script_type='bash', timeout=300, working_dir=None):
+        """Execute a script on a remote host via SSH
+        
+        Args:
+            host: Host configuration dict
+            script_content: The script content to execute
+            script_type: Type of script (bash, python, sh, etc.)
+            timeout: Execution timeout in seconds
+            working_dir: Working directory for script execution
+            
+        Returns:
+            Tuple of (result_dict, error_string)
+        """
+        ssh = self.get_ssh_connection(host)
+        if not ssh:
+            return None, f"Could not connect to {host['name']}"
+        
+        try:
+            # Create a temporary script file
+            import tempfile
+            import uuid
+            
+            script_id = str(uuid.uuid4())[:8]
+            temp_script_path = f"/tmp/networkmap_script_{script_id}"
+            
+            # Determine script interpreter
+            interpreters = {
+                'bash': '/bin/bash',
+                'sh': '/bin/sh', 
+                'python': '/usr/bin/python3',
+                'python3': '/usr/bin/python3',
+                'python2': '/usr/bin/python2',
+                'perl': '/usr/bin/perl',
+                'ruby': '/usr/bin/ruby'
+            }
+            
+            interpreter = interpreters.get(script_type.lower(), '/bin/bash')
+            
+            # Upload script content to temporary file
+            sftp = ssh.open_sftp()
+            
+            try:
+                with sftp.open(temp_script_path, 'w') as f:
+                    f.write(script_content)
+                
+                # Make script executable
+                sftp.chmod(temp_script_path, 0o755)
+                
+            finally:
+                sftp.close()
+            
+            # Build execution command
+            if working_dir:
+                exec_cmd = f"cd {working_dir} && {interpreter} {temp_script_path}"
+            else:
+                exec_cmd = f"{interpreter} {temp_script_path}"
+            
+            # Execute the script
+            stdin, stdout, stderr = ssh.exec_command(exec_cmd, timeout=timeout)
+            
+            # Wait for execution to complete
+            exit_status = stdout.channel.recv_exit_status()
+            
+            # Read output
+            output = stdout.read().decode('utf-8', errors='ignore')
+            error = stderr.read().decode('utf-8', errors='ignore')
+            
+            # Clean up temporary script file
+            try:
+                cleanup_cmd = f"rm -f {temp_script_path}"
+                ssh.exec_command(cleanup_cmd)
+            except:
+                pass  # Best effort cleanup
+            
+            ssh.close()
+            
+            return {
+                'exit_status': exit_status,
+                'stdout': output,
+                'stderr': error,
+                'success': exit_status == 0,
+                'script_id': script_id,
+                'script_type': script_type,
+                'execution_time': None  # Could add timing if needed
+            }, None
+            
+        except Exception as e:
+            ssh.close()
+            return None, f"Script execution failed: {e}"

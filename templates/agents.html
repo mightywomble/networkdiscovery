@@ -218,7 +218,7 @@
 
 <!-- Agent Statistics -->
 <section class="pf-c-page__main-section" style="padding-top: 0;">
-    <div class="pf-l-gallery pf-m-gutter" style="grid-template-columns: repeat(4, 1fr);">
+    <div class="pf-l-gallery pf-m-gutter" style="grid-template-columns: repeat(6, 1fr);">
         <div class="pf-c-card nm-stat-card">
             <div class="pf-c-card__body pf-u-text-align-center">
                 <div class="nm-stat-value" style="color: var(--pf-global--primary-color--100)" id="total-hosts">-</div>
@@ -241,6 +241,18 @@
             <div class="pf-c-card__body pf-u-text-align-center">
                 <div class="nm-stat-value" style="color: var(--pf-global--warning-color--100)" id="pending-agents">-</div>
                 <div class="nm-stat-label">Pending</div>
+            </div>
+        </div>
+        <div class="pf-c-card nm-stat-card">
+            <div class="pf-c-card__body pf-u-text-align-center">
+                <div class="nm-stat-value" style="color: var(--pf-global--palette--purple-500)" id="current-deployed-version">-</div>
+                <div class="nm-stat-label">Current Deployed</div>
+            </div>
+        </div>
+        <div class="pf-c-card nm-stat-card">
+            <div class="pf-c-card__body pf-u-text-align-center">
+                <div class="nm-stat-value" style="color: var(--pf-global--palette--cyan-500)" id="latest-available-version">-</div>
+                <div class="nm-stat-label">Latest Available</div>
             </div>
         </div>
     </div>
@@ -991,7 +1003,7 @@ function renderHosts() {
     container.innerHTML = `<div class="pf-l-gallery pf-m-gutter">${hostCards}</div>`;
 }
 
-function updateStats() {
+async function updateStats() {
     const totalHosts = hosts.length;
     const deployedAgents = agents.length;
     
@@ -1022,6 +1034,70 @@ function updateStats() {
     document.getElementById('deployed-agents').textContent = deployedAgents;
     document.getElementById('online-agents').textContent = onlineCount;
     document.getElementById('pending-agents').textContent = pendingAgents;
+    
+    // Update version statistics
+    await updateVersionStats();
+}
+
+async function updateVersionStats() {
+    try {
+        // Fetch version data
+        const versionsResponse = await fetch('/api/agent/versions');
+        const versionsData = await versionsResponse.json();
+        
+        let currentDeployedVersion = '-';
+        let latestAvailableVersion = '-';
+        
+        if (versionsData.success && versionsData.agents && versionsData.agents.length > 0) {
+            const agentVersions = versionsData.agents
+                .map(a => a.agent_version)
+                .filter(v => v && v !== 'Unknown');
+            
+            if (agentVersions.length > 0) {
+                // Find the most common deployed version (current deployed)
+                const versionCounts = {};
+                agentVersions.forEach(version => {
+                    versionCounts[version] = (versionCounts[version] || 0) + 1;
+                });
+                
+                // Get the version with the highest count
+                currentDeployedVersion = Object.keys(versionCounts)
+                    .reduce((a, b) => versionCounts[a] > versionCounts[b] ? a : b);
+                
+                // Find the latest version (highest semantic version)
+                const versions = agentVersions
+                    .map(v => {
+                        const parts = v.split('.').map(n => parseInt(n) || 0);
+                        return { version: v, parts: parts };
+                    })
+                    .sort((a, b) => {
+                        // Sort by semantic version (descending)
+                        for (let i = 0; i < Math.max(a.parts.length, b.parts.length); i++) {
+                            const aPart = a.parts[i] || 0;
+                            const bPart = b.parts[i] || 0;
+                            if (aPart !== bPart) {
+                                return bPart - aPart;
+                            }
+                        }
+                        return 0;
+                    });
+                
+                if (versions.length > 0) {
+                    latestAvailableVersion = versions[0].version;
+                }
+            }
+        }
+        
+        // Update the version statistics in the UI
+        document.getElementById('current-deployed-version').textContent = currentDeployedVersion;
+        document.getElementById('latest-available-version').textContent = latestAvailableVersion;
+        
+    } catch (error) {
+        console.error('Error updating version stats:', error);
+        // Set fallback values on error
+        document.getElementById('current-deployed-version').textContent = 'Error';
+        document.getElementById('latest-available-version').textContent = 'Error';
+    }
 }
 
 function toggleHostSelection(hostId, event) {

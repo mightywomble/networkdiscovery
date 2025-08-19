@@ -259,6 +259,13 @@ agent_run_progress = {
     'logs': deque(maxlen=500)  # Recent logs across all runs
 }
 
+# Global state for script execution progress
+script_execution_progress = {
+    'running': {},  # Dict of execution_id -> execution_info
+    'logs': deque(maxlen=1000),  # Recent logs across all script executions
+    'completed': {}  # Recently completed executions (kept for 5 minutes)
+}
+
 @app.route('/install_ubuntu_tools', methods=['POST'])
 def install_ubuntu_tools():
     """Start installation of network tools with real-time progress tracking"""
@@ -3865,6 +3872,154 @@ def run_agent_now():
             'error': str(e)
         }), 500
 
+@app.route('/api/agent/execute_script', methods=['POST'])
+def execute_script_on_agent():
+    """Execute a script on an agent host via SSH with progress tracking"""
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({
+                'success': False,
+                'error': 'No data provided'
+            }), 400
+        
+        # Required fields
+        hostname = data.get('hostname')
+        ip_address = data.get('ip_address')
+        script_content = data.get('script_content')
+        
+        if not all([hostname, ip_address, script_content]):
+            return jsonify({
+                'success': False,
+                'error': 'hostname, ip_address, and script_content are required'
+            }), 400
+        
+        # Optional fields with defaults
+        script_type = data.get('script_type', 'bash')
+        timeout = data.get('timeout', 300)  # 5 minute default
+        working_dir = data.get('working_dir')
+        background = data.get('background', False)  # Run in background with progress tracking
+        
+        # Validate script type
+        allowed_script_types = ['bash', 'sh', 'python', 'python3', 'python2', 'perl', 'ruby']
+        if script_type.lower() not in allowed_script_types:
+            return jsonify({
+                'success': False,
+                'error': f'Invalid script_type. Allowed: {", ".join(allowed_script_types)}'
+            }), 400
+        
+        # Validate timeout
+        if not isinstance(timeout, int) or timeout < 1 or timeout > 3600:  # Max 1 hour
+            return jsonify({
+                'success': False,
+                'error': 'timeout must be an integer between 1 and 3600 seconds'
+            }), 400
+        
+        # Basic script security validation
+        dangerous_patterns = [
+            'rm -rf /',
+            'sudo rm',
+            'mkfs.',
+            'dd if=',
+            'format ',
+            '> /dev/sd',
+            'shutdown',
+            'reboot',
+            'halt',
+            'init 0',
+            'init 6'
+        ]
+        
+        script_lower = script_content.lower()
+        for pattern in dangerous_patterns:
+            if pattern in script_lower:
+                return jsonify({
+                    'success': False,
+                    'error': f'Script contains potentially dangerous command: {pattern}'
+                }), 400
+        
+        # Find host by IP or name
+        hosts = host_manager.get_all_hosts()
+        host = next((h for h in hosts if h['ip_address'] == ip_address or h['name'] == hostname), None)
+        
+        if not host:
+            return jsonify({
+                'success': False,
+                'error': f'Host {hostname} ({ip_address}) not found in configuration'
+            }), 404
+        
+        # If background execution is requested, start it with progress tracking
+        if background:
+            import uuid
+            execution_id = str(uuid.uuid4())
+            
+            # Check if script execution is already running for this host
+            global script_execution_progress
+            host_key = f"{hostname}_{ip_address}"
+            
+            if host_key in script_execution_progress['running']:
+                return jsonify({
+                    'success': False,
+                    'error': f'Script execution already in progress for {hostname}'
+                }), 400
+            
+            # Start script execution in background thread with progress tracking
+            thread = threading.Thread(
+                target=execute_script_with_progress, 
+                args=(execution_id, host, script_content, script_type, timeout, working_dir, hostname, ip_address)
+            )
+            thread.daemon = True
+            thread.start()
+            
+            return jsonify({
+                'success': True,
+                'execution_id': execution_id,
+                'message': f'Script execution started in background on {hostname}',
+                'hostname': hostname,
+                'ip_address': ip_address,
+                'background': True,
+                'timestamp': datetime.now().isoformat()
+            })
+        else:
+            # Execute the script synchronously (existing behavior)
+            result, error = host_manager.execute_script(
+                host=host,
+                script_content=script_content,
+                script_type=script_type,
+                timeout=timeout,
+                working_dir=working_dir
+            )
+            
+            if result:
+                return jsonify({
+                    'success': result['success'],
+                    'script_id': result['script_id'],
+                    'exit_status': result['exit_status'],
+                    'stdout': result['stdout'],
+                    'stderr': result['stderr'],
+                    'script_type': result['script_type'],
+                    'hostname': hostname,
+                    'ip_address': ip_address,
+                    'background': False,
+                    'timestamp': datetime.now().isoformat()
+                })
+            else:
+                return jsonify({
+                    'success': False,
+                    'error': error,
+                    'hostname': hostname,
+                    'ip_address': ip_address,
+                    'background': False,
+                    'timestamp': datetime.now().isoformat()
+                }), 500
+            
+    except Exception as e:
+        print(f"Error executing script: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
 @app.route('/api/agent/last_data/<agent_id>', methods=['GET'])
 def get_agent_last_data(agent_id):
     """Get the last data collected by an agent"""
@@ -4089,6 +4244,163 @@ def get_all_agent_run_progress():
             'success': False,
             'error': str(e)
         }), 500
+
+def execute_script_with_progress(execution_id, host, script_content, script_type, timeout, working_dir, hostname, ip_address):
+    """Execute script with progress tracking"""
+    global script_execution_progress
+    
+    host_key = f"{hostname}_{ip_address}"
+    
+    # Initialize execution info
+    execution_info = {
+        'execution_id': execution_id,
+        'hostname': hostname,
+        'ip_address': ip_address,
+        'start_time': datetime.now().isoformat(),
+        'current_phase': 'initializing',
+        'progress': 0,
+        'status': 'running',
+        'current_action': 'Starting script execution...',
+        'script_type': script_type,
+        'timeout': timeout,
+        'working_dir': working_dir,
+        'error': None,
+        'phases_completed': []
+    }
+    
+    # Add to running executions
+    script_execution_progress['running'][execution_id] = execution_info
+    
+    def log_script_progress(message, level='info', phase=None, progress=None, action=None):
+        """Log progress for this specific script execution"""
+        log_entry = {
+            'timestamp': datetime.now().isoformat(),
+            'execution_id': execution_id,
+            'hostname': hostname,
+            'message': message,
+            'level': level,
+            'phase': phase
+        }
+        
+        script_execution_progress['logs'].append(log_entry)
+        
+        # Update execution info
+        if phase:
+            execution_info['current_phase'] = phase
+        if progress is not None:
+            execution_info['progress'] = progress
+        if action:
+            execution_info['current_action'] = action
+        
+        print(f"[SCRIPT EXEC {execution_id}] {hostname}: {message}")
+    
+    try:
+        log_script_progress("🚀 Starting script execution", 'info', 'initializing', 0, 'Connecting to host...')
+        
+        # Phase 1: Test connectivity
+        log_script_progress("Testing SSH connectivity", 'info', 'connecting', 10, 'Testing SSH connection...')
+        
+        test_result, test_error = host_manager.execute_command(host, 'echo "SSH test successful"', timeout=10)
+        
+        if not test_result or not test_result.get('success'):
+            error_msg = f'SSH connection failed: {test_error or "Connection timeout"}'
+            log_script_progress(error_msg, 'error', 'error', execution_info['progress'], 'SSH connection failed')
+            execution_info['status'] = 'error'
+            execution_info['error'] = error_msg
+            return
+        
+        log_script_progress("✅ SSH connectivity confirmed", 'info', 'connecting', 20, 'SSH connection successful')
+        execution_info['phases_completed'].append('connecting')
+        
+        # Phase 2: Prepare script for execution
+        log_script_progress("Preparing script for execution", 'info', 'preparing', 30, 'Preparing script...')
+        
+        # Phase 3: Execute the script
+        log_script_progress(f"Executing {script_type} script", 'info', 'executing', 50, f'Running {script_type} script...')
+        
+        # Execute the script using host_manager
+        result, error = host_manager.execute_script(
+            host=host,
+            script_content=script_content,
+            script_type=script_type,
+            timeout=timeout,
+            working_dir=working_dir
+        )
+        
+        execution_info['phases_completed'].append('executing')
+        
+        # Phase 4: Process results
+        log_script_progress("Processing execution results", 'info', 'processing', 80, 'Processing results...')
+        
+        if result:
+            # Store execution results
+            execution_info['result'] = {
+                'success': result['success'],
+                'script_id': result['script_id'],
+                'exit_status': result['exit_status'],
+                'stdout': result['stdout'],
+                'stderr': result['stderr'],
+                'script_type': result['script_type']
+            }
+            
+            if result['success']:
+                log_script_progress(f"✅ Script executed successfully (exit status: {result['exit_status']})", 'info', 'complete', 100, 'Script execution completed')
+                execution_info['status'] = 'completed'
+            else:
+                log_script_progress(f"⚠️ Script completed with errors (exit status: {result['exit_status']})", 'warning', 'complete', 100, 'Script execution completed with errors')
+                execution_info['status'] = 'completed_with_errors'
+        else:
+            error_msg = error or "Unknown error during script execution"
+            log_script_progress(f"❌ Script execution failed: {error_msg}", 'error', 'error', execution_info['progress'], 'Script execution failed')
+            execution_info['status'] = 'error'
+            execution_info['error'] = error_msg
+            execution_info['result'] = {
+                'success': False,
+                'error': error_msg
+            }
+        
+        execution_info['phases_completed'].append('processing')
+        
+        # Phase 5: Complete
+        execution_info['end_time'] = datetime.now().isoformat()
+        
+        # Calculate duration
+        start_time = datetime.fromisoformat(execution_info['start_time'])
+        end_time = datetime.fromisoformat(execution_info['end_time'])
+        duration = (end_time - start_time).total_seconds()
+        execution_info['duration_seconds'] = round(duration, 2)
+        
+        log_script_progress(f"Script execution completed in {duration:.1f} seconds", 'info', 'complete', 100, f'Completed in {duration:.1f}s')
+        
+    except Exception as e:
+        error_msg = f"Exception during script execution: {str(e)}"
+        log_script_progress(error_msg, 'error', 'error', execution_info.get('progress', 0), 'Exception occurred')
+        execution_info['status'] = 'error'
+        execution_info['error'] = error_msg
+        print(f"Exception in execute_script_with_progress: {e}")
+    
+    finally:
+        # Move to completed executions and keep for a brief period
+        def move_to_completed():
+            time.sleep(300)  # Keep in completed for 5 minutes
+            if execution_id in script_execution_progress['running']:
+                # Move from running to completed
+                script_execution_progress['completed'][execution_id] = script_execution_progress['running'][execution_id]
+                del script_execution_progress['running'][execution_id]
+                
+                # Cleanup completed executions after some time
+                def cleanup_completed():
+                    time.sleep(300)  # Keep completed for another 5 minutes
+                    if execution_id in script_execution_progress['completed']:
+                        del script_execution_progress['completed'][execution_id]
+                
+                cleanup_thread = threading.Thread(target=cleanup_completed)
+                cleanup_thread.daemon = True
+                cleanup_thread.start()
+        
+        move_thread = threading.Thread(target=move_to_completed)
+        move_thread.daemon = True
+        move_thread.start()
 
 def run_agent_with_progress(agent, host):
     """Run agent scan with progress tracking"""
@@ -5305,6 +5617,273 @@ def generate_ai_report():
             'data_type': request.json.get('data_type', 'Unknown') if request.json else 'Unknown',
             'generated_at': datetime.now().isoformat()
         })
+
+# Script execution progress tracking endpoints
+@app.route('/api/script_execution/progress/<execution_id>', methods=['GET'])
+def get_script_execution_progress(execution_id):
+    """Get the progress of a running script execution"""
+    try:
+        global script_execution_progress
+        
+        # Check running executions first
+        if execution_id in script_execution_progress['running']:
+            execution_info = script_execution_progress['running'][execution_id]
+            
+            # Get recent logs for this specific execution
+            execution_logs = [log for log in script_execution_progress['logs'] 
+                             if log.get('execution_id') == execution_id][-20:]  # Last 20 logs
+            
+            return jsonify({
+                'success': True,
+                'execution_id': execution_id,
+                'running': True,
+                'execution_info': execution_info,
+                'logs': execution_logs,
+                'timestamp': datetime.now().isoformat()
+            })
+        
+        # Check completed executions
+        elif execution_id in script_execution_progress['completed']:
+            execution_info = script_execution_progress['completed'][execution_id]
+            
+            # Get logs for this completed execution
+            execution_logs = [log for log in script_execution_progress['logs'] 
+                             if log.get('execution_id') == execution_id]
+            
+            return jsonify({
+                'success': True,
+                'execution_id': execution_id,
+                'running': False,
+                'completed': True,
+                'execution_info': execution_info,
+                'logs': execution_logs,
+                'timestamp': datetime.now().isoformat()
+            })
+        
+        else:
+            return jsonify({
+                'success': False,
+                'error': f'No execution found for ID {execution_id}',
+                'running': False,
+                'completed': False
+            }), 404
+        
+    except Exception as e:
+        print(f"Error getting script execution progress: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@app.route('/api/script_execution/all_progress', methods=['GET'])
+def get_all_script_execution_progress():
+    """Get the progress of all running script executions"""
+    try:
+        global script_execution_progress
+        
+        # Get recent logs (last 50 entries)
+        recent_logs = list(script_execution_progress['logs'])[-50:]
+        
+        # Count running and completed executions
+        running_count = len(script_execution_progress['running'])
+        completed_count = len(script_execution_progress['completed'])
+        
+        return jsonify({
+            'success': True,
+            'running_executions': script_execution_progress['running'],
+            'completed_executions': script_execution_progress['completed'],
+            'running_count': running_count,
+            'completed_count': completed_count,
+            'recent_logs': recent_logs,
+            'timestamp': datetime.now().isoformat()
+        })
+        
+    except Exception as e:
+        print(f"Error getting all script execution progress: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@app.route('/api/script_execution/results/<execution_id>', methods=['GET'])
+def get_script_execution_results(execution_id):
+    """Get the detailed results of a script execution"""
+    try:
+        global script_execution_progress
+        
+        execution_info = None
+        
+        # Check running executions first
+        if execution_id in script_execution_progress['running']:
+            execution_info = script_execution_progress['running'][execution_id]
+        # Check completed executions
+        elif execution_id in script_execution_progress['completed']:
+            execution_info = script_execution_progress['completed'][execution_id]
+        
+        if not execution_info:
+            return jsonify({
+                'success': False,
+                'error': f'No execution found for ID {execution_id}'
+            }), 404
+        
+        # Get all logs for this execution
+        execution_logs = [log for log in script_execution_progress['logs'] 
+                         if log.get('execution_id') == execution_id]
+        
+        # Prepare detailed results
+        results = {
+            'execution_id': execution_id,
+            'hostname': execution_info.get('hostname'),
+            'ip_address': execution_info.get('ip_address'),
+            'script_type': execution_info.get('script_type'),
+            'start_time': execution_info.get('start_time'),
+            'end_time': execution_info.get('end_time'),
+            'duration_seconds': execution_info.get('duration_seconds'),
+            'status': execution_info.get('status'),
+            'current_phase': execution_info.get('current_phase'),
+            'progress': execution_info.get('progress'),
+            'current_action': execution_info.get('current_action'),
+            'phases_completed': execution_info.get('phases_completed', []),
+            'error': execution_info.get('error'),
+            'result': execution_info.get('result'),
+            'logs': execution_logs
+        }
+        
+        return jsonify({
+            'success': True,
+            'results': results,
+            'timestamp': datetime.now().isoformat()
+        })
+        
+    except Exception as e:
+        print(f"Error getting script execution results: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@app.route('/api/script_execution/cancel/<execution_id>', methods=['POST'])
+def cancel_script_execution(execution_id):
+    """Cancel a running script execution"""
+    try:
+        global script_execution_progress
+        
+        if execution_id not in script_execution_progress['running']:
+            return jsonify({
+                'success': False,
+                'error': f'No running execution found for ID {execution_id}'
+            }), 404
+        
+        execution_info = script_execution_progress['running'][execution_id]
+        
+        # Mark as cancelled
+        execution_info['status'] = 'cancelled'
+        execution_info['current_action'] = 'Execution cancelled by user'
+        execution_info['end_time'] = datetime.now().isoformat()
+        
+        # Calculate duration if start time exists
+        if execution_info.get('start_time'):
+            try:
+                start_time = datetime.fromisoformat(execution_info['start_time'])
+                end_time = datetime.fromisoformat(execution_info['end_time'])
+                duration = (end_time - start_time).total_seconds()
+                execution_info['duration_seconds'] = round(duration, 2)
+            except:
+                pass
+        
+        # Add cancellation log
+        log_entry = {
+            'timestamp': datetime.now().isoformat(),
+            'execution_id': execution_id,
+            'hostname': execution_info.get('hostname'),
+            'message': 'Script execution cancelled by user',
+            'level': 'warning',
+            'phase': 'cancelled'
+        }
+        script_execution_progress['logs'].append(log_entry)
+        
+        # Move to completed
+        script_execution_progress['completed'][execution_id] = execution_info
+        del script_execution_progress['running'][execution_id]
+        
+        return jsonify({
+            'success': True,
+            'message': f'Script execution {execution_id} cancelled',
+            'execution_id': execution_id,
+            'timestamp': datetime.now().isoformat()
+        })
+        
+    except Exception as e:
+        print(f"Error cancelling script execution: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@app.route('/api/script_execution/cleanup', methods=['POST'])
+def cleanup_script_executions():
+    """Clean up old completed script executions"""
+    try:
+        global script_execution_progress
+        
+        # Get cleanup parameters
+        data = request.get_json() or {}
+        hours_old = data.get('hours_old', 1)  # Default: remove executions older than 1 hour
+        
+        cutoff_time = datetime.now() - timedelta(hours=hours_old)
+        
+        removed_count = 0
+        execution_ids_to_remove = []
+        
+        # Find old completed executions
+        for execution_id, execution_info in script_execution_progress['completed'].items():
+            try:
+                if execution_info.get('end_time'):
+                    end_time = datetime.fromisoformat(execution_info['end_time'])
+                    if end_time < cutoff_time:
+                        execution_ids_to_remove.append(execution_id)
+            except:
+                # If we can't parse the time, consider it for removal
+                execution_ids_to_remove.append(execution_id)
+        
+        # Remove old executions
+        for execution_id in execution_ids_to_remove:
+            del script_execution_progress['completed'][execution_id]
+            removed_count += 1
+        
+        # Also clean up old logs
+        log_cutoff_time = datetime.now() - timedelta(hours=hours_old * 2)  # Keep logs longer
+        original_log_count = len(script_execution_progress['logs'])
+        
+        # Filter out old logs
+        filtered_logs = []
+        for log in script_execution_progress['logs']:
+            try:
+                log_time = datetime.fromisoformat(log['timestamp'])
+                if log_time >= log_cutoff_time:
+                    filtered_logs.append(log)
+            except:
+                # Keep logs we can't parse timestamp for
+                filtered_logs.append(log)
+        
+        script_execution_progress['logs'] = deque(filtered_logs, maxlen=1000)
+        logs_removed = original_log_count - len(filtered_logs)
+        
+        return jsonify({
+            'success': True,
+            'message': f'Cleaned up {removed_count} executions and {logs_removed} log entries',
+            'executions_removed': removed_count,
+            'logs_removed': logs_removed,
+            'hours_old': hours_old,
+            'timestamp': datetime.now().isoformat()
+        })
+        
+    except Exception as e:
+        print(f"Error cleaning up script executions: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
 
 # Statistics page route
 @app.route('/statistics')
