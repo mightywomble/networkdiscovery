@@ -136,9 +136,9 @@ def add_database_methods(db_path='networkmap.db'):
             if cursor.fetchone():
                 # Update existing conversation
                 conn.execute('''
-                    UPDATE chatbot_conversations 
-                    SET state = ?, updated_at = ?, metadata = ?
-                    WHERE id = ?
+UPDATE chatbot_conversations 
+SET state = ?, updated_at = ?, metadata = ?
+WHERE id = ?
                 ''', (
                     conversation.get('state', 'initial'),
                     conversation.get('updated_at', datetime.now().isoformat()),
