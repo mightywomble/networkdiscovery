@@ -1,17 +1,4 @@
-nohup: ignoring input
-/home/david/live/networkmap/venv/lib/python3.12/site-packages/paramiko/pkey.py:100: CryptographyDeprecationWarning: TripleDES has been moved to cryptography.hazmat.decrepit.ciphers.algorithms.TripleDES and will be removed from cryptography.hazmat.primitives.ciphers.algorithms in 48.0.0.
-  "cipher": algorithms.TripleDES,
-/home/david/live/networkmap/venv/lib/python3.12/site-packages/paramiko/transport.py:258: CryptographyDeprecationWarning: TripleDES has been moved to cryptography.hazmat.decrepit.ciphers.algorithms.TripleDES and will be removed from cryptography.hazmat.primitives.ciphers.algorithms in 48.0.0.
-  "class": algorithms.TripleDES,
-Initializing NetworkMap Flask Application...
-Initializing database...
-DEBUG: Initializing database at networkmap.db
-DEBUG: Got database connection
-DEBUG: Database initialization completed successfully
-✓ Database initialized successfully
-Starting Flask server on http://0.0.0.0:5150
-Note: Debug mode disabled for stability
- * Serving Flask app 'app'
- * Debug mode: off
-Address already in use
-Port 5150 is in use by another program. Either identify and stop that program, or start the server with a different port.
+Traceback (most recent call last):
+  File "/Users/david/code/networkdiscovery/app.py", line 7, in <module>
+    from flask import Flask, render_template, request, jsonify, redirect, url_for, flash
+ModuleNotFoundError: No module named 'flask'
