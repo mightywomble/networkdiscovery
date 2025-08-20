@@ -11,6 +11,7 @@ import os
 import threading
 import time
 from collections import defaultdict, deque
+import psycopg2.extras
 
 from network_scanner import NetworkScanner
 from host_manager import HostManager
@@ -761,12 +762,15 @@ def export_enhanced_scan_results():
         # Try to get recent enhanced scan results from database first
         results = []
         try:
-            results = db.execute('''
-                SELECT host_id, scan_timestamp, scan_data 
-                FROM enhanced_scan_results 
-                WHERE scan_timestamp > datetime('now', '-24 hours')
-                ORDER BY scan_timestamp DESC
-            ''').fetchall()
+            with db.get_connection() as conn:
+                cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+                cursor.execute('''
+                    SELECT host_id, scan_timestamp, scan_data 
+                    FROM enhanced_scan_results 
+                    WHERE scan_timestamp > NOW() - INTERVAL '24 HOURS'
+                    ORDER BY scan_timestamp DESC
+                ''')
+                results = cursor.fetchall()
         except Exception as db_error:
             print(f"Database query failed: {db_error}")
         
@@ -1523,10 +1527,11 @@ def update_device():
                     try:
                         # Update host in the database using proper connection pattern
                         with db.get_connection() as conn:
-                            conn.execute("""
+                            cursor = conn.cursor()
+                            cursor.execute("""
                                 UPDATE hosts 
-                                SET name = ?, description = ?
-                                WHERE ip_address = ?
+                                SET name = %s, description = %s
+                                WHERE ip_address = %s
                             """, (label, notes, ip))
                             conn.commit()
                         
@@ -1536,8 +1541,9 @@ def update_device():
             
             # Store/update device metadata in a device_metadata table
             with db.get_connection() as conn:
+                cursor = conn.cursor()
                 # Create the table if it doesn't exist
-                conn.execute("""
+                cursor.execute("""
                     CREATE TABLE IF NOT EXISTS device_metadata (
                         device_id TEXT PRIMARY KEY,
                         ip_address TEXT,
@@ -1549,11 +1555,17 @@ def update_device():
                     )
                 """)
                 
-                # Insert or update device metadata
-                conn.execute("""
-                    INSERT OR REPLACE INTO device_metadata 
+                # Insert or update device metadata (PostgreSQL UPSERT)
+                cursor.execute("""
+                    INSERT INTO device_metadata 
                     (device_id, ip_address, label, device_type, notes, updated_at)
-                    VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+                    VALUES (%s, %s, %s, %s, %s, CURRENT_TIMESTAMP)
+                    ON CONFLICT (device_id) DO UPDATE SET
+                        ip_address = EXCLUDED.ip_address,
+                        label = EXCLUDED.label,
+                        device_type = EXCLUDED.device_type,
+                        notes = EXCLUDED.notes,
+                        updated_at = CURRENT_TIMESTAMP
                 """, (device_id, ip, label, device_type, notes))
                 
                 conn.commit()
@@ -1593,8 +1605,9 @@ def get_device_metadata(device_id):
     try:
         # Query device metadata using proper connection pattern
         with db.get_connection() as conn:
-            cursor = conn.execute(
-                "SELECT * FROM device_metadata WHERE device_id = ?", 
+            cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+            cursor.execute(
+                "SELECT * FROM device_metadata WHERE device_id = %s", 
                 (device_id,)
             )
             result = cursor.fetchone()
@@ -1632,7 +1645,8 @@ def get_all_device_metadata():
     try:
         # Query all device metadata using proper connection pattern
         with db.get_connection() as conn:
-            cursor = conn.execute(
+            cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+            cursor.execute(
                 "SELECT * FROM device_metadata ORDER BY updated_at DESC"
             )
             results = cursor.fetchall()
@@ -1712,9 +1726,10 @@ def update_host():
         try:
             # Update host in database
             with db.get_connection() as conn:
+                cursor = conn.cursor()
                 # Check if host exists
-                cursor = conn.execute(
-                    "SELECT id FROM hosts WHERE id = ?", 
+                cursor.execute(
+                    "SELECT id FROM hosts WHERE id = %s", 
                     (host_id,)
                 )
                 existing_host = cursor.fetchone()
@@ -1726,11 +1741,11 @@ def update_host():
                     }), 404
                 
                 # Update the host
-                conn.execute("""
+                cursor.execute("""
                     UPDATE hosts 
-                    SET name = ?, ip_address = ?, username = ?, ssh_port = ?, 
-                        description = ?, updated_at = CURRENT_TIMESTAMP
-                    WHERE id = ?
+                    SET name = %s, ip_address = %s, username = %s, ssh_port = %s, 
+                        description = %s, updated_at = CURRENT_TIMESTAMP
+                    WHERE id = %s
                 """, (name, ip_address, username, ssh_port, description, host_id))
                 
                 conn.commit()
@@ -1882,7 +1897,8 @@ def import_hosts():
             # Delete all existing hosts
             try:
                 with db.get_connection() as conn:
-                    conn.execute("DELETE FROM hosts")
+                    cursor = conn.cursor()
+                    cursor.execute("DELETE FROM hosts")
                     conn.commit()
                 print("Cleared all existing hosts for replace mode")
             except Exception as e:
@@ -1929,11 +1945,12 @@ def import_hosts():
                     # Update existing host
                     try:
                         with db.get_connection() as conn:
-                            conn.execute("""
+                            cursor = conn.cursor()
+                            cursor.execute("""
                                 UPDATE hosts 
-                                SET name = ?, ip_address = ?, username = ?, ssh_port = ?, 
-                                    description = ?, updated_at = CURRENT_TIMESTAMP
-                                WHERE id = ?
+                                SET name = %s, ip_address = %s, username = %s, ssh_port = %s, 
+                                    description = %s, updated_at = CURRENT_TIMESTAMP
+                                WHERE id = %s
                             """, (name, ip_address, username, ssh_port, description, existing_host['id']))
                             conn.commit()
                         
@@ -4744,33 +4761,35 @@ def get_connection_statistics():
         # Get connection breakdown by protocol, port, etc.
         with db.get_connection() as conn:
             # Protocol breakdown
-            cursor = conn.execute('''
+            cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+            cursor.execute('''
                 SELECT 
                     protocol,
                     COUNT(*) as connection_count,
                     SUM(connection_count) as total_connections,
                     SUM(bytes_sent + bytes_received) as total_traffic
                 FROM network_connections
-                WHERE last_seen > datetime('now', '-{} hour')
+                WHERE last_seen > NOW() - INTERVAL '%s HOUR'
                 GROUP BY protocol
                 ORDER BY connection_count DESC
-            '''.format(hours))
-            protocol_stats = [dict(row) for row in cursor.fetchall()]
+            ''', (hours,))
+            protocol_stats = cursor.fetchall()
             
             # Top ports
-            cursor = conn.execute('''
+            cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+            cursor.execute('''
                 SELECT 
                     dest_port,
                     COUNT(*) as connection_count,
                     SUM(connection_count) as total_connections,
                     COUNT(DISTINCT source_host_id) as unique_sources
                 FROM network_connections
-                WHERE last_seen > datetime('now', '-{} hour')
+                WHERE last_seen > NOW() - INTERVAL '%s HOUR'
                 GROUP BY dest_port
                 ORDER BY connection_count DESC
                 LIMIT 20
-            '''.format(hours))
-            port_stats = [dict(row) for row in cursor.fetchall()]
+            ''', (hours,))
+            port_stats = cursor.fetchall()
         
         return jsonify({
             'success': True,
@@ -4802,30 +4821,33 @@ def get_realtime_statistics():
         
         with db.get_connection() as conn:
             # Recent activity counters
-            cursor = conn.execute('''
+            cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+            cursor.execute('''
                 SELECT COUNT(*) as recent_connections
                 FROM network_connections 
-                WHERE last_seen > ?
+                WHERE last_seen > %s
             ''', (recent_cutoff,))
-            recent_activity = dict(cursor.fetchone())
+            recent_activity = cursor.fetchone()
             
             # Active hosts in last 5 minutes
-            cursor = conn.execute('''
+            cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+            cursor.execute('''
                 SELECT COUNT(DISTINCT source_host_id) as active_hosts
                 FROM network_connections 
-                WHERE last_seen > ?
+                WHERE last_seen > %s
             ''', (recent_cutoff,))
-            active_hosts = dict(cursor.fetchone())
+            active_hosts = cursor.fetchone()
             
             # Recent agent activity
-            cursor = conn.execute('''
+            cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+            cursor.execute('''
                 SELECT 
                     COUNT(*) as recent_heartbeats,
                     COUNT(CASE WHEN status = 'active' THEN 1 END) as active_agents
                 FROM agents 
-                WHERE last_heartbeat > ?
+                WHERE last_heartbeat > %s
             ''', (recent_cutoff,))
-            agent_activity = dict(cursor.fetchone())
+            agent_activity = cursor.fetchone()
         
         realtime_data = {
             'current_time': current_time.isoformat(),
