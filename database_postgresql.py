@@ -1171,6 +1171,69 @@ class Database:
             }
 
 
+    def get_unified_dashboard_stats(self):
+        """Get comprehensive dashboard statistics for all pages"""
+        try:
+            with self.get_connection() as conn:
+                cursor = conn.cursor()
+                stats = {}
+                
+                # Host statistics
+                cursor.execute('SELECT COUNT(*) FROM hosts')
+                result = cursor.fetchone()
+                stats['total_hosts'] = result[0] if result else 0
+                
+                cursor.execute("SELECT COUNT(*) FROM hosts WHERE status = %s", ('online',))
+                result = cursor.fetchone()
+                stats['online_hosts'] = result[0] if result else 0
+                
+                # Agent statistics
+                cursor.execute('SELECT COUNT(*) FROM agents')
+                result = cursor.fetchone()
+                stats['agents_deployed'] = result[0] if result else 0
+                
+                cursor.execute("SELECT COUNT(*) FROM agents WHERE status = %s", ('active',))
+                result = cursor.fetchone()
+                stats['active_agents'] = result[0] if result else 0
+                
+                # Get most common deployed agent version
+                cursor.execute("SELECT agent_version, COUNT(*) FROM agents WHERE agent_version IS NOT NULL GROUP BY agent_version ORDER BY COUNT(*) DESC LIMIT 1")
+                result = cursor.fetchone()
+                stats['current_deployed'] = result[0] if result else 'Unknown'
+                
+                # Get latest available version from settings or use default
+                cursor.execute("SELECT setting_value FROM application_settings WHERE setting_key = %s", ('latest_agent_version',))
+                result = cursor.fetchone()
+                stats['latest_available'] = result[0] if result else '1.7.0'
+                
+                # Recent scans (last 24 hours)
+                cursor.execute("""
+                    SELECT COUNT(*) FROM agent_scan_results 
+                    WHERE scan_timestamp > NOW() - INTERVAL '24 hour'
+                """)
+                result = cursor.fetchone()
+                stats['recent_scans'] = result[0] if result else 0
+                
+                # Add total_connections for backward compatibility
+                cursor.execute("SELECT COUNT(*) FROM network_connections")
+                result = cursor.fetchone()
+                stats["total_connections"] = result[0] if result else 0
+                
+            return stats
+            
+        except Exception as e:
+            logger.error(f"Error getting unified dashboard stats: {e}")
+            return {
+                'total_hosts': 0,
+                'online_hosts': 0,
+                'active_agents': 0,
+                'agents_deployed': 0,
+                'current_deployed': 'Unknown',
+                'latest_available': '1.6.0',
+                'recent_scans': 0
+            }
+
+
     # Utility method
     def _format_bytes(self, bytes_value):
         """Format bytes to human readable format"""
@@ -1181,3 +1244,293 @@ class Database:
                 return f"{bytes_value:.1f} {unit}"
             bytes_value /= 1024.0
         return f"{bytes_value:.1f} PB"
+
+    def get_network_statistics(self):
+        """Get comprehensive network connection statistics"""
+        try:
+            with self.get_connection() as conn:
+                cursor = conn.cursor()
+                stats = {}
+                
+                # Protocol breakdown
+                cursor.execute("""
+                    SELECT protocol, 
+                           COUNT(*) as connection_count,
+                           SUM(connection_count) as total_connections,
+                           COUNT(DISTINCT source_host_id) as unique_hosts,
+                           COUNT(DISTINCT dest_ip) as unique_destinations
+                    FROM network_connections 
+                    GROUP BY protocol 
+                    ORDER BY COUNT(*) DESC
+                """)
+                stats['protocol_breakdown'] = [
+                    {
+                        'protocol': row[0],
+                        'connection_count': row[1],
+                        'total_connections': row[2],
+                        'unique_hosts': row[3],
+                        'unique_destinations': row[4]
+                    } for row in cursor.fetchall()
+                ]
+                
+                # Top destination IPs
+                cursor.execute("""
+                    SELECT dest_ip,
+                           COUNT(*) as connection_count,
+                           SUM(connection_count) as total_connections,
+                           COUNT(DISTINCT source_host_id) as source_hosts,
+                           COUNT(DISTINCT dest_port) as dest_ports,
+                           SUM(bytes_sent + bytes_received) as total_bytes
+                    FROM network_connections 
+                    GROUP BY dest_ip 
+                    ORDER BY COUNT(*) DESC 
+                    LIMIT 10
+                """)
+                stats['top_destinations'] = [
+                    {
+                        'dest_ip': row[0],
+                        'connection_count': row[1],
+                        'total_connections': row[2],
+                        'source_hosts': row[3],
+                        'dest_ports': row[4],
+                        'total_bytes': row[5] or 0
+                    } for row in cursor.fetchall()
+                ]
+                
+                # Top source hosts by connections
+                cursor.execute("""
+                    SELECT h.name, h.ip_address, h.status,
+                           COUNT(nc.id) as connection_count,
+                           SUM(nc.connection_count) as total_connections,
+                           COUNT(DISTINCT nc.dest_ip) as unique_destinations,
+                           SUM(nc.bytes_sent + nc.bytes_received) as total_bytes,
+                           MAX(nc.last_seen) as last_activity
+                    FROM hosts h
+                    LEFT JOIN network_connections nc ON h.id = nc.source_host_id
+                    GROUP BY h.id, h.name, h.ip_address, h.status
+                    ORDER BY connection_count DESC
+                    LIMIT 10
+                """)
+                stats['top_hosts'] = [
+                    {
+                        'host_name': row[0],
+                        'ip_address': row[1],
+                        'status': row[2],
+                        'connection_count': row[3],
+                        'total_connections': row[4] or 0,
+                        'unique_destinations': row[5] or 0,
+                        'total_bytes': row[6] or 0,
+                        'last_activity': row[7]
+                    } for row in cursor.fetchall()
+                ]
+                
+                # LAN vs External analysis
+                cursor.execute("""
+                    SELECT 
+                        CASE 
+                            WHEN dest_ip LIKE '192.168.%' OR 
+                                 dest_ip LIKE '10.%' OR 
+                                 dest_ip LIKE '172.16.%' OR
+                                 dest_ip LIKE '172.17.%' OR
+                                 dest_ip LIKE '172.18.%' OR
+                                 dest_ip LIKE '172.19.%' OR
+                                 dest_ip LIKE '172.20.%' OR
+                                 dest_ip LIKE '172.21.%' OR
+                                 dest_ip LIKE '172.22.%' OR
+                                 dest_ip LIKE '172.23.%' OR
+                                 dest_ip LIKE '172.24.%' OR
+                                 dest_ip LIKE '172.25.%' OR
+                                 dest_ip LIKE '172.26.%' OR
+                                 dest_ip LIKE '172.27.%' OR
+                                 dest_ip LIKE '172.28.%' OR
+                                 dest_ip LIKE '172.29.%' OR
+                                 dest_ip LIKE '172.30.%' OR
+                                 dest_ip LIKE '172.31.%'
+                            THEN 'LAN' 
+                            ELSE 'External' 
+                        END as connection_type,
+                        COUNT(*) as connection_count,
+                        SUM(connection_count) as total_connections,
+                        COUNT(DISTINCT source_host_id) as unique_hosts,
+                        SUM(bytes_sent + bytes_received) as total_bytes
+                    FROM network_connections 
+                    GROUP BY connection_type
+                """)
+                lan_external = {row[0]: {
+                    'connection_count': row[1],
+                    'total_connections': row[2] or 0,
+                    'unique_hosts': row[3],
+                    'total_bytes': row[4] or 0
+                } for row in cursor.fetchall()}
+                
+                total_conns = sum(data['connection_count'] for data in lan_external.values())
+                for conn_type in lan_external:
+                    lan_external[conn_type]['percentage'] = round(
+                        (lan_external[conn_type]['connection_count'] / total_conns * 100) if total_conns > 0 else 0, 1
+                    )
+                
+                stats['lan_vs_external'] = lan_external
+                
+                return stats
+                
+        except Exception as e:
+            logger.error(f"Error getting network statistics: {e}")
+            return {
+                'protocol_breakdown': [],
+                'top_destinations': [],
+                'top_hosts': [],
+                'lan_vs_external': {}
+            }
+
+    def get_agent_statistics(self):
+        """Get comprehensive agent activity statistics"""
+        try:
+            with self.get_connection() as conn:
+                cursor = conn.cursor()
+                stats = {}
+                
+                # Agent activity overview
+                cursor.execute("""
+                    SELECT 
+                        COUNT(*) as total_agents,
+                        COUNT(CASE WHEN status = 'active' THEN 1 END) as active_agents,
+                        COUNT(CASE WHEN last_heartbeat > NOW() - INTERVAL '5 minutes' THEN 1 END) as recent_heartbeats,
+                        COUNT(CASE WHEN last_scan > NOW() - INTERVAL '1 hour' THEN 1 END) as recent_scans
+                    FROM agents
+                """)
+                row = cursor.fetchone()
+                stats['overview'] = {
+                    'total_agents': row[0],
+                    'active_agents': row[1],
+                    'recent_heartbeats': row[2],
+                    'recent_scans': row[3]
+                }
+                
+                # Recent scan activity by type
+                cursor.execute("""
+                    SELECT scan_type, 
+                           COUNT(*) as scan_count,
+                           COUNT(DISTINCT agent_id) as unique_agents
+                    FROM agent_scan_results 
+                    WHERE scan_timestamp > NOW() - INTERVAL '24 hours'
+                    GROUP BY scan_type
+                    ORDER BY scan_count DESC
+                """)
+                stats['scan_activity'] = [
+                    {
+                        'scan_type': row[0],
+                        'scan_count': row[1],
+                        'unique_agents': row[2]
+                    } for row in cursor.fetchall()
+                ]
+                
+                # Agent versions
+                cursor.execute("""
+                    SELECT agent_version, 
+                           COUNT(*) as agent_count,
+                           COUNT(CASE WHEN status = 'active' THEN 1 END) as active_count
+                    FROM agents 
+                    WHERE agent_version IS NOT NULL
+                    GROUP BY agent_version
+                    ORDER BY agent_count DESC
+                """)
+                stats['version_breakdown'] = [
+                    {
+                        'version': row[0],
+                        'agent_count': row[1],
+                        'active_count': row[2]
+                    } for row in cursor.fetchall()
+                ]
+                
+                # Platform breakdown
+                cursor.execute("""
+                    SELECT platform, 
+                           COUNT(*) as agent_count,
+                           COUNT(CASE WHEN status = 'active' THEN 1 END) as active_count
+                    FROM agents 
+                    WHERE platform IS NOT NULL
+                    GROUP BY platform
+                    ORDER BY agent_count DESC
+                """)
+                stats['platform_breakdown'] = [
+                    {
+                        'platform': row[0],
+                        'agent_count': row[1],
+                        'active_count': row[2]
+                    } for row in cursor.fetchall()
+                ]
+                
+                return stats
+                
+        except Exception as e:
+            logger.error(f"Error getting agent statistics: {e}")
+            return {
+                'overview': {'total_agents': 0, 'active_agents': 0, 'recent_heartbeats': 0, 'recent_scans': 0},
+                'scan_activity': [],
+                'version_breakdown': [],
+                'platform_breakdown': []
+            }
+
+    def get_historical_statistics(self, hours=24):
+        """Get historical statistics for the specified time period"""
+        try:
+            with self.get_connection() as conn:
+                cursor = conn.cursor()
+                stats = {}
+                
+                # Hourly connection activity
+                cursor.execute("""
+                    SELECT 
+                        to_char(date_trunc('hour', last_seen), 'YYYY-MM-DD HH24:00:00') as hour,
+                        COUNT(*) as connections,
+                        COUNT(DISTINCT source_host_id) as unique_hosts,
+                        COUNT(DISTINCT dest_ip) as unique_destinations
+                    FROM network_connections 
+                    WHERE last_seen > NOW() - INTERVAL %s
+                    GROUP BY date_trunc('hour', last_seen)
+                    ORDER BY hour
+                """, (f'{hours} hours',))
+                
+                stats['hourly_activity'] = [
+                    {
+                        'hour': row[0],
+                        'connections': row[1],
+                        'unique_hosts': row[2],
+                        'unique_destinations': row[3]
+                    } for row in cursor.fetchall()
+                ]
+                
+                # Daily agent scan activity
+                cursor.execute("""
+                    SELECT 
+                        to_char(date_trunc('day', scan_timestamp), 'YYYY-MM-DD') as day,
+                        scan_type,
+                        COUNT(*) as scan_count,
+                        COUNT(DISTINCT agent_id) as unique_agents
+                    FROM agent_scan_results 
+                    WHERE scan_timestamp > NOW() - INTERVAL %s
+                    GROUP BY date_trunc('day', scan_timestamp), scan_type
+                    ORDER BY day, scan_count DESC
+                """, (f'{hours} hours',))
+                
+                daily_scans = {}
+                for row in cursor.fetchall():
+                    day = row[0]
+                    if day not in daily_scans:
+                        daily_scans[day] = []
+                    daily_scans[day].append({
+                        'scan_type': row[1],
+                        'scan_count': row[2],
+                        'unique_agents': row[3]
+                    })
+                
+                stats['daily_scan_activity'] = daily_scans
+                
+                return stats
+                
+        except Exception as e:
+            logger.error(f"Error getting historical statistics: {e}")
+            return {
+                'hourly_activity': [],
+                'daily_scan_activity': {}
+            }

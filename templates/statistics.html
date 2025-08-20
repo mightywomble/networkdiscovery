@@ -16,12 +16,12 @@
 /* Statistics-specific styles */
 .nm-chart-container {
     position: relative;
-    height: 300px;
+    height: 350px;
     margin-top: var(--pf-global--spacer--md);
 }
 
-.nm-chart-container.large {
-    height: 400px;
+.nm-chart-container.small {
+    height: 200px;
 }
 
 .nm-metric-row {
@@ -46,49 +46,6 @@
     color: var(--pf-global--primary-color--100);
 }
 
-.nm-section-title {
-    display: flex;
-    align-items: center;
-    font-size: var(--pf-global--FontSize--lg);
-    font-weight: var(--pf-global--FontWeight--semi-bold);
-    color: var(--pf-global--Color--dark-100);
-    margin-bottom: var(--pf-global--spacer--md);
-}
-
-.nm-section-title i {
-    margin-right: var(--pf-global--spacer--sm);
-}
-
-.nm-status-indicator {
-    display: inline-flex;
-    align-items: center;
-    gap: var(--pf-global--spacer--xs);
-}
-
-.nm-status-indicator::before {
-    content: '';
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    display: inline-block;
-}
-
-.nm-status-indicator.online::before {
-    background-color: var(--pf-global--success-color--100);
-}
-
-.nm-status-indicator.offline::before {
-    background-color: var(--pf-global--danger-color--100);
-}
-
-.nm-status-indicator.warning::before {
-    background-color: var(--pf-global--warning-color--100);
-}
-
-.nm-stats-overview {
-    margin-bottom: var(--pf-global--spacer--xl);
-}
-
 .nm-stats-grid {
     display: grid;
     gap: var(--pf-global--spacer--lg);
@@ -105,20 +62,52 @@
     .nm-stats-grid-triple {
         grid-template-columns: 1fr 1fr 1fr;
     }
+    
+    .nm-stats-grid-wide {
+        grid-template-columns: 2fr 1fr;
+    }
 }
 
-.nm-refresh-indicator {
-    display: inline-block;
-    margin-left: var(--pf-global--spacer--sm);
+.nm-progress-bar {
+    background-color: var(--pf-global--BackgroundColor--300);
+    border-radius: var(--pf-global--BorderRadius--sm);
+    height: 8px;
+    overflow: hidden;
+    margin: var(--pf-global--spacer--xs) 0;
 }
 
-.nm-refresh-indicator.spinning {
-    animation: spin 1s linear infinite;
+.nm-progress-fill {
+    height: 100%;
+    transition: width 0.3s ease;
 }
 
-@keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
+.nm-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: var(--pf-global--spacer--xs) var(--pf-global--spacer--sm);
+    border-radius: var(--pf-global--BorderRadius--sm);
+    font-size: var(--pf-global--FontSize--sm);
+    font-weight: var(--pf-global--FontWeight--semi-bold);
+}
+
+.nm-badge-primary {
+    background-color: var(--pf-global--primary-color--100);
+    color: white;
+}
+
+.nm-badge-success {
+    background-color: var(--pf-global--success-color--100);
+    color: white;
+}
+
+.nm-badge-info {
+    background-color: var(--pf-global--info-color--100);
+    color: white;
+}
+
+.nm-badge-warning {
+    background-color: var(--pf-global--warning-color--100);
+    color: var(--pf-global--Color--dark-100);
 }
 
 .nm-table-container {
@@ -126,49 +115,18 @@
     overflow-y: auto;
 }
 
-/* PatternFly table enhancements */
-.pf-c-table.pf-m-compact td {
-    padding: var(--pf-global--spacer--sm);
+.nm-loading {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: var(--pf-global--spacer--xl);
+    color: var(--pf-global--Color--200);
 }
 
-/* Statistics card styling */
-.nm-stat-card {
-    height: 100%;
-    transition: all 0.2s ease;
-}
-
-.nm-stat-card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-}
-
-.nm-stat-value {
-    font-size: var(--pf-global--FontSize--2xl);
-    font-weight: var(--pf-global--FontWeight--bold);
-    line-height: 1.2;
-}
-
-.nm-stat-label {
-    font-size: var(--pf-global--FontSize--md);
-    font-weight: var(--pf-global--FontWeight--semi-bold);
-    color: var(--pf-global--Color--dark-200);
-    margin-top: var(--pf-global--spacer--xs);
-}
-
-/* Chart responsiveness */
-.nm-chart-responsive {
-    position: relative;
-    width: 100%;
-    height: 0;
-    padding-bottom: 60%; /* 16:10 aspect ratio */
-}
-
-.nm-chart-responsive canvas {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
+.nm-error {
+    text-align: center;
+    padding: var(--pf-global--spacer--lg);
+    color: var(--pf-global--danger-color--100);
 }
 </style>
 {% endblock %}
@@ -181,7 +139,7 @@
             <i class="fas fa-chart-bar pf-u-mr-sm"></i>
             Statistics Dashboard
         </h1>
-        <p class="pf-u-color-200">Network activity and performance analytics</p>
+        <p class="pf-u-color-200">Comprehensive network activity and performance analytics</p>
     </div>
 </section>
 
@@ -191,91 +149,91 @@
         <div class="pf-c-alert__title" style="color: var(--pf-global--Color--200); font-size: var(--pf-global--FontSize--sm);">
             <i class="fas fa-clock pf-u-mr-sm"></i>
             Last Updated: <span id="lastUpdateTime">Loading...</span>
-            <i id="refreshIcon" class="fas fa-sync nm-refresh-indicator pf-u-ml-sm"></i>
+            <button class="pf-c-button pf-m-plain pf-u-ml-sm" onclick="refreshAllData()">
+                <i id="refreshIcon" class="fas fa-sync"></i>
+            </button>
         </div>
     </div>
 </section>
 
-<!-- Overview Statistics -->
+<!-- Statistics Overview -->
 <section class="pf-c-page__main-section" style="padding-top: 0;">
-    <div class="pf-l-gallery pf-m-gutter" id="overviewStats" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));">
-        <!-- Stats will be populated here -->
-    </div>
+    {% include "unified_stats_cards.html" %}
 </section>
 
-<!-- Main Dashboard Content -->
+<!-- Network Analysis Section -->
 <section class="pf-c-page__main-section">
     <div class="nm-stats-grid">
         <!-- LAN vs External Analysis -->
         <div class="pf-c-card">
             <div class="pf-c-card__header">
-                <div class="pf-c-card__title nm-section-title">
-                    <i class="fas fa-globe-americas"></i>LAN vs External Connections
+                <div class="pf-c-card__title">
+                    <i class="fas fa-globe-americas pf-u-mr-sm"></i>
+                    Network Traffic Analysis
                 </div>
             </div>
             <div class="pf-c-card__body">
-                <div class="pf-l-flex pf-m-space-items-lg pf-u-mb-md">
-                    <div class="pf-l-flex__item pf-m-flex-1">
-                        <div class="pf-u-text-align-center pf-u-p-md" style="background-color: #28a745; border-radius: var(--pf-global--BorderRadius--sm);">
-                            <div class="nm-stat-value" style="color: white;" id="lanConnectionsCount">-</div>
-                            <div class="pf-u-font-size-sm" style="color: white;">LAN Connections</div>
-                            <div class="pf-u-font-size-sm" style="color: white;" id="lanPercentage">-</div>
-                        </div>
-                    </div>
-                    <div class="pf-l-flex__item pf-m-flex-1">
-                        <div class="pf-u-text-align-center pf-u-p-md" style="background-color: #ffc107; border-radius: var(--pf-global--BorderRadius--sm);">
-                            <div class="nm-stat-value" style="color: black;" id="externalConnectionsCount">-</div>
-                            <div class="pf-u-font-size-sm" style="color: black;">External Connections</div>
-                            <div class="pf-u-font-size-sm" style="color: black;" id="externalPercentage">-</div>
-                        </div>
+                <div id="lanExternalChart" class="nm-chart-container small">
+                    <div class="nm-loading">
+                        <i class="fas fa-spinner fa-spin pf-u-mr-sm"></i>
+                        Loading network analysis...
                     </div>
                 </div>
-                <div class="nm-chart-container">
-                    <canvas id="lanVsExternalChart"></canvas>
+                <div id="lanExternalSummary" class="pf-u-mt-md">
+                    <!-- Summary will be populated here -->
                 </div>
             </div>
         </div>
 
-        <!-- Connection Timeline -->
+        <!-- Protocol Breakdown -->
         <div class="pf-c-card">
             <div class="pf-c-card__header">
-                <div class="pf-c-card__title nm-section-title">
-                    <i class="fas fa-chart-line"></i>Connection Activity (24 Hours)
+                <div class="pf-c-card__title">
+                    <i class="fas fa-network-wired pf-u-mr-sm"></i>
+                    Protocol Distribution
                 </div>
             </div>
             <div class="pf-c-card__body">
-                <div class="nm-chart-container">
-                    <canvas id="connectionTimelineChart"></canvas>
+                <div id="protocolBreakdown">
+                    <div class="nm-loading">
+                        <i class="fas fa-spinner fa-spin pf-u-mr-sm"></i>
+                        Loading protocols...
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 </section>
 
-<!-- Additional Statistics Sections -->
+<!-- Host and Connection Statistics -->
 <section class="pf-c-page__main-section">
     <div class="nm-stats-grid">
         <!-- Top Hosts by Connections -->
         <div class="pf-c-card">
             <div class="pf-c-card__header">
-                <div class="pf-c-card__title nm-section-title">
-                    <i class="fas fa-server"></i>Top Hosts by Connections
+                <div class="pf-c-card__title">
+                    <i class="fas fa-server pf-u-mr-sm"></i>
+                    Top Active Hosts
                 </div>
             </div>
             <div class="pf-c-card__body">
                 <div class="nm-table-container">
-                    <table class="pf-c-table pf-m-compact pf-m-grid-md">
+                    <table class="pf-c-table pf-m-compact pf-m-grid-md" id="topHostsTable">
                         <thead>
                             <tr>
                                 <th>Host</th>
-                                <th>IP Address</th>
+                                <th>Status</th>
                                 <th>Connections</th>
-                                <th>Traffic</th>
                                 <th>Destinations</th>
                             </tr>
                         </thead>
-                        <tbody id="topHostsTable">
-                            <tr><td colspan="5" class="pf-u-text-align-center pf-u-color-200">Loading...</td></tr>
+                        <tbody>
+                            <tr>
+                                <td colspan="4" class="nm-loading">
+                                    <i class="fas fa-spinner fa-spin pf-u-mr-sm"></i>
+                                    Loading hosts...
+                                </td>
+                            </tr>
                         </tbody>
                     </table>
                 </div>
@@ -285,24 +243,29 @@
         <!-- Top External Destinations -->
         <div class="pf-c-card">
             <div class="pf-c-card__header">
-                <div class="pf-c-card__title nm-section-title">
-                    <i class="fas fa-external-link-alt"></i>Top External Destinations
+                <div class="pf-c-card__title">
+                    <i class="fas fa-external-link-alt pf-u-mr-sm"></i>
+                    Top External Destinations
                 </div>
             </div>
             <div class="pf-c-card__body">
                 <div class="nm-table-container">
-                    <table class="pf-c-table pf-m-compact pf-m-grid-md">
+                    <table class="pf-c-table pf-m-compact pf-m-grid-md" id="topDestinationsTable">
                         <thead>
                             <tr>
                                 <th>Destination IP</th>
                                 <th>Connections</th>
                                 <th>Source Hosts</th>
                                 <th>Ports</th>
-                                <th>Traffic</th>
                             </tr>
                         </thead>
-                        <tbody id="topExternalTable">
-                            <tr><td colspan="5" class="pf-u-text-align-center pf-u-color-200">Loading...</td></tr>
+                        <tbody>
+                            <tr>
+                                <td colspan="4" class="nm-loading">
+                                    <i class="fas fa-spinner fa-spin pf-u-mr-sm"></i>
+                                    Loading destinations...
+                                </td>
+                            </tr>
                         </tbody>
                     </table>
                 </div>
@@ -311,88 +274,111 @@
     </div>
 </section>
 
-<!-- Historical Analysis Section -->
+<!-- Agent Activity Section -->
 <section class="pf-c-page__main-section">
-    <div class="nm-stats-grid" style="grid-template-columns: 2fr 1fr;">
-        <!-- Historical Analysis -->
+    <div class="nm-stats-grid">
+        <!-- Agent Activity Overview -->
         <div class="pf-c-card">
             <div class="pf-c-card__header">
-                <div class="pf-c-card__title nm-section-title">
-                    <i class="fas fa-history"></i>Historical Analysis
+                <div class="pf-c-card__title">
+                    <i class="fas fa-robot pf-u-mr-sm"></i>
+                    Agent Activity Overview
                 </div>
             </div>
             <div class="pf-c-card__body">
-                <div class="pf-l-flex pf-m-space-items-lg pf-u-text-align-center">
-                    <div class="pf-l-flex__item pf-m-flex-1">
-                        <div class="pf-u-font-size-sm pf-u-color-200">Last Hour</div>
-                        <div class="pf-u-font-weight-bold pf-u-font-size-lg" id="connections1h">-</div>
-                        <div class="pf-u-font-size-sm" style="color: var(--pf-global--success-color--100);" id="hosts1h">- hosts</div>
-                    </div>
-                    <div class="pf-l-flex__item pf-m-flex-1">
-                        <div class="pf-u-font-size-sm pf-u-color-200">Last 6 Hours</div>
-                        <div class="pf-u-font-weight-bold pf-u-font-size-lg" id="connections6h">-</div>
-                        <div class="pf-u-font-size-sm" style="color: var(--pf-global--success-color--100);" id="hosts6h">- hosts</div>
-                    </div>
-                    <div class="pf-l-flex__item pf-m-flex-1">
-                        <div class="pf-u-font-size-sm pf-u-color-200">Last Day</div>
-                        <div class="pf-u-font-weight-bold pf-u-font-size-lg" id="connections1d">-</div>
-                        <div class="pf-u-font-size-sm" style="color: var(--pf-global--success-color--100);" id="hosts1d">- hosts</div>
-                    </div>
-                    <div class="pf-l-flex__item pf-m-flex-1">
-                        <div class="pf-u-font-size-sm pf-u-color-200">Last 3 Days</div>
-                        <div class="pf-u-font-weight-bold pf-u-font-size-lg" id="connections3d">-</div>
-                        <div class="pf-u-font-size-sm" style="color: var(--pf-global--success-color--100);" id="hosts3d">- hosts</div>
-                    </div>
-                    <div class="pf-l-flex__item pf-m-flex-1">
-                        <div class="pf-u-font-size-sm pf-u-color-200">Last Week</div>
-                        <div class="pf-u-font-weight-bold pf-u-font-size-lg" id="connections1w">-</div>
-                        <div class="pf-u-font-size-sm" style="color: var(--pf-global--success-color--100);" id="hosts1w">- hosts</div>
+                <div id="agentOverview">
+                    <div class="nm-loading">
+                        <i class="fas fa-spinner fa-spin pf-u-mr-sm"></i>
+                        Loading agent data...
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- Protocol and Port Breakdown -->
+        <!-- Scan Activity -->
         <div class="pf-c-card">
             <div class="pf-c-card__header">
-                <div class="pf-c-card__title nm-section-title">
-                    <i class="fas fa-network-wired"></i>Protocol Breakdown
+                <div class="pf-c-card__title">
+                    <i class="fas fa-search pf-u-mr-sm"></i>
+                    Recent Scan Activity
                 </div>
             </div>
             <div class="pf-c-card__body">
-                <div id="protocolBreakdown">
-                    <p class="pf-u-text-align-center pf-u-color-200">Loading protocol statistics...</p>
+                <div id="scanActivity">
+                    <div class="nm-loading">
+                        <i class="fas fa-spinner fa-spin pf-u-mr-sm"></i>
+                        Loading scan activity...
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 </section>
 
-<!-- Real-time Activity Monitor -->
+<!-- Agent Version and Platform Analysis -->
+<section class="pf-c-page__main-section">
+    <div class="nm-stats-grid">
+        <!-- Agent Versions -->
+        <div class="pf-c-card">
+            <div class="pf-c-card__header">
+                <div class="pf-c-card__title">
+                    <i class="fas fa-code-branch pf-u-mr-sm"></i>
+                    Agent Version Distribution
+                </div>
+            </div>
+            <div class="pf-c-card__body">
+                <div id="versionBreakdown">
+                    <div class="nm-loading">
+                        <i class="fas fa-spinner fa-spin pf-u-mr-sm"></i>
+                        Loading version data...
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Platform Distribution -->
+        <div class="pf-c-card">
+            <div class="pf-c-card__header">
+                <div class="pf-c-card__title">
+                    <i class="fas fa-desktop pf-u-mr-sm"></i>
+                    Platform Distribution
+                </div>
+            </div>
+            <div class="pf-c-card__body">
+                <div id="platformBreakdown">
+                    <div class="nm-loading">
+                        <i class="fas fa-spinner fa-spin pf-u-mr-sm"></i>
+                        Loading platform data...
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Historical Trends -->
 <section class="pf-c-page__main-section">
     <div class="pf-c-card">
         <div class="pf-c-card__header">
-            <div class="pf-c-card__title nm-section-title">
-                <i class="fas fa-activity"></i>Real-time Activity Monitor
+            <div class="pf-c-card__title">
+                <i class="fas fa-chart-line pf-u-mr-sm"></i>
+                Network Activity Trends (24 Hours)
+            </div>
+            <div class="pf-c-card__actions">
+                <div class="pf-c-select" id="timeRangeSelect">
+                    <select class="pf-c-form-control" onchange="updateTimeRange(this.value)">
+                        <option value="24">Last 24 Hours</option>
+                        <option value="72">Last 3 Days</option>
+                        <option value="168">Last Week</option>
+                    </select>
+                </div>
             </div>
         </div>
         <div class="pf-c-card__body">
-            <div class="pf-l-gallery pf-m-gutter" style="grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));">
-                <div class="pf-u-text-align-center">
-                    <div class="nm-stat-value" style="color: var(--pf-global--primary-color--100);" id="realtimeConnections">-</div>
-                    <div class="pf-u-font-size-sm pf-u-color-200">Active Connections</div>
-                </div>
-                <div class="pf-u-text-align-center">
-                    <div class="nm-stat-value" style="color: var(--pf-global--success-color--100);" id="realtimeHosts">-</div>
-                    <div class="pf-u-font-size-sm pf-u-color-200">Active Hosts</div>
-                </div>
-                <div class="pf-u-text-align-center">
-                    <div class="nm-stat-value" style="color: var(--pf-global--info-color--100);" id="realtimeAgents">-</div>
-                    <div class="pf-u-font-size-sm pf-u-color-200">Active Agents</div>
-                </div>
-                <div class="pf-u-text-align-center">
-                    <div class="nm-stat-value" style="color: var(--pf-global--warning-color--100);" id="realtimeHeartbeats">-</div>
-                    <div class="pf-u-font-size-sm pf-u-color-200">Recent Heartbeats</div>
+            <div id="activityChart" class="nm-chart-container">
+                <div class="nm-loading">
+                    <i class="fas fa-spinner fa-spin pf-u-mr-sm"></i>
+                    Loading activity trends...
                 </div>
             </div>
         </div>
@@ -401,437 +387,449 @@
 {% endblock %}
 
 {% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+// Global variables
+let charts = {};
+let refreshInterval;
+let currentTimeRange = 24;
+
+// Initialize dashboard
+document.addEventListener('DOMContentLoaded', function() {
+    loadAllStatistics();
+    startAutoRefresh();
+});
+
+// Auto-refresh every 30 seconds
+function startAutoRefresh() {
+    refreshInterval = setInterval(() => {
+        loadAllStatistics();
+    }, 30000);
+}
+
+// Load all statistics data
+async function loadAllStatistics() {
+    showLoadingState();
     
-    <script>
-        // Global variables
-        let charts = {};
-        let refreshInterval;
-        let realtimeInterval;
+    try {
+        await Promise.all([
+            loadNetworkStatistics(),
+            loadAgentStatistics(),
+            loadHistoricalStatistics()
+        ]);
+        
+        updateLastRefreshTime();
+    } catch (error) {
+        console.error('Error loading statistics:', error);
+        showErrorState('Failed to load statistics data');
+    }
+    
+    hideLoadingState();
+}
 
-        // Initialize dashboard
-        document.addEventListener('DOMContentLoaded', function() {
-            loadDashboardData();
-            startRealTimeUpdates();
-            
-            // Set refresh interval for main data (every 30 seconds)
-            refreshInterval = setInterval(() => {
-                loadDashboardData();
-            }, 30000);
-            
-            // Set real-time updates interval (every 5 seconds)
-            realtimeInterval = setInterval(() => {
-                updateRealTimeStats();
-            }, 5000);
-        });
+// Manual refresh function
+function refreshAllData() {
+    const refreshIcon = document.getElementById('refreshIcon');
+    refreshIcon.style.animation = 'spin 1s linear infinite';
+    
+    loadAllStatistics().finally(() => {
+        refreshIcon.style.animation = '';
+    });
+}
 
-        // Load all dashboard data
-        async function loadDashboardData() {
-            showLoadingIndicator(true);
-            
-            try {
-                await Promise.all([
-                    loadOverviewStats(),
-                    loadLANAnalysis(), 
-                    loadHostStatistics(),
-                    loadHistoricalStats(),
-                    loadConnectionStats()
-                ]);
-                
-                updateLastRefreshTime();
-            } catch (error) {
-                console.error('Error loading dashboard data:', error);
-                showError('Failed to load dashboard data');
-            }
-            
-            showLoadingIndicator(false);
+// Load network statistics
+async function loadNetworkStatistics() {
+    try {
+        const response = await fetch('/api/statistics/network');
+        const result = await response.json();
+        
+        if (result.success) {
+            displayNetworkStatistics(result.data);
+        } else {
+            throw new Error(result.error);
         }
+    } catch (error) {
+        console.error('Error loading network statistics:', error);
+        showErrorInContainer('lanExternalChart', 'Failed to load network statistics');
+    }
+}
 
-        // Load overview statistics
-        async function loadOverviewStats() {
-            try {
-                const response = await fetch('/api/stats/overview');
-                const result = await response.json();
-                
-                if (result.success) {
-                    displayOverviewStats(result.data);
-                } else {
-                    throw new Error(result.error);
+// Load agent statistics
+async function loadAgentStatistics() {
+    try {
+        const response = await fetch('/api/statistics/agents');
+        const result = await response.json();
+        
+        if (result.success) {
+            displayAgentStatistics(result.data);
+        } else {
+            throw new Error(result.error);
+        }
+    } catch (error) {
+        console.error('Error loading agent statistics:', error);
+        showErrorInContainer('agentOverview', 'Failed to load agent statistics');
+    }
+}
+
+// Load historical statistics
+async function loadHistoricalStatistics() {
+    try {
+        const response = await fetch(`/api/statistics/historical?hours=${currentTimeRange}`);
+        const result = await response.json();
+        
+        if (result.success) {
+            displayHistoricalStatistics(result.data);
+        } else {
+            throw new Error(result.error);
+        }
+    } catch (error) {
+        console.error('Error loading historical statistics:', error);
+        showErrorInContainer('activityChart', 'Failed to load historical statistics');
+    }
+}
+
+// Display network statistics
+function displayNetworkStatistics(data) {
+    // LAN vs External Chart
+    displayLANExternalChart(data.lan_vs_external);
+    
+    // Protocol Breakdown
+    displayProtocolBreakdown(data.protocol_breakdown);
+    
+    // Top Hosts Table
+    displayTopHostsTable(data.top_hosts);
+    
+    // Top Destinations Table
+    displayTopDestinationsTable(data.top_destinations);
+}
+
+// Display LAN vs External chart
+function displayLANExternalChart(data) {
+    const ctx = document.createElement('canvas');
+    const container = document.getElementById('lanExternalChart');
+    container.innerHTML = '';
+    container.appendChild(ctx);
+    
+    if (charts.lanExternal) {
+        charts.lanExternal.destroy();
+    }
+    
+    const lanData = data.LAN || { connection_count: 0, percentage: 0 };
+    const externalData = data.External || { connection_count: 0, percentage: 0 };
+    
+    charts.lanExternal = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels: ['LAN Connections', 'External Connections'],
+            datasets: [{
+                data: [lanData.connection_count, externalData.connection_count],
+                backgroundColor: ['#28a745', '#ffc107'],
+                borderWidth: 2,
+                borderColor: '#ffffff'
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'bottom'
                 }
-            } catch (error) {
-                console.error('Error loading overview stats:', error);
             }
         }
+    });
+    
+    // Update summary
+    const summary = document.getElementById('lanExternalSummary');
+    summary.innerHTML = `
+        <div class="pf-l-flex pf-m-space-items-lg">
+            <div class="pf-l-flex__item">
+                <div class="nm-badge nm-badge-success">LAN: ${lanData.connection_count} (${lanData.percentage}%)</div>
+            </div>
+            <div class="pf-l-flex__item">
+                <div class="nm-badge nm-badge-warning">External: ${externalData.connection_count} (${externalData.percentage}%)</div>
+            </div>
+        </div>
+    `;
+}
 
-        // Display overview statistics cards
-        function displayOverviewStats(data) {
-            const container = document.getElementById('overviewStats');
-            
-            const stats = [
-                {
-                    title: 'Total Hosts',
-                    value: data.hosts?.total_hosts || 0,
-                    subtitle: `${data.hosts?.online_hosts || 0} online`,
-                    icon: 'fas fa-server',
-                    color: 'primary'
-                },
-                {
-                    title: 'Network Connections',
-                    value: data.connections?.total_connections || 0,
-                    subtitle: `${data.connections?.active_last_hour || 0} active`,
-                    icon: 'fas fa-network-wired',
-                    color: 'success'
-                },
-                {
-                    title: 'Active Agents',
-                    value: data.agents?.active_agents || 0,
-                    subtitle: `${data.agents?.recently_active || 0} recent`,
-                    icon: 'fas fa-robot',
-                    color: 'info'
-                },
-                {
-                    title: 'Open Ports',
-                    value: data.ports?.total_open_ports || 0,
-                    subtitle: `${data.ports?.hosts_with_open_ports || 0} hosts`,
-                    icon: 'fas fa-door-open',
-                    color: 'warning'
-                },
-                {
-                    title: 'Recent Scans',
-                    value: data.scans?.scans_last_day || 0,
-                    subtitle: `${data.scans?.scans_last_hour || 0} this hour`,
-                    icon: 'fas fa-search',
-                    color: 'secondary'
-                }
-            ];
-
-            container.innerHTML = stats.map(stat => `
-                <div class="pf-l-gallery__item">
-                    <div class="pf-c-card nm-stat-card">
-                        <div class="pf-c-card__body pf-u-text-align-center">
-                            <div class="pf-u-mb-sm">
-                                <i class="${stat.icon} fa-2x" style="color: var(--pf-global--${stat.color}-color--100);"></i>
-                            </div>
-                            <div class="nm-stat-value" style="color: var(--pf-global--${stat.color}-color--100);">${stat.value.toLocaleString()}</div>
-                            <div class="nm-stat-label">${stat.title}</div>
-                            <div class="pf-u-font-size-sm pf-u-color-200 pf-u-mt-sm">${stat.subtitle}</div>
-                        </div>
-                    </div>
+// Display protocol breakdown
+function displayProtocolBreakdown(protocols) {
+    const container = document.getElementById('protocolBreakdown');
+    
+    if (!protocols || protocols.length === 0) {
+        container.innerHTML = '<p class="pf-u-text-align-center pf-u-color-200">No protocol data available</p>';
+        return;
+    }
+    
+    container.innerHTML = protocols.map(protocol => `
+        <div class="nm-metric-row">
+            <span class="nm-metric-label">${protocol.protocol.toUpperCase()}</span>
+            <div>
+                <span class="nm-badge nm-badge-primary">${protocol.connection_count}</span>
+                <div class="pf-u-font-size-sm pf-u-color-200 pf-u-mt-xs">
+                    ${protocol.unique_hosts} hosts → ${protocol.unique_destinations} destinations
                 </div>
-            `).join('');
-        }
+            </div>
+        </div>
+    `).join('');
+}
 
-        // Load LAN analysis
-        async function loadLANAnalysis() {
-            try {
-                const response = await fetch('/api/stats/lan_analysis');
-                const result = await response.json();
-                
-                if (result.success) {
-                    displayLANAnalysis(result.data);
-                } else {
-                    throw new Error(result.error);
+// Display top hosts table
+function displayTopHostsTable(hosts) {
+    const tbody = document.querySelector('#topHostsTable tbody');
+    
+    if (!hosts || hosts.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="4" class="pf-u-text-align-center pf-u-color-200">No host data available</td></tr>';
+        return;
+    }
+    
+    tbody.innerHTML = hosts.map(host => `
+        <tr>
+            <td>
+                <strong>${host.host_name || 'Unknown'}</strong>
+                <div class="pf-u-font-size-sm pf-u-color-200">${host.ip_address}</div>
+            </td>
+            <td>
+                <span class="nm-badge ${host.status === 'online' ? 'nm-badge-success' : 'nm-badge-warning'}">
+                    ${host.status}
+                </span>
+            </td>
+            <td>
+                <span class="nm-badge nm-badge-primary">${host.connection_count}</span>
+            </td>
+            <td>
+                <span class="pf-u-font-size-sm">${host.unique_destinations} destinations</span>
+            </td>
+        </tr>
+    `).join('');
+}
+
+// Display top destinations table
+function displayTopDestinationsTable(destinations) {
+    const tbody = document.querySelector('#topDestinationsTable tbody');
+    
+    if (!destinations || destinations.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="4" class="pf-u-text-align-center pf-u-color-200">No destination data available</td></tr>';
+        return;
+    }
+    
+    tbody.innerHTML = destinations.map(dest => `
+        <tr>
+            <td><code>${dest.dest_ip}</code></td>
+            <td><span class="nm-badge nm-badge-warning">${dest.connection_count}</span></td>
+            <td><span class="pf-u-font-size-sm">${dest.source_hosts} hosts</span></td>
+            <td><span class="pf-u-font-size-sm">${dest.dest_ports} ports</span></td>
+        </tr>
+    `).join('');
+}
+
+// Display agent statistics
+function displayAgentStatistics(data) {
+    displayAgentOverview(data.overview);
+    displayScanActivity(data.scan_activity);
+    displayVersionBreakdown(data.version_breakdown);
+    displayPlatformBreakdown(data.platform_breakdown);
+}
+
+// Display agent overview
+function displayAgentOverview(overview) {
+    const container = document.getElementById('agentOverview');
+    
+    container.innerHTML = `
+        <div class="pf-l-gallery pf-m-gutter" style="grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));">
+            <div class="pf-u-text-align-center">
+                <div class="pf-u-font-size-xl pf-u-font-weight-bold pf-u-color-100">${overview.total_agents}</div>
+                <div class="pf-u-font-size-sm pf-u-color-200">Total Agents</div>
+            </div>
+            <div class="pf-u-text-align-center">
+                <div class="pf-u-font-size-xl pf-u-font-weight-bold" style="color: var(--pf-global--success-color--100);">${overview.active_agents}</div>
+                <div class="pf-u-font-size-sm pf-u-color-200">Active</div>
+            </div>
+            <div class="pf-u-text-align-center">
+                <div class="pf-u-font-size-xl pf-u-font-weight-bold" style="color: var(--pf-global--info-color--100);">${overview.recent_heartbeats}</div>
+                <div class="pf-u-font-size-sm pf-u-color-200">Recent Heartbeats</div>
+            </div>
+            <div class="pf-u-text-align-center">
+                <div class="pf-u-font-size-xl pf-u-font-weight-bold" style="color: var(--pf-global--warning-color--100);">${overview.recent_scans}</div>
+                <div class="pf-u-font-size-sm pf-u-color-200">Recent Scans</div>
+            </div>
+        </div>
+    `;
+}
+
+// Display scan activity
+function displayScanActivity(scanActivity) {
+    const container = document.getElementById('scanActivity');
+    
+    if (!scanActivity || scanActivity.length === 0) {
+        container.innerHTML = '<p class="pf-u-text-align-center pf-u-color-200">No recent scan activity</p>';
+        return;
+    }
+    
+    container.innerHTML = scanActivity.map(scan => `
+        <div class="nm-metric-row">
+            <span class="nm-metric-label">${scan.scan_type}</span>
+            <div>
+                <span class="nm-badge nm-badge-info">${scan.scan_count} scans</span>
+                <div class="pf-u-font-size-sm pf-u-color-200 pf-u-mt-xs">${scan.unique_agents} agents</div>
+            </div>
+        </div>
+    `).join('');
+}
+
+// Display version breakdown
+function displayVersionBreakdown(versions) {
+    const container = document.getElementById('versionBreakdown');
+    
+    if (!versions || versions.length === 0) {
+        container.innerHTML = '<p class="pf-u-text-align-center pf-u-color-200">No version data available</p>';
+        return;
+    }
+    
+    container.innerHTML = versions.map(version => `
+        <div class="nm-metric-row">
+            <span class="nm-metric-label">v${version.version}</span>
+            <div>
+                <span class="nm-badge nm-badge-primary">${version.agent_count} agents</span>
+                <div class="pf-u-font-size-sm pf-u-color-200 pf-u-mt-xs">${version.active_count} active</div>
+            </div>
+        </div>
+    `).join('');
+}
+
+// Display platform breakdown
+function displayPlatformBreakdown(platforms) {
+    const container = document.getElementById('platformBreakdown');
+    
+    if (!platforms || platforms.length === 0) {
+        container.innerHTML = '<p class="pf-u-text-align-center pf-u-color-200">No platform data available</p>';
+        return;
+    }
+    
+    container.innerHTML = platforms.map(platform => `
+        <div class="nm-metric-row">
+            <span class="nm-metric-label">${platform.platform}</span>
+            <div>
+                <span class="nm-badge nm-badge-info">${platform.agent_count} agents</span>
+                <div class="pf-u-font-size-sm pf-u-color-200 pf-u-mt-xs">${platform.active_count} active</div>
+            </div>
+        </div>
+    `).join('');
+}
+
+// Display historical statistics
+function displayHistoricalStatistics(data) {
+    displayActivityChart(data.hourly_activity);
+}
+
+// Display activity chart
+function displayActivityChart(hourlyData) {
+    const ctx = document.createElement('canvas');
+    const container = document.getElementById('activityChart');
+    container.innerHTML = '';
+    container.appendChild(ctx);
+    
+    if (charts.activity) {
+        charts.activity.destroy();
+    }
+    
+    if (!hourlyData || hourlyData.length === 0) {
+        container.innerHTML = '<div class="nm-error">No historical data available for the selected time period</div>';
+        return;
+    }
+    
+    const labels = hourlyData.map(item => {
+        const date = new Date(item.hour);
+        return date.toLocaleDateString() + ' ' + date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+    });
+    
+    charts.activity = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'Connections',
+                data: hourlyData.map(item => item.connections),
+                borderColor: '#007bff',
+                backgroundColor: 'rgba(0, 123, 255, 0.1)',
+                tension: 0.4,
+                fill: true
+            }, {
+                label: 'Active Hosts',
+                data: hourlyData.map(item => item.unique_hosts),
+                borderColor: '#28a745',
+                backgroundColor: 'rgba(40, 167, 69, 0.1)',
+                tension: 0.4,
+                fill: false
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'top'
                 }
-            } catch (error) {
-                console.error('Error loading LAN analysis:', error);
-            }
-        }
-
-        // Display LAN vs external analysis
-        function displayLANAnalysis(data) {
-            const lanVsExternal = data.lan_vs_external;
-            const topExternal = data.top_external_destinations;
-
-            // Update LAN vs External counters
-            document.getElementById('lanConnectionsCount').textContent = 
-                lanVsExternal.lan.connection_count.toLocaleString();
-            document.getElementById('externalConnectionsCount').textContent = 
-                lanVsExternal.external.connection_count.toLocaleString();
-            document.getElementById('lanPercentage').textContent = 
-                `${lanVsExternal.ratios.lan_pct}% of total`;
-            document.getElementById('externalPercentage').textContent = 
-                `${lanVsExternal.ratios.external_pct}% of total`;
-
-            // Update LAN vs External chart
-            updateLANChart(lanVsExternal);
-
-            // Update top external destinations table
-            updateTopExternalTable(topExternal);
-        }
-
-        // Update LAN vs External chart
-        function updateLANChart(data) {
-            const ctx = document.getElementById('lanVsExternalChart').getContext('2d');
-            
-            if (charts.lanVsExternal) {
-                charts.lanVsExternal.destroy();
-            }
-
-            charts.lanVsExternal = new Chart(ctx, {
-                type: 'doughnut',
-                data: {
-                    labels: ['LAN Connections', 'External Connections'],
-                    datasets: [{
-                        data: [data.lan.connection_count, data.external.connection_count],
-                        backgroundColor: ['#28a745', '#ffc107'],
-                        borderWidth: 2,
-                        borderColor: '#ffffff'
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: {
-                            position: 'bottom',
-                            labels: {
-                                padding: 20,
-                                usePointStyle: true
-                            }
-                        }
-                    }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true
                 }
-            });
-        }
-
-        // Load host statistics
-        async function loadHostStatistics() {
-            try {
-                const response = await fetch('/api/stats/hosts?limit=10');
-                const result = await response.json();
-                
-                if (result.success) {
-                    updateTopHostsTable(result.data.top_hosts);
-                } else {
-                    throw new Error(result.error);
-                }
-            } catch (error) {
-                console.error('Error loading host statistics:', error);
             }
         }
+    });
+}
 
-        // Update top hosts table
-        function updateTopHostsTable(hosts) {
-            const tbody = document.getElementById('topHostsTable');
-            
-            if (!hosts || hosts.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">No data available</td></tr>';
-                return;
-            }
+// Update time range
+function updateTimeRange(hours) {
+    currentTimeRange = parseInt(hours);
+    loadHistoricalStatistics();
+}
 
-            tbody.innerHTML = hosts.map(host => `
-                <tr>
-                    <td><strong>${host.host_name || 'Unknown'}</strong></td>
-                    <td><code>${host.ip_address}</code></td>
-                    <td><span class="badge bg-primary">${host.connection_count}</span></td>
-                    <td><small>${host.total_traffic}</small></td>
-                    <td><small>${host.unique_destinations} destinations</small></td>
-                </tr>
-            `).join('');
+// Utility functions
+function showLoadingState() {
+    const refreshIcon = document.getElementById('refreshIcon');
+    refreshIcon.style.animation = 'spin 1s linear infinite';
+}
+
+function hideLoadingState() {
+    const refreshIcon = document.getElementById('refreshIcon');
+    refreshIcon.style.animation = '';
+}
+
+function updateLastRefreshTime() {
+    document.getElementById('lastUpdateTime').textContent = new Date().toLocaleTimeString();
+}
+
+function showErrorState(message) {
+    console.error(message);
+}
+
+function showErrorInContainer(containerId, message) {
+    const container = document.getElementById(containerId);
+    container.innerHTML = `<div class="nm-error"><i class="fas fa-exclamation-triangle pf-u-mr-sm"></i>${message}</div>`;
+}
+
+// Cleanup on page unload
+window.addEventListener('beforeunload', function() {
+    if (refreshInterval) clearInterval(refreshInterval);
+    
+    Object.values(charts).forEach(chart => {
+        if (chart && typeof chart.destroy === 'function') {
+            chart.destroy();
         }
+    });
+});
 
-        // Update top external destinations table
-        function updateTopExternalTable(destinations) {
-            const tbody = document.getElementById('topExternalTable');
-            
-            if (!destinations || destinations.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">No external connections</td></tr>';
-                return;
-            }
-
-            tbody.innerHTML = destinations.map(dest => `
-                <tr>
-                    <td><code>${dest.dest_ip}</code></td>
-                    <td><span class="badge bg-warning">${dest.connection_count}</span></td>
-                    <td><small>${dest.source_hosts} hosts</small></td>
-                    <td><small>${dest.dest_ports} ports</small></td>
-                    <td><small>${dest.total_traffic}</small></td>
-                </tr>
-            `).join('');
-        }
-
-        // Load historical statistics
-        async function loadHistoricalStats() {
-            try {
-                const response = await fetch('/api/stats/historical?hours=24');
-                const result = await response.json();
-                
-                if (result.success) {
-                    displayHistoricalStats(result.data);
-                } else {
-                    throw new Error(result.error);
-                }
-            } catch (error) {
-                console.error('Error loading historical stats:', error);
-            }
-        }
-
-        // Display historical statistics
-        function displayHistoricalStats(data) {
-            const periodStats = data.period_stats;
-            const hourlyHistory = data.hourly_history;
-
-            // Update period statistics
-            ['1h', '6h', '1d', '3d', '1w'].forEach(period => {
-                const stats = periodStats[period];
-                if (stats) {
-                    document.getElementById(`connections${period}`).textContent = 
-                        stats.connections.toLocaleString();
-                    document.getElementById(`hosts${period}`).textContent = 
-                        `${stats.active_hosts} hosts`;
-                }
-            });
-
-            // Update timeline chart
-            updateTimelineChart(hourlyHistory);
-        }
-
-        // Update connection timeline chart
-        function updateTimelineChart(hourlyData) {
-            const ctx = document.getElementById('connectionTimelineChart').getContext('2d');
-            
-            if (charts.timeline) {
-                charts.timeline.destroy();
-            }
-
-            const labels = hourlyData.map(item => {
-                const date = new Date(item.hour);
-                return date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
-            });
-
-            const connectionData = hourlyData.map(item => item.connections || 0);
-            const hostData = hourlyData.map(item => item.unique_hosts || 0);
-
-            charts.timeline = new Chart(ctx, {
-                type: 'line',
-                data: {
-                    labels: labels,
-                    datasets: [
-                        {
-                            label: 'Connections',
-                            data: connectionData,
-                            borderColor: '#007bff',
-                            backgroundColor: 'rgba(0, 123, 255, 0.1)',
-                            tension: 0.4,
-                            fill: true
-                        },
-                        {
-                            label: 'Active Hosts',
-                            data: hostData,
-                            borderColor: '#28a745',
-                            backgroundColor: 'rgba(40, 167, 69, 0.1)',
-                            tension: 0.4,
-                            fill: false
-                        }
-                    ]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: {
-                            position: 'top'
-                        }
-                    },
-                    scales: {
-                        y: {
-                            beginAtZero: true
-                        }
-                    }
-                }
-            });
-        }
-
-        // Load connection statistics for protocol breakdown
-        async function loadConnectionStats() {
-            try {
-                const response = await fetch('/api/stats/connections?hours=24');
-                const result = await response.json();
-                
-                if (result.success) {
-                    displayProtocolBreakdown(result.data.protocol_breakdown);
-                } else {
-                    throw new Error(result.error);
-                }
-            } catch (error) {
-                console.error('Error loading connection stats:', error);
-            }
-        }
-
-        // Display protocol breakdown
-        function displayProtocolBreakdown(protocols) {
-            const container = document.getElementById('protocolBreakdown');
-            
-            if (!protocols || protocols.length === 0) {
-                container.innerHTML = '<p class="text-muted text-center">No protocol data available</p>';
-                return;
-            }
-
-            container.innerHTML = protocols.map(protocol => `
-                <div class="nm-metric-row">
-                    <span class="nm-metric-label">${protocol.protocol.toUpperCase()}</span>
-                    <span class="nm-metric-value">${protocol.connection_count}</span>
-                </div>
-            `).join('');
-        }
-
-        // Start real-time updates
-        function startRealTimeUpdates() {
-            updateRealTimeStats();
-        }
-
-        // Update real-time statistics
-        async function updateRealTimeStats() {
-            try {
-                const response = await fetch('/api/stats/realtime');
-                const result = await response.json();
-                
-                if (result.success) {
-                    const data = result.data;
-                    document.getElementById('realtimeConnections').textContent = 
-                        data.recent_connections.toLocaleString();
-                    document.getElementById('realtimeHosts').textContent = 
-                        data.active_hosts.toLocaleString();
-                    document.getElementById('realtimeAgents').textContent = 
-                        data.active_agents.toLocaleString();
-                    document.getElementById('realtimeHeartbeats').textContent = 
-                        data.recent_heartbeats.toLocaleString();
-                }
-            } catch (error) {
-                console.error('Error updating real-time stats:', error);
-            }
-        }
-
-        // Utility functions
-        function showLoadingIndicator(show) {
-            const icon = document.getElementById('refreshIcon');
-            if (show) {
-                icon.classList.add('spinning');
-            } else {
-                icon.classList.remove('spinning');
-            }
-        }
-
-        function updateLastRefreshTime() {
-            document.getElementById('lastUpdateTime').textContent = 
-                new Date().toLocaleTimeString();
-        }
-
-        function showError(message) {
-            console.error(message);
-            // Could show a toast notification here
-        }
-
-        // Cleanup on page unload
-        window.addEventListener('beforeunload', function() {
-            if (refreshInterval) clearInterval(refreshInterval);
-            if (realtimeInterval) clearInterval(realtimeInterval);
-            
-            // Destroy charts to prevent memory leaks
-            Object.values(charts).forEach(chart => {
-                if (chart && typeof chart.destroy === 'function') {
-                    chart.destroy();
-                }
-            });
-        });
-    </script>
+// Add CSS animation for spinning
+const style = document.createElement('style');
+style.textContent = `
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+`;
+document.head.appendChild(style);
+</script>
 {% endblock %}

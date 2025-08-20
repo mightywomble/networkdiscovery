@@ -10,6 +10,7 @@ import json
 import os
 import threading
 import time
+import logging
 from collections import defaultdict, deque
 import psycopg2.extras
 
@@ -19,6 +20,10 @@ from database_postgresql import Database
 from topology_analyzer import TopologyAnalyzer
 
 app = Flask(__name__)
+# Initialize logger
+logger = logging.getLogger(__name__)
+logging.basicConfig(level=logging.INFO)
+
 app.secret_key = os.environ.get('FLASK_SECRET_KEY', 'dev-key-change-in-production')
 
 # Initialize components
@@ -42,19 +47,22 @@ scan_status = {
 def index():
     """Main dashboard page"""
     hosts = host_manager.get_all_hosts()
-    network_stats = db.get_network_stats()
-    return render_template('index.html', hosts=hosts, stats=network_stats, scan_status=scan_status)
+    unified_stats = db.get_unified_dashboard_stats()
+    return render_template('index.html', hosts=hosts, stats=unified_stats, scan_status=scan_status)
 
 @app.route('/hosts')
 def hosts():
     """Host management page"""
     hosts = host_manager.get_all_hosts()
-    return render_template('hosts.html', hosts=hosts)
+    unified_stats = db.get_unified_dashboard_stats()
+    return render_template("hosts.html", hosts=hosts, stats=unified_stats)
+    
 
 @app.route('/agents')
 def agents():
     """Agent management page"""
-    return render_template('agents.html')
+    unified_stats = db.get_unified_dashboard_stats()
+    return render_template("agents.html", stats=unified_stats)
 
 @app.route('/add_host', methods=['POST'])
 def add_host():
@@ -4636,7 +4644,7 @@ def get_statistics_overview():
     try:
         overview_stats = db.get_network_overview_stats()
         agent_stats = db.get_agent_stats()
-        network_stats = db.get_network_stats()
+        unified_stats = db.get_unified_dashboard_stats()
         
         # Combine all overview data
         combined_stats = {
@@ -5183,6 +5191,21 @@ def save_chatbot_settings():
             'success': False,
             'error': str(e)
         }), 500
+@app.route("/api/unified_stats", methods=["GET"])
+def get_unified_stats():
+    """Get unified dashboard statistics for all pages"""
+    try:
+        stats = db.get_unified_dashboard_stats()
+        return jsonify({
+            "success": True,
+            "stats": stats
+        })
+    except Exception as e:
+        return jsonify({
+            "success": False,
+            "error": str(e)
+        }), 500
+
 
 @app.route('/api/chatbot/conversation/<conversation_id>', methods=['GET'])
 def get_chatbot_conversation(conversation_id):
@@ -6005,8 +6028,62 @@ def cleanup_script_executions():
 @app.route('/statistics')
 def statistics_dashboard():
     """Render the statistics dashboard page"""
-    return render_template('statistics.html')
+    unified_stats = db.get_unified_dashboard_stats()
+    return render_template("statistics.html", stats=unified_stats)
 
+@app.route('/api/statistics/network', methods=['GET'])
+def get_network_statistics_api():
+    """Get network traffic statistics"""
+    try:
+        stats = db.get_network_statistics()
+        return jsonify({
+            'success': True,
+            'data': stats,
+            'timestamp': datetime.now().isoformat()
+        })
+    except Exception as e:
+        logger.error(f'Error getting network statistics: {e}')
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+
+@app.route('/api/statistics/agents', methods=['GET'])
+def get_agent_statistics_api():
+    """Get agent activity statistics"""
+    try:
+        stats = db.get_agent_statistics()
+        return jsonify({
+            'success': True,
+            'data': stats,
+            'timestamp': datetime.now().isoformat()
+        })
+    except Exception as e:
+        logger.error(f'Error getting agent statistics: {e}')
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@app.route('/api/statistics/historical', methods=['GET'])
+def get_historical_statistics_api():
+    """Get historical statistics"""
+    try:
+        hours = int(request.args.get('hours', 24))
+        stats = db.get_historical_statistics(hours)
+        return jsonify({
+            'success': True,
+            'data': stats,
+            'hours': hours,
+            'timestamp': datetime.now().isoformat()
+        })
+    except Exception as e:
+        logger.error(f'Error getting historical statistics: {e}')
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
 if __name__ == '__main__':
     print("Initializing NetworkMap Flask Application...")
     
@@ -6026,3 +6103,4 @@ if __name__ == '__main__':
         print(f"❌ Failed to start Flask application: {e}")
         import traceback
         traceback.print_exc()
+

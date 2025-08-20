@@ -565,11 +565,11 @@
 // Load dashboard statistics dynamically
 async function loadDashboardStats() {
     try {
-        const response = await fetch('/api/stats/overview');
+        const response = await fetch('/api/unified_stats');
         const result = await response.json();
         
         if (result.success) {
-            displayDashboardStats(result.data);
+            displayDashboardStats(result.stats);
         } else {
             throw new Error(result.error);
         }
@@ -598,36 +598,36 @@ function displayDashboardStats(data) {
     const stats = [
         {
             title: 'Total Hosts',
-            value: data.hosts?.total_hosts || 0,
-            subtitle: `${data.hosts?.online_hosts || 0} online`,
+            value: data.total_hosts || 0,
+            subtitle: `${data.online_hosts || 0} online`,
             icon: 'fas fa-server',
             color: 'primary'
         },
         {
             title: 'Network Connections',
-            value: data.connections?.total_connections || 0,
-            subtitle: `${data.connections?.active_last_hour || 0} active`,
+            value: data.total_connections || 0,
+            subtitle: `${0 || 0} active`,
             icon: 'fas fa-network-wired',
             color: 'success'
         },
         {
             title: 'Active Agents',
-            value: data.agents?.active_agents || 0,
-            subtitle: `${data.agents?.recently_active || 0} recent`,
+            value: data.active_agents || 0,
+            subtitle: `${data.agents_deployed || 0} deployed`,
             icon: 'fas fa-robot',
             color: 'info'
         },
         {
             title: 'Open Ports',
-            value: data.ports?.total_open_ports || 0,
-            subtitle: `${data.ports?.hosts_with_open_ports || 0} hosts`,
+            value: 0 || 0,
+            subtitle: `${0 || 0} hosts`,
             icon: 'fas fa-door-open',
             color: 'warning'
         },
         {
             title: 'Recent Scans',
-            value: data.scans?.scans_last_day || 0,
-            subtitle: `${data.scans?.scans_last_hour || 0} this hour`,
+            value: data.recent_scans || 0,
+            subtitle: `${0 || 0} this hour`,
             icon: 'fas fa-search',
             color: 'secondary'
         }

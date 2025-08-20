@@ -28,54 +28,8 @@
 
 <section class="pf-c-page__main-section">
     {% if hosts %}
-    <!-- Host Statistics -->
-    <div class="pf-c-card pf-u-mb-md nm-stats-card">
-        <div class="pf-c-card__header">
-            <div class="pf-c-card__header-main">
-                <h2 class="pf-c-card__title">
-                    <i class="fas fa-chart-bar pf-u-mr-sm"></i>
-                    Host Statistics
-                </h2>
-            </div>
-        </div>
-        <div class="pf-c-card__body">
-            <div class="pf-l-grid pf-m-all-3-col pf-m-gutter">
-                <div class="pf-l-grid__item">
-                    <div class="pf-c-card nm-stat-card">
-                        <div class="pf-c-card__body pf-u-text-align-center">
-                            <div class="nm-stat-value" style="color: var(--pf-global--primary-color--100)">{{ hosts|length }}</div>
-                            <div class="nm-stat-label">Total Hosts</div>
-                        </div>
-                    </div>
-                </div>
-                <div class="pf-l-grid__item">
-                    <div class="pf-c-card nm-stat-card">
-                        <div class="pf-c-card__body pf-u-text-align-center">
-                            <div class="nm-stat-value" style="color: var(--pf-global--success-color--100)">{{ hosts|selectattr("status", "equalto", "online")|list|length }}</div>
-                            <div class="nm-stat-label">Online</div>
-                        </div>
-                    </div>
-                </div>
-                <div class="pf-l-grid__item">
-                    <div class="pf-c-card nm-stat-card">
-                        <div class="pf-c-card__body pf-u-text-align-center">
-                            <div class="nm-stat-value" style="color: var(--pf-global--warning-color--100)">{{ hosts|selectattr("status", "equalto", "ping_only")|list|length }}</div>
-                            <div class="nm-stat-label">Ping Only</div>
-                        </div>
-                    </div>
-                </div>
-                <div class="pf-l-grid__item">
-                    <div class="pf-c-card nm-stat-card">
-                        <div class="pf-c-card__body pf-u-text-align-center">
-                            <div class="nm-stat-value" style="color: var(--pf-global--danger-color--100)">{{ hosts|selectattr("status", "equalto", "offline")|list|length }}</div>
-                            <div class="nm-stat-label">Offline</div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-    {% endif %}
+    <!-- Statistics Overview -->
+    {% include "unified_stats_cards.html" %}
     
     <!-- Configured Hosts Section -->
     <div class="pf-c-card nm-hosts-list-card">
@@ -211,6 +165,7 @@
         </div>
     </div>
     
+    {% endif %}
 </section>
 
 <!-- Add Host Modal -->
