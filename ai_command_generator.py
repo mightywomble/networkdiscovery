@@ -122,6 +122,9 @@ class AICommandGenerator:
             f"# Template: {template['description']}",
             f"# Generated at: {datetime.now().isoformat()}",
             "",
+            "# Confirm hostname at start of execution",
+            "hostname",
+            "",
             "echo '=== " + template['description'] + " ==='",
             "echo 'Hostname:' $(hostname)",
             "echo 'Timestamp:' $(date)",
@@ -352,6 +355,29 @@ Respond with ONLY the bash script, no additional text or explanation. Start with
             if not script_content.startswith('#!/bin/bash'):
                 script_content = '#!/bin/bash\n' + script_content
             
+            # Ensure hostname command is at the beginning (after shebang and initial comments)
+            script_lines = script_content.split('\n')
+            hostname_added = False
+            insert_position = 1  # After shebang
+            
+            # Find where to insert hostname command (skip initial comments)
+            for i, line in enumerate(script_lines):
+                line_stripped = line.strip()
+                if line_stripped and not line_stripped.startswith('#') and line_stripped != '#!/bin/bash':
+                    insert_position = i
+                    break
+                if line_stripped.startswith('hostname'):
+                    hostname_added = True
+                    break
+            
+            # Add hostname command if not already present
+            if not hostname_added:
+                script_lines.insert(insert_position, '')
+                script_lines.insert(insert_position + 1, '# Confirm hostname at start of execution')
+                script_lines.insert(insert_position + 2, 'hostname')
+                script_lines.insert(insert_position + 3, '')
+                script_content = '\n'.join(script_lines)
+            
             return {
                 'success': True,
                 'script': script_content,
@@ -372,6 +398,9 @@ Respond with ONLY the bash script, no additional text or explanation. Start with
         fallback_script = f"""#!/bin/bash
 # Fallback script for request: {user_request}
 # Generated at: {datetime.now().isoformat()}
+
+# Confirm hostname at start of execution
+hostname
 
 echo "=== System Information Request ==="
 echo "Request: {user_request}"

@@ -110,6 +110,33 @@
                 </div>
             </div>
         </div>
+        
+        <!-- AI Chatbot Settings Card -->
+        <div class="pf-l-gallery__item">
+            <div class="pf-c-card" style="min-height: 400px;">
+                <div class="pf-c-card__header">
+                    <div class="pf-c-card__header-main">
+                        <h2 class="pf-c-card__title">
+                            <i class="fas fa-robot pf-u-mr-sm"></i>AI Chatbot
+                        </h2>
+                    </div>
+                </div>
+                <div class="pf-c-card__body">
+                    <p class="pf-u-color-200">Configure AI Chatbot settings for script generation and execution.</p>
+                    <p>Manage agent version requirements, prompts, and execution policies for the AI-powered chatbot.</p>
+                    
+                    <div id="chatbot-settings-status" class="pf-u-mt-md">
+                        <!-- Chatbot settings status will be loaded here -->
+                        <div class="pf-c-skeleton pf-u-w-100 pf-u-h-sm"></div>
+                    </div>
+                </div>
+                <div class="pf-c-card__footer">
+                    <button class="pf-c-button pf-m-primary" type="button" onclick="openChatbotSettingsModal()">
+                        <i class="fas fa-cog pf-u-mr-sm"></i>Configure Chatbot
+                    </button>
+                </div>
+            </div>
+        </div>
 
         <!-- System Information -->
         <div class="pf-l-gallery__item" style="grid-column: 1 / -1;">
@@ -167,6 +194,7 @@ document.addEventListener('DOMContentLoaded', function() {
     loadAISettingsOverview();
     loadProviderStatus('gemini');
     loadProviderStatus('chatgpt');
+    loadChatbotSettingsStatus();
 });
 
 function loadAISettingsOverview() {
@@ -314,12 +342,314 @@ function loadProviderStatus(provider) {
     });
 }
 
+function loadChatbotSettingsStatus() {
+    const statusContainer = document.getElementById('chatbot-settings-status');
+    
+    fetch('/api/chatbot_settings')
+    .then(response => response.json())
+    .then(data => {
+        let html = '';
+        
+        if (data.success) {
+            const settings = data.settings;
+            const versionCheckColor = settings.require_version_check ? 'success' : 'warning';
+            const versionCheckText = settings.require_version_check ? 'Enabled' : 'Disabled';
+            const versionCheckIcon = settings.require_version_check ? 'check-circle' : 'exclamation-triangle';
+            
+            html = `
+                <div style="color: #000; font-weight: bold; margin-bottom: 8px;">Minimum Agent Version</div>
+                <div style="margin-bottom: 12px;">${settings.minimum_agent_version}</div>
+                
+                <div style="color: #000; font-weight: bold; margin-bottom: 8px;">Version Checking</div>
+                <div style="margin-bottom: 12px;">
+                    <span class="pf-c-label pf-m-${versionCheckColor}">
+                        <span class="pf-c-label__content">
+                            <i class="fas fa-${versionCheckIcon} pf-u-mr-xs"></i>${versionCheckText}
+                        </span>
+                    </span>
+                </div>
+                
+                <div style="color: #000; font-weight: bold; margin-bottom: 8px;">Script Timeout</div>
+                <div>${settings.script_timeout}s</div>
+            `;
+        } else {
+            html = `
+                <div class="pf-c-alert pf-m-warning pf-m-inline pf-m-plain" aria-label="Warning alert">
+                    <div class="pf-c-alert__icon">
+                        <i class="fas fa-exclamation-triangle" aria-hidden="true"></i>
+                    </div>
+                    <p class="pf-c-alert__title">Unable to load chatbot settings</p>
+                </div>
+            `;
+        }
+        
+        statusContainer.innerHTML = html;
+    })
+    .catch(error => {
+        console.error('Error loading chatbot settings:', error);
+        statusContainer.innerHTML = `
+            <div class="pf-c-alert pf-m-warning pf-m-inline pf-m-plain" aria-label="Warning alert">
+                <div class="pf-c-alert__icon">
+                    <i class="fas fa-exclamation-triangle" aria-hidden="true"></i>
+                </div>
+                <p class="pf-c-alert__title">Unable to load status</p>
+            </div>
+        `;
+    });
+}
+
+function openChatbotSettingsModal() {
+    // Create modal HTML if it doesn't exist
+    if (!document.getElementById('chatbotSettingsModal')) {
+        const modalHtml = `
+            <div class="pf-c-backdrop">
+                <div class="pf-l-bullseye">
+                    <div class="pf-c-modal-box pf-m-lg" role="dialog" aria-modal="true" aria-labelledby="chatbot-settings-modal-title" aria-describedby="chatbot-settings-modal-description" id="chatbotSettingsModal">
+                        <div class="pf-c-modal-box__header">
+                            <h1 class="pf-c-modal-box__title" id="chatbot-settings-modal-title">
+                                <i class="fas fa-robot pf-u-mr-sm"></i>AI Chatbot Configuration
+                            </h1>
+                        </div>
+                        <div class="pf-c-modal-box__body" id="chatbot-settings-modal-description">
+                            <form id="chatbot-settings-form">
+                                <div class="pf-l-grid pf-m-gutter">
+                                    <div class="pf-l-grid__item pf-m-12-col">
+                                        <div class="pf-c-form__group">
+                                            <div class="pf-c-form__group-label">
+                                                <label class="pf-c-form__label" for="minimum-agent-version">
+                                                    <span class="pf-c-form__label-text">Minimum Agent Version</span>
+                                                    <span class="pf-c-form__label-required" aria-hidden="true">*</span>
+                                                </label>
+                                            </div>
+                                            <div class="pf-c-form__group-control">
+                                                <select class="pf-c-form-control" id="minimum-agent-version" required>
+                                                    <option value="1.5.0">1.5.0</option>
+                                                    <option value="1.6.0" selected>1.6.0</option>
+                                                    <option value="1.7.0">1.7.0</option>
+                                                    <option value="2.0.0">2.0.0</option>
+                                                </select>
+                                                <div class="pf-c-form__helper-text">
+                                                    <div class="pf-c-helper-text">
+                                                        <div class="pf-c-helper-text__item">
+                                                            <span class="pf-c-helper-text__item-text">Agents with versions below this will be blocked from executing AI-generated scripts.</span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="pf-l-grid__item pf-m-12-col">
+                                        <div class="pf-c-form__group">
+                                            <div class="pf-c-form__group-control">
+                                                <div class="pf-c-check">
+                                                    <input class="pf-c-check__input" type="checkbox" id="require-version-check" checked>
+                                                    <label class="pf-c-check__label" for="require-version-check">Enable version checking</label>
+                                                </div>
+                                                <div class="pf-c-form__helper-text">
+                                                    <div class="pf-c-helper-text">
+                                                        <div class="pf-c-helper-text__item">
+                                                            <span class="pf-c-helper-text__item-text">When enabled, prevents script execution on agents with incompatible versions. Disable for testing or maintenance.</span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="pf-l-grid__item pf-m-12-col">
+                                        <div class="pf-c-form__group">
+                                            <div class="pf-c-form__group-label">
+                                                <label class="pf-c-form__label" for="script-timeout">
+                                                    <span class="pf-c-form__label-text">Script Timeout (seconds)</span>
+                                                </label>
+                                            </div>
+                                            <div class="pf-c-form__group-control">
+                                                <input class="pf-c-form-control" type="number" id="script-timeout" min="30" max="3600" value="300">
+                                                <div class="pf-c-form__helper-text">
+                                                    <div class="pf-c-helper-text">
+                                                        <div class="pf-c-helper-text__item">
+                                                            <span class="pf-c-helper-text__item-text">Maximum time to wait for script execution before timing out.</span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="pf-l-grid__item pf-m-12-col">
+                                        <div class="pf-c-form__group">
+                                            <div class="pf-c-form__group-label">
+                                                <label class="pf-c-form__label" for="max-concurrent">
+                                                    <span class="pf-c-form__label-text">Max Concurrent Executions</span>
+                                                </label>
+                                            </div>
+                                            <div class="pf-c-form__group-control">
+                                                <input class="pf-c-form-control" type="number" id="max-concurrent" min="1" max="20" value="5">
+                                                <div class="pf-c-form__helper-text">
+                                                    <div class="pf-c-helper-text">
+                                                        <div class="pf-c-helper-text__item">
+                                                            <span class="pf-c-helper-text__item-text">Maximum number of scripts that can run simultaneously.</span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="pf-l-grid__item pf-m-12-col">
+                                        <div class="pf-c-form__group">
+                                            <div class="pf-c-form__group-label">
+                                                <label class="pf-c-form__label" for="system-prompt">
+                                                    <span class="pf-c-form__label-text">System Prompt</span>
+                                                </label>
+                                            </div>
+                                            <div class="pf-c-form__group-control">
+                                                <textarea class="pf-c-form-control" id="system-prompt" rows="6" placeholder="Enter the system prompt for the AI chatbot..."></textarea>
+                                                <div class="pf-c-form__helper-text">
+                                                    <div class="pf-c-helper-text">
+                                                        <div class="pf-c-helper-text__item">
+                                                            <span class="pf-c-helper-text__item-text">The system prompt that guides the AI's behavior when generating scripts.</span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </form>
+                        </div>
+                        <div class="pf-c-modal-box__footer">
+                            <button class="pf-c-button pf-m-primary" type="button" onclick="saveChatbotSettings()">
+                                <i class="fas fa-save pf-u-mr-sm"></i>Save Settings
+                            </button>
+                            <button class="pf-c-button pf-m-link" type="button" onclick="closeChatbotSettingsModal()">
+                                Cancel
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        document.body.insertAdjacentHTML('beforeend', modalHtml);
+    }
+    
+    // Load current settings into the form
+    loadChatbotSettingsIntoForm();
+    
+    // Show the modal
+    document.getElementById('chatbotSettingsModal').style.display = 'block';
+}
+
+function loadChatbotSettingsIntoForm() {
+    fetch('/api/chatbot_settings')
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            const settings = data.settings;
+            
+            document.getElementById('minimum-agent-version').value = settings.minimum_agent_version || '1.6.0';
+            document.getElementById('require-version-check').checked = settings.require_version_check !== false;
+            document.getElementById('script-timeout').value = settings.script_timeout || 300;
+            document.getElementById('max-concurrent').value = settings.max_concurrent_executions || 5;
+            document.getElementById('system-prompt').value = settings.system_prompt || '';
+        }
+    })
+    .catch(error => {
+        console.error('Error loading chatbot settings into form:', error);
+    });
+}
+
+function saveChatbotSettings() {
+    const formData = {
+        minimum_agent_version: document.getElementById('minimum-agent-version').value,
+        require_version_check: document.getElementById('require-version-check').checked,
+        script_timeout: parseInt(document.getElementById('script-timeout').value),
+        max_concurrent_executions: parseInt(document.getElementById('max-concurrent').value),
+        system_prompt: document.getElementById('system-prompt').value
+    };
+    
+    // Show saving indicator
+    const saveButton = document.querySelector('#chatbotSettingsModal .pf-m-primary');
+    const originalText = saveButton.innerHTML;
+    saveButton.innerHTML = '<i class="fas fa-spinner fa-spin pf-u-mr-sm"></i>Saving...';
+    saveButton.disabled = true;
+    
+    fetch('/api/chatbot_settings', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(formData)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Show success notification
+            showNotification('Chatbot settings saved successfully', 'success');
+            closeChatbotSettingsModal();
+            loadChatbotSettingsStatus();
+        } else {
+            showNotification('Error saving settings: ' + data.error, 'danger');
+        }
+    })
+    .catch(error => {
+        console.error('Error saving chatbot settings:', error);
+        showNotification('Error saving chatbot settings', 'danger');
+    })
+    .finally(() => {
+        saveButton.innerHTML = originalText;
+        saveButton.disabled = false;
+    });
+}
+
+function closeChatbotSettingsModal() {
+    const modal = document.getElementById('chatbotSettingsModal');
+    if (modal) {
+        modal.style.display = 'none';
+    }
+}
+
+function showNotification(message, type) {
+    // Simple notification function - you can enhance this
+    const alert = document.createElement('div');
+    alert.className = `pf-c-alert pf-m-${type} pf-m-inline`;
+    alert.style.position = 'fixed';
+    alert.style.top = '20px';
+    alert.style.right = '20px';
+    alert.style.zIndex = '9999';
+    alert.innerHTML = `
+        <div class="pf-c-alert__icon">
+            <i class="fas fa-${type === 'success' ? 'check-circle' : 'exclamation-circle'}" aria-hidden="true"></i>
+        </div>
+        <p class="pf-c-alert__title">${message}</p>
+    `;
+    
+    document.body.appendChild(alert);
+    
+    // Remove after 5 seconds
+    setTimeout(() => {
+        if (alert && alert.parentNode) {
+            alert.parentNode.removeChild(alert);
+        }
+    }, 5000);
+}
+
 // Refresh the overview and provider status when modals are closed
 document.addEventListener('hidden.bs.modal', function (event) {
     if (event.target.id === 'geminiModal' || event.target.id === 'chatgptModal') {
         loadAISettingsOverview();
         loadProviderStatus('gemini');
         loadProviderStatus('chatgpt');
+    }
+});
+
+// Close modal when clicking outside
+document.addEventListener('click', function(event) {
+    const modal = document.getElementById('chatbotSettingsModal');
+    if (modal && event.target === modal) {
+        closeChatbotSettingsModal();
     }
 });
 </script>
