@@ -1825,6 +1825,33 @@ class Database:
             
             return conversation
     
+    def get_chatbot_messages(self, conversation_id):
+        """Get messages for a chatbot conversation"""
+        with self.get_connection() as conn:
+            cursor = conn.execute('''
+                SELECT * FROM chatbot_messages 
+                WHERE conversation_id = ? 
+                ORDER BY timestamp
+            ''', (conversation_id,))
+            
+            messages = []
+            for row in cursor.fetchall():
+                message = dict(row)
+                
+                # Parse metadata
+                try:
+                    message_metadata = json.loads(message.get('metadata', '{}'))
+                    message['metadata'] = message_metadata
+                except:
+                    message['metadata'] = {}
+                
+                # Map message_type to type for consistency
+                message['type'] = message.get('message_type', 'bot')
+                
+                messages.append(message)
+            
+            return messages
+    
     # Application settings management
     def save_application_setting(self, setting_key, setting_value, setting_type='string', description=None):
         """Save or update an application setting"""
