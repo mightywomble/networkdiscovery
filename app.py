@@ -15,7 +15,7 @@ import psycopg2.extras
 
 from network_scanner import NetworkScanner
 from host_manager import HostManager
-from database import Database
+from database_postgresql import Database
 from topology_analyzer import TopologyAnalyzer
 
 app = Flask(__name__)
