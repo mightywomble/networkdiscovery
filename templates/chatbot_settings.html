@@ -1,0 +1,546 @@
+{% extends "base_patternfly.html" %}
+
+{% block title %}AI Chatbot Settings - Home Lab{% endblock %}
+
+{% block breadcrumb %}
+<li class="pf-c-breadcrumb__item">
+    <a href="{{ url_for('index') }}" class="pf-c-breadcrumb__link">Home</a>
+</li>
+<li class="pf-c-breadcrumb__item">
+    <span class="pf-c-breadcrumb__item-divider">></span>
+    <a href="{{ url_for('settings') }}" class="pf-c-breadcrumb__link">Settings</a>
+</li>
+<li class="pf-c-breadcrumb__item">
+    <span class="pf-c-breadcrumb__item-divider">></span>
+    <span class="pf-c-breadcrumb__link pf-m-current" aria-current="page">AI Chatbot Settings</span>
+</li>
+{% endblock %}
+
+{% block content %}
+<!-- Page header -->
+<section class="pf-c-page__main-section pf-m-light">
+    <div class="pf-c-content">
+        <h1>
+            <i class="fas fa-robot pf-u-mr-sm"></i>AI Chatbot Settings
+        </h1>
+        <p class="pf-c-content">Configure AI-powered chatbot behavior, security policies, and execution parameters.</p>
+    </div>
+</section>
+
+<!-- Settings content -->
+<section class="pf-c-page__main-section">
+    <div class="pf-l-grid pf-m-gutter">
+        
+        <!-- Main Settings Form -->
+        <div class="pf-l-grid__item pf-m-12-col pf-m-8-col-on-lg">
+            <div class="pf-c-card">
+                <div class="pf-c-card__header">
+                    <div class="pf-c-card__header-main">
+                        <h2 class="pf-c-card__title">
+                            <i class="fas fa-cog pf-u-mr-sm"></i>Configuration
+                        </h2>
+                    </div>
+                </div>
+                <div class="pf-c-card__body">
+                    <form id="chatbot-settings-form">
+                        <div class="pf-l-grid pf-m-gutter">
+                            
+                            <!-- Agent Version Requirements -->
+                            <div class="pf-l-grid__item pf-m-12-col">
+                                <div class="pf-c-form__group">
+                                    <div class="pf-c-form__group-label">
+                                        <label class="pf-c-form__label" for="minimum-agent-version">
+                                            <span class="pf-c-form__label-text">Minimum Agent Version</span>
+                                            <span class="pf-c-form__label-required" aria-hidden="true">*</span>
+                                        </label>
+                                    </div>
+                                    <div class="pf-c-form__group-control">
+                                        <select class="pf-c-form-control" id="minimum-agent-version" required>
+                                            <option value="1.5.0">1.5.0</option>
+                                            <option value="1.6.0" selected>1.6.0</option>
+                                            <option value="1.7.0">1.7.0</option>
+                                            <option value="2.0.0">2.0.0</option>
+                                        </select>
+                                        <div class="pf-c-form__helper-text">
+                                            <div class="pf-c-helper-text">
+                                                <div class="pf-c-helper-text__item">
+                                                    <span class="pf-c-helper-text__item-text">Agents with versions below this will be blocked from executing AI-generated scripts.</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Version Checking Toggle -->
+                            <div class="pf-l-grid__item pf-m-12-col">
+                                <div class="pf-c-form__group">
+                                    <div class="pf-c-form__group-control">
+                                        <div class="pf-c-check">
+                                            <input class="pf-c-check__input" type="checkbox" id="require-version-check" checked>
+                                            <label class="pf-c-check__label" for="require-version-check">Enable version checking</label>
+                                        </div>
+                                        <div class="pf-c-form__helper-text">
+                                            <div class="pf-c-helper-text">
+                                                <div class="pf-c-helper-text__item">
+                                                    <span class="pf-c-helper-text__item-text">When enabled, prevents script execution on agents with incompatible versions. Disable for testing or maintenance.</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Script Timeout -->
+                            <div class="pf-l-grid__item pf-m-12-col pf-m-6-col-on-md">
+                                <div class="pf-c-form__group">
+                                    <div class="pf-c-form__group-label">
+                                        <label class="pf-c-form__label" for="script-timeout">
+                                            <span class="pf-c-form__label-text">Script Timeout (seconds)</span>
+                                        </label>
+                                    </div>
+                                    <div class="pf-c-form__group-control">
+                                        <input class="pf-c-form-control" type="number" id="script-timeout" min="30" max="3600" value="300">
+                                        <div class="pf-c-form__helper-text">
+                                            <div class="pf-c-helper-text">
+                                                <div class="pf-c-helper-text__item">
+                                                    <span class="pf-c-helper-text__item-text">Maximum time to wait for script execution before timing out (30-3600 seconds).</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Max Concurrent Executions -->
+                            <div class="pf-l-grid__item pf-m-12-col pf-m-6-col-on-md">
+                                <div class="pf-c-form__group">
+                                    <div class="pf-c-form__group-label">
+                                        <label class="pf-c-form__label" for="max-concurrent">
+                                            <span class="pf-c-form__label-text">Max Concurrent Executions</span>
+                                        </label>
+                                    </div>
+                                    <div class="pf-c-form__group-control">
+                                        <input class="pf-c-form-control" type="number" id="max-concurrent" min="1" max="20" value="5">
+                                        <div class="pf-c-form__helper-text">
+                                            <div class="pf-c-helper-text">
+                                                <div class="pf-c-helper-text__item">
+                                                    <span class="pf-c-helper-text__item-text">Maximum number of scripts that can run simultaneously (1-20).</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- System Prompt -->
+                            <div class="pf-l-grid__item pf-m-12-col">
+                                <div class="pf-c-form__group">
+                                    <div class="pf-c-form__group-label">
+                                        <label class="pf-c-form__label" for="system-prompt">
+                                            <span class="pf-c-form__label-text">System Prompt</span>
+                                        </label>
+                                    </div>
+                                    <div class="pf-c-form__group-control">
+                                        <textarea class="pf-c-form-control" id="system-prompt" rows="8" placeholder="Enter the system prompt that will guide the AI chatbot's behavior when generating scripts..."></textarea>
+                                        <div class="pf-c-form__helper-text">
+                                            <div class="pf-c-helper-text">
+                                                <div class="pf-c-helper-text__item">
+                                                    <span class="pf-c-helper-text__item-text">The system prompt that guides the AI's behavior when generating scripts. This should include safety guidelines, coding standards, and specific instructions for your network environment.</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                        </div>
+                    </form>
+                </div>
+                <div class="pf-c-card__footer">
+                    <button class="pf-c-button pf-m-primary" type="button" id="save-settings-btn" onclick="saveChatbotSettings()">
+                        <i class="fas fa-save pf-u-mr-sm"></i>Save Settings
+                    </button>
+                    <button class="pf-c-button pf-m-secondary" type="button" onclick="loadChatbotSettings()">
+                        <i class="fas fa-refresh pf-u-mr-sm"></i>Reset to Current
+                    </button>
+                    <button class="pf-c-button pf-m-link" type="button" onclick="testChatbotSettings()">
+                        <i class="fas fa-flask pf-u-mr-sm"></i>Test Configuration
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Status and Information Sidebar -->
+        <div class="pf-l-grid__item pf-m-12-col pf-m-4-col-on-lg">
+            
+            <!-- Current Status Card -->
+            <div class="pf-c-card pf-u-mb-md">
+                <div class="pf-c-card__header">
+                    <div class="pf-c-card__header-main">
+                        <h3 class="pf-c-card__title">
+                            <i class="fas fa-info-circle pf-u-mr-sm"></i>Current Status
+                        </h3>
+                    </div>
+                </div>
+                <div class="pf-c-card__body">
+                    <div id="current-status">
+                        <!-- Status will be loaded here -->
+                        <div class="pf-c-skeleton pf-u-w-100 pf-u-h-sm pf-u-mb-sm"></div>
+                        <div class="pf-c-skeleton pf-u-w-75 pf-u-h-sm pf-u-mb-sm"></div>
+                        <div class="pf-c-skeleton pf-u-w-50 pf-u-h-sm"></div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- AI Service Dependencies Card -->
+            <div class="pf-c-card pf-u-mb-md">
+                <div class="pf-c-card__header">
+                    <div class="pf-c-card__header-main">
+                        <h3 class="pf-c-card__title">
+                            <i class="fas fa-link pf-u-mr-sm"></i>AI Service Dependencies
+                        </h3>
+                    </div>
+                </div>
+                <div class="pf-c-card__body">
+                    <div id="ai-dependencies">
+                        <!-- Dependencies will be loaded here -->
+                        <div class="pf-c-skeleton pf-u-w-100 pf-u-h-sm pf-u-mb-sm"></div>
+                        <div class="pf-c-skeleton pf-u-w-100 pf-u-h-sm"></div>
+                    </div>
+                </div>
+                <div class="pf-c-card__footer">
+                    <a href="{{ url_for('settings') }}" class="pf-c-button pf-m-link pf-m-small">
+                        <i class="fas fa-cog pf-u-mr-sm"></i>Configure AI Services
+                    </a>
+                </div>
+            </div>
+            
+            <!-- Security Guidelines Card -->
+            <div class="pf-c-card">
+                <div class="pf-c-card__header">
+                    <div class="pf-c-card__header-main">
+                        <h3 class="pf-c-card__title">
+                            <i class="fas fa-shield-alt pf-u-mr-sm"></i>Security Guidelines
+                        </h3>
+                    </div>
+                </div>
+                <div class="pf-c-card__body">
+                    <div class="pf-c-content pf-u-font-size-sm">
+                        <ul>
+                            <li>Always require minimum agent versions for security updates</li>
+                            <li>Set reasonable script timeouts to prevent runaway processes</li>
+                            <li>Limit concurrent executions to avoid system overload</li>
+                            <li>Include safety guidelines in your system prompt</li>
+                            <li>Regularly review and update your configuration</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            
+        </div>
+    </div>
+</section>
+
+<!-- Success/Error Alert Container -->
+<div id="alert-container" style="position: fixed; top: 20px; right: 20px; z-index: 9999;">
+    <!-- Alerts will be dynamically added here -->
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    loadChatbotSettings();
+    loadCurrentStatus();
+    loadAIDependencies();
+});
+
+function loadChatbotSettings() {
+    fetch('/api/chatbot_settings')
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            const settings = data.settings;
+            
+            // Populate form fields
+            document.getElementById('minimum-agent-version').value = settings.minimum_agent_version || '1.6.0';
+            document.getElementById('require-version-check').checked = settings.require_version_check !== false;
+            document.getElementById('script-timeout').value = settings.script_timeout || 300;
+            document.getElementById('max-concurrent').value = settings.max_concurrent_executions || 5;
+            document.getElementById('system-prompt').value = settings.system_prompt || '';
+            
+            showAlert('Settings loaded successfully', 'success', 2000);
+        } else {
+            showAlert('Error loading settings: ' + data.error, 'danger');
+        }
+    })
+    .catch(error => {
+        console.error('Error loading chatbot settings:', error);
+        showAlert('Failed to load chatbot settings', 'warning');
+    });
+}
+
+function saveChatbotSettings() {
+    // Validate form
+    const minimumVersion = document.getElementById('minimum-agent-version').value;
+    const scriptTimeout = parseInt(document.getElementById('script-timeout').value);
+    const maxConcurrent = parseInt(document.getElementById('max-concurrent').value);
+    
+    if (!minimumVersion) {
+        showAlert('Minimum agent version is required', 'danger');
+        return;
+    }
+    
+    if (scriptTimeout < 30 || scriptTimeout > 3600) {
+        showAlert('Script timeout must be between 30 and 3600 seconds', 'danger');
+        return;
+    }
+    
+    if (maxConcurrent < 1 || maxConcurrent > 20) {
+        showAlert('Max concurrent executions must be between 1 and 20', 'danger');
+        return;
+    }
+    
+    const formData = {
+        minimum_agent_version: minimumVersion,
+        require_version_check: document.getElementById('require-version-check').checked,
+        script_timeout: scriptTimeout,
+        max_concurrent_executions: maxConcurrent,
+        system_prompt: document.getElementById('system-prompt').value.trim()
+    };
+    
+    // Show saving state
+    const saveButton = document.getElementById('save-settings-btn');
+    const originalText = saveButton.innerHTML;
+    saveButton.innerHTML = '<i class="fas fa-spinner fa-spin pf-u-mr-sm"></i>Saving...';
+    saveButton.disabled = true;
+    
+    const timeoutController = new AbortController();
+    const timeoutId = setTimeout(() => timeoutController.abort(), 10000); // 10 second timeout
+    
+    fetch('/api/chatbot_settings', {
+        signal: timeoutController.signal,
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(formData)
+    })
+    .then(response => response.json())
+    .then(data => {
+        clearTimeout(timeoutId);
+        if (data.success) {
+            showAlert('Chatbot settings saved successfully', 'success');
+            loadCurrentStatus(); // Refresh status display
+        } else {
+            showAlert('Error saving settings: ' + data.error, 'danger');
+        }
+    })
+    .catch(error => {
+        clearTimeout(timeoutId);
+        console.error('Error saving chatbot settings:', error);
+        if (error.name === 'AbortError') {
+            showAlert('Request timeout - settings save took too long', 'warning');
+        } else {
+            showAlert('Failed to save chatbot settings', 'danger');
+        }
+    })
+    .finally(() => {
+        saveButton.innerHTML = originalText;
+        saveButton.disabled = false;
+    });
+}
+
+function loadCurrentStatus() {
+    const statusContainer = document.getElementById('current-status');
+    
+    fetch('/api/chatbot_settings')
+    .then(response => response.json())
+    .then(data => {
+        let html = '';
+        
+        if (data.success) {
+            const settings = data.settings;
+            const versionCheckColor = settings.require_version_check ? 'success' : 'warning';
+            const versionCheckText = settings.require_version_check ? 'Enabled' : 'Disabled';
+            const versionCheckIcon = settings.require_version_check ? 'check-circle' : 'exclamation-triangle';
+            
+            html = `
+                <dl class="pf-c-description-list pf-m-compact">
+                    <dt class="pf-c-description-list__term">
+                        <span class="pf-c-description-list__text">Min Agent Version</span>
+                    </dt>
+                    <dd class="pf-c-description-list__description">
+                        <div class="pf-c-description-list__text">
+                            <span class="pf-c-label pf-m-blue">
+                                <span class="pf-c-label__content">${settings.minimum_agent_version}</span>
+                            </span>
+                        </div>
+                    </dd>
+                    <dt class="pf-c-description-list__term">
+                        <span class="pf-c-description-list__text">Version Checking</span>
+                    </dt>
+                    <dd class="pf-c-description-list__description">
+                        <div class="pf-c-description-list__text">
+                            <span class="pf-c-label pf-m-${versionCheckColor}">
+                                <span class="pf-c-label__content">
+                                    <i class="fas fa-${versionCheckIcon} pf-u-mr-xs"></i>${versionCheckText}
+                                </span>
+                            </span>
+                        </div>
+                    </dd>
+                    <dt class="pf-c-description-list__term">
+                        <span class="pf-c-description-list__text">Script Timeout</span>
+                    </dt>
+                    <dd class="pf-c-description-list__description">
+                        <div class="pf-c-description-list__text">${settings.script_timeout}s</div>
+                    </dd>
+                    <dt class="pf-c-description-list__term">
+                        <span class="pf-c-description-list__text">Max Concurrent</span>
+                    </dt>
+                    <dd class="pf-c-description-list__description">
+                        <div class="pf-c-description-list__text">${settings.max_concurrent_executions}</div>
+                    </dd>
+                </dl>
+            `;
+        } else {
+            html = `
+                <div class="pf-c-alert pf-m-warning pf-m-inline pf-m-plain" aria-label="Warning alert">
+                    <div class="pf-c-alert__icon">
+                        <i class="fas fa-exclamation-triangle" aria-hidden="true"></i>
+                    </div>
+                    <p class="pf-c-alert__title">Unable to load status</p>
+                </div>
+            `;
+        }
+        
+        statusContainer.innerHTML = html;
+    })
+    .catch(error => {
+        console.error('Error loading status:', error);
+        statusContainer.innerHTML = `
+            <div class="pf-c-alert pf-m-danger pf-m-inline pf-m-plain" aria-label="Danger alert">
+                <div class="pf-c-alert__icon">
+                    <i class="fas fa-exclamation-circle" aria-hidden="true"></i>
+                </div>
+                <p class="pf-c-alert__title">Error loading status</p>
+            </div>
+        `;
+    });
+}
+
+function loadAIDependencies() {
+    const dependenciesContainer = document.getElementById('ai-dependencies');
+    
+    fetch('/api/ai_settings')
+    .then(response => response.json())
+    .then(data => {
+        let html = '';
+        
+        if (data.success && data.settings && data.settings.length > 0) {
+            const enabledServices = data.settings.filter(s => s.enabled);
+            const totalServices = data.settings.length;
+            
+            html = `
+                <div class="pf-c-content pf-u-font-size-sm pf-u-mb-sm">
+                    <strong>${enabledServices.length}/${totalServices}</strong> AI services configured and enabled
+                </div>
+                <div class="pf-l-grid pf-m-gutter">
+            `;
+            
+            for (const service of data.settings) {
+                const statusColor = service.enabled ? 'success' : 'grey';
+                const statusIcon = service.enabled ? 'check-circle' : 'times-circle';
+                const serviceName = service.provider === 'gemini' ? 'Google Gemini' : 'OpenAI ChatGPT';
+                
+                html += `
+                    <div class="pf-l-grid__item pf-m-12-col">
+                        <span class="pf-c-label pf-m-${statusColor} pf-m-compact">
+                            <span class="pf-c-label__content">
+                                <i class="fas fa-${statusIcon} pf-u-mr-xs"></i>${serviceName}
+                            </span>
+                        </span>
+                    </div>
+                `;
+            }
+            
+            html += '</div>';
+        } else {
+            html = `
+                <div class="pf-c-alert pf-m-warning pf-m-inline pf-m-plain" aria-label="Warning alert">
+                    <div class="pf-c-alert__icon">
+                        <i class="fas fa-exclamation-triangle" aria-hidden="true"></i>
+                    </div>
+                    <p class="pf-c-alert__title">No AI services configured</p>
+                    <div class="pf-c-alert__description pf-u-font-size-sm">
+                        Configure at least one AI service to enable chatbot functionality.
+                    </div>
+                </div>
+            `;
+        }
+        
+        dependenciesContainer.innerHTML = html;
+    })
+    .catch(error => {
+        console.error('Error loading AI dependencies:', error);
+        dependenciesContainer.innerHTML = `
+            <div class="pf-c-alert pf-m-danger pf-m-inline pf-m-plain" aria-label="Danger alert">
+                <div class="pf-c-alert__icon">
+                    <i class="fas fa-exclamation-circle" aria-hidden="true"></i>
+                </div>
+                <p class="pf-c-alert__title">Error loading AI services</p>
+            </div>
+        `;
+    });
+}
+
+function testChatbotSettings() {
+    showAlert('Configuration test feature coming soon', 'info');
+    // TODO: Implement configuration test functionality
+}
+
+function showAlert(message, type, duration = 5000) {
+    const alertContainer = document.getElementById('alert-container');
+    const alertId = 'alert-' + Date.now();
+    
+    const iconMap = {
+        'success': 'check-circle',
+        'danger': 'exclamation-circle',
+        'warning': 'exclamation-triangle',
+        'info': 'info-circle'
+    };
+    
+    const alertHtml = `
+        <div id="${alertId}" class="pf-c-alert pf-m-${type} pf-m-inline pf-u-mb-sm" aria-label="${type} alert">
+            <div class="pf-c-alert__icon">
+                <i class="fas fa-${iconMap[type] || 'info-circle'}" aria-hidden="true"></i>
+            </div>
+            <p class="pf-c-alert__title">${message}</p>
+            <div class="pf-c-alert__action">
+                <button class="pf-c-button pf-m-plain" type="button" aria-label="Close alert" onclick="closeAlert('${alertId}')">
+                    <i class="fas fa-times" aria-hidden="true"></i>
+                </button>
+            </div>
+        </div>
+    `;
+    
+    alertContainer.insertAdjacentHTML('beforeend', alertHtml);
+    
+    // Auto-remove after duration
+    if (duration > 0) {
+        setTimeout(() => {
+            closeAlert(alertId);
+        }, duration);
+    }
+}
+
+function closeAlert(alertId) {
+    const alert = document.getElementById(alertId);
+    if (alert && alert.parentNode) {
+        alert.parentNode.removeChild(alert);
+    }
+}
+</script>
+{% endblock %}

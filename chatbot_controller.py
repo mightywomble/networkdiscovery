@@ -9,8 +9,11 @@ import uuid
 import threading
 import time
 from datetime import datetime, timedelta
-from typing import Dict, List, Any, Optional
+from typing import Dict, List, Any, Optional, Tuple
 import logging
+
+# Import version utilities
+from version_utils import is_version_compatible, format_version_comparison_error
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
@@ -135,8 +138,32 @@ class ChatbotController:
             conversation = self.active_conversations.get(conversation_id)
             if not conversation:
                 # Try to load from database
-                conversation = self.db.get_chatbot_conversation(conversation_id)
-                if conversation:
+                conversation_data = self.db.get_chatbot_conversation(conversation_id)
+                if conversation_data:
+                    # Create a fully reconstructed conversation object
+                    conversation = {
+                        'id': conversation_id,
+                        'user_id': conversation_data.get('user_id'),
+                        'state': conversation_data.get('state', 'initial'),
+                        'messages': [],  # Will be loaded from messages table
+                        'created_at': conversation_data.get('created_at') or datetime.now().isoformat(),
+                        'updated_at': conversation_data.get('updated_at') or datetime.now().isoformat()
+                    }
+                    
+                    # Add metadata fields to the conversation
+                    metadata = conversation_data.get('metadata', {})
+                    if metadata:
+                        conversation['current_script'] = metadata.get('current_script')
+                        conversation['validation_result'] = metadata.get('validation_result')
+                        conversation['selected_hosts'] = metadata.get('selected_hosts', [])
+                        conversation['execution_results'] = metadata.get('execution_results')
+                    
+                    # Fetch messages
+                    messages = self.db.get_chatbot_messages(conversation_id)
+                    if messages:
+                        conversation['messages'] = messages
+                    
+                    # Cache in memory
                     self.active_conversations[conversation_id] = conversation
                 else:
                     return {
@@ -317,6 +344,39 @@ class ChatbotController:
                     'success': False,
                     'error': 'No hosts selected for execution'
                 }
+            
+            # Check if version checking is enabled
+            require_version_check = self.db.get_application_setting('chatbot.require_version_check', True)
+            
+            if require_version_check:
+                minimum_version = self.db.get_application_setting('chatbot.minimum_agent_version', '1.6.0')
+                version_check_result = self._validate_agent_versions_detailed(selected_hosts, minimum_version)
+                
+                if not version_check_result['success']:
+                    bot_message = {
+                        'id': str(uuid.uuid4()),
+                        'type': 'bot',
+                        'content': f"⚠️ **Agent Version Check Failed**\n\n" +
+                                  version_check_result['error'] + "\n\n" +
+                                  "**Options:**\n" +
+                                  "• Update agents to the required version\n" +
+                                  "• Contact your administrator to adjust version requirements\n" +
+                                  "• Select different hosts with compatible agents",
+                        'timestamp': datetime.now().isoformat(),
+                        'metadata': {
+                            'conversation_state': 'script_validated',
+                            'version_check_failed': True,
+                            'incompatible_hosts': version_check_result.get('incompatible_hosts', []),
+                            'available_actions': ['edit', 'try_again']
+                        }
+                    }
+                    
+                    return {
+                        'success': False,
+                        'message': bot_message,
+                        'error': 'Agent version compatibility check failed',
+                        'conversation_state': conversation['state']
+                    }
             
             # Check if execution is approved
             if not validation_data.get('is_approved'):
@@ -746,11 +806,168 @@ What would you like me to help you with today?"""
             'conversation_state': conversation['state']
         }
     
+    def _validate_agent_versions(self, selected_hosts: List[Dict], minimum_version: str = None) -> Tuple[bool, str]:
+        """Validate that all selected hosts have agents with compatible versions.
+        
+        This is a convenience wrapper that returns a simple (is_valid, error_message) tuple.
+        For detailed results, use _validate_agent_versions_detailed.
+        
+        Args:
+            selected_hosts: List of host IDs or host dicts
+            minimum_version: Minimum version required (if None, fetched from settings)
+            
+        Returns:
+            Tuple of (is_valid, error_message)
+        """
+        if minimum_version is None:
+            minimum_version = self.db.get_application_setting('chatbot.minimum_agent_version', '1.6.0')
+            
+        require_version_check = self.db.get_application_setting('chatbot.require_version_check', True)
+        if not require_version_check:
+            return True, None
+            
+        # Convert host IDs to host objects if needed
+        host_objects = []
+        for host_item in selected_hosts:
+            if isinstance(host_item, dict):
+                host_objects.append(host_item)
+            else:
+                # Assume it's a host ID
+                host_data = self.db.get_host(host_item)
+                if host_data:
+                    host_objects.append(host_data)
+                else:
+                    return False, f"Host with ID {host_item} not found"
+        
+        result = self._validate_agent_versions_detailed(host_objects, minimum_version)
+        return result['success'], result.get('error')
+    
+    def _validate_agent_versions_detailed(self, selected_hosts: List[Dict], minimum_version: str) -> Dict[str, Any]:
+        """Validate that all selected hosts have agents with compatible versions"""
+        try:
+            incompatible_hosts = []
+            missing_agent_hosts = []
+            
+            for host in selected_hosts:
+                host_name = host.get('name', 'Unknown')
+                host_ip = host.get('ip_address', 'Unknown')
+                
+                # Check if host has an agent
+                agents = self.db.get_all_agents()
+                host_agent = None
+                
+                # Find agent for this host by IP or hostname
+                for agent in agents:
+                    if (agent.get('ip_address') == host_ip or 
+                        agent.get('hostname') == host_name or
+                        agent.get('host_id') == host.get('id')):
+                        host_agent = agent
+                        break
+                
+                if not host_agent:
+                    missing_agent_hosts.append({
+                        'host_name': host_name,
+                        'host_ip': host_ip,
+                        'reason': 'No agent installed or registered'
+                    })
+                    continue
+                
+                # Check agent version compatibility
+                current_version = host_agent.get('agent_version')
+                if not current_version:
+                    incompatible_hosts.append({
+                        'host_name': host_name,
+                        'host_ip': host_ip,
+                        'current_version': 'Unknown',
+                        'minimum_version': minimum_version,
+                        'reason': 'Agent version not reported'
+                    })
+                    continue
+                
+                if not is_version_compatible(current_version, minimum_version):
+                    incompatible_hosts.append({
+                        'host_name': host_name,
+                        'host_ip': host_ip,
+                        'current_version': current_version,
+                        'minimum_version': minimum_version,
+                        'reason': format_version_comparison_error(current_version, minimum_version)
+                    })
+            
+            # Generate error message if there are compatibility issues
+            if incompatible_hosts or missing_agent_hosts:
+                error_parts = []
+                
+                if missing_agent_hosts:
+                    error_parts.append(f"**Hosts without agents ({len(missing_agent_hosts)}):**")
+                    for host in missing_agent_hosts[:5]:  # Limit to first 5
+                        error_parts.append(f"• **{host['host_name']}** ({host['host_ip']}): {host['reason']}")
+                    if len(missing_agent_hosts) > 5:
+                        error_parts.append(f"• ... and {len(missing_agent_hosts) - 5} more hosts")
+                    error_parts.append("")  # Empty line
+                
+                if incompatible_hosts:
+                    error_parts.append(f"**Incompatible agent versions ({len(incompatible_hosts)}):**")
+                    for host in incompatible_hosts[:5]:  # Limit to first 5
+                        error_parts.append(
+                            f"• **{host['host_name']}** ({host['host_ip']}): "
+                            f"v{host['current_version']} < v{host['minimum_version']}"
+                        )
+                    if len(incompatible_hosts) > 5:
+                        error_parts.append(f"• ... and {len(incompatible_hosts) - 5} more hosts")
+                    error_parts.append("")  # Empty line
+                
+                error_parts.append(f"**Minimum required version:** {minimum_version}")
+                
+                return {
+                    'success': False,
+                    'error': '\n'.join(error_parts),
+                    'incompatible_hosts': incompatible_hosts + missing_agent_hosts,
+                    'minimum_version': minimum_version
+                }
+            
+            return {
+                'success': True,
+                'message': f'All selected hosts have compatible agent versions (>= {minimum_version})'
+            }
+            
+        except Exception as e:
+            logger.error(f"Error validating agent versions: {e}")
+            return {
+                'success': False,
+                'error': f'Error checking agent versions: {str(e)}'
+            }
+    
     def _save_conversation(self, conversation: Dict):
         """Save conversation to database"""
         try:
-            self.db.save_chatbot_conversation(conversation)
-            logger.info(f"Saved conversation {conversation['id']} to database")
+            # Extract needed data from the conversation object for PostgreSQL
+            conversation_id = conversation['id']
+            user_id = conversation.get('user_id')
+            state = conversation.get('state', 'initial')
+            
+            # Create metadata dict with all the conversation data we want to persist
+            metadata = {
+                'current_script': conversation.get('current_script'),
+                'validation_result': conversation.get('validation_result'),
+                'selected_hosts': conversation.get('selected_hosts', []),
+                'execution_results': conversation.get('execution_results'),
+                'updated_at': conversation.get('updated_at'),
+                'created_at': conversation.get('created_at')
+            }
+            
+            # Save conversation metadata
+            self.db.save_chatbot_conversation(conversation_id, user_id, state, metadata)
+            logger.info(f"Saved conversation {conversation_id} to database")
+            
+            # Save each message separately
+            for message in conversation.get('messages', []):
+                self.db.save_chatbot_message(
+                    message['id'],
+                    conversation_id,
+                    message['type'],
+                    message['content'],
+                    message.get('metadata')
+                )
             
         except Exception as e:
             logger.error(f"Error saving conversation: {e}")

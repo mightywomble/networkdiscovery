@@ -59,6 +59,31 @@
 - **Consistent Data**: Same data sources as Statistics page ensuring accuracy
 - **Quick Actions**: Direct access to network scans, tool installation, and network maps
 
+### 📈 **Advanced Statistics Dashboard** *(NEW in v2.1.0)*
+- **Real-time Network Analytics**: Comprehensive network traffic analysis with live data
+- **Interactive Charts**: Chart.js powered visualizations with protocol breakdown and traffic patterns
+- **Network Traffic Analysis**: 
+  - Protocol breakdown (TCP, UDP, ICMP) with connection counts and percentages
+  - Top destinations with connection volumes and port analysis
+  - Top active hosts with traffic patterns and activity status
+  - LAN vs External traffic analysis with bandwidth utilization
+- **Agent Activity Monitoring**:
+  - Real-time agent status with platform breakdown
+  - Version distribution across monitored infrastructure
+  - Scan activity metrics with type-based analysis
+  - Heartbeat monitoring with connectivity status
+- **Historical Analytics**:
+  - Hourly connection activity trends with visual timelines
+  - Daily agent scan activity with performance metrics
+  - Time-based filtering (24h, 7d, 30d) for trend analysis
+  - Historical data visualization with interactive charts
+- **REST API Integration**: Three dedicated endpoints for real-time data
+  - `/api/statistics/network` - Network traffic and topology statistics
+  - `/api/statistics/agents` - Agent monitoring and activity metrics  
+  - `/api/statistics/historical` - Time-based analytics and trend data
+- **Auto-refresh Functionality**: 30-second refresh intervals with manual refresh options
+- **Professional PatternFly Design**: Enterprise-grade cards, charts, and layout components
+
 ### 🖥 **Improved Web Interface**
 - **Streamlined Sidebar**: Organized navigation with Main, Infrastructure, Visualization, AI Tooling, and Settings
 - **Enhanced Host Management**: Improved edit buttons, removed clutter, better visual hierarchy
@@ -95,7 +120,7 @@
 - **Comprehensive Host Management**: Add, edit, organize hosts with enhanced forms
 - **Agent Lifecycle Management**: Deploy, configure, update, monitor with version tracking
 - **Centralized Configuration**: Unified configuration management across all agents
-- **Advanced Analytics**: SQLite-based data analytics with performance insights
+- **Advanced Analytics**: PostgreSQL-based data analytics with performance insights
 - **Import/Export**: Backup and restore configurations with data validation
 - **Cleanup Utilities**: Database maintenance tools and stale record removal
 
@@ -106,6 +131,7 @@
 ### Prerequisites
 - **Python 3.8+** with pip and virtual environment support
 - **Ubuntu/Debian Server** (recommended for optimal performance)
+- **PostgreSQL Database** (for production) or SQLite (for development)
 - **SSH Access** to target hosts for agent deployment
 - **Network Connectivity** between server and monitored infrastructure
 - **Modern Web Browser** (Chrome, Firefox, Safari, Edge)
@@ -124,7 +150,7 @@ source venv/bin/activate
 pip install -r requirements.txt
 
 # Initialize the database
-python3 -c "from database import Database; db = Database(); db.init_db()"
+python3 -c "from database_postgresql import Database; db = Database(); db.init_db()"
 
 # Start the server
 python3 app.py
@@ -140,7 +166,8 @@ http://your-server-ip:5150
 1. **Dashboard** → Overview of your network with live statistics
 2. **Hosts** → Add hosts with IP addresses and SSH credentials
 3. **Agents** → Deploy monitoring agents to your infrastructure
-4. **AI Configuration** → Set up Google Gemini or OpenAI API keys
+4. **Statistics** → View comprehensive network analytics and trends
+5. **AI Configuration** → Set up Google Gemini or OpenAI API keys
 
 ### 4. 🤖 Generate AI Reports
 1. **AI Reports** → Choose data type (Complete Dataset, Latest Snapshot, System Logs)
@@ -149,7 +176,7 @@ http://your-server-ip:5150
 4. **Review Recommendations** → Follow AI suggestions for network optimization
 
 ### 5. 📊 Monitor Your Network
-1. **Statistics** → View detailed network metrics and trends
+1. **Statistics** → View detailed network metrics, charts, and trends
 2. **Network Maps** → Visualize topology and device relationships
 3. **Agent Monitoring** → Track agent health and data collection
 4. **Real-time Updates** → Monitor live network status and changes
@@ -293,6 +320,92 @@ Streamlined action buttons for common network operations:
 
 ---
 
+## 📈 Advanced Statistics Dashboard *(NEW in v2.1.0)*
+
+### 🎯 Overview
+The completely redesigned Statistics page provides comprehensive network intelligence with real-time data visualization, interactive charts, and professional PatternFly styling.
+
+### 📊 **Network Traffic Analytics**
+
+#### Protocol Analysis
+- **Protocol Breakdown**: Visual pie charts showing TCP, UDP, ICMP distribution
+- **Connection Metrics**: Total connections, unique hosts, and destination analysis
+- **Traffic Patterns**: Visual representation of network communication flows
+- **Port Usage**: Analysis of commonly used ports and services
+
+#### Top Destinations & Hosts
+- **Traffic Leaders**: Ranked tables of most active destinations and source hosts
+- **Connection Counts**: Total connections with unique port and host metrics
+- **Activity Status**: Real-time status indicators (online/offline)
+- **Last Activity**: Timestamps showing recent network activity
+- **Traffic Distribution**: Visual charts showing communication patterns
+
+#### LAN vs External Analysis
+- **Network Segmentation**: Clear breakdown of internal vs external traffic
+- **Security Assessment**: Analysis of external connections and potential risks
+- **Bandwidth Utilization**: Visual representation of traffic distribution
+- **Connection Patterns**: Identification of normal vs anomalous traffic flows
+
+### 🤖 **Agent Activity Monitoring**
+
+#### Agent Overview
+- **Total Agent Count**: Complete inventory of deployed monitoring agents
+- **Active Status**: Real-time status with recent heartbeat tracking
+- **Platform Distribution**: Breakdown by operating system and architecture
+- **Version Management**: Agent version distribution and update status
+
+#### Scan Activity Analysis
+- **Scan Type Breakdown**: Analysis of different scan types (network, port, service)
+- **Activity Metrics**: Scan frequency and completion rates
+- **Agent Performance**: Individual agent productivity and health metrics
+- **Historical Trends**: Scan activity patterns over time
+
+### 📅 **Historical Analytics** *(NEW Feature)*
+
+#### Time-based Analysis
+- **Hourly Activity**: Connection patterns throughout the day
+- **Daily Trends**: Long-term activity patterns and growth analysis
+- **Custom Time Ranges**: Flexible time period selection (24h, 7d, 30d)
+- **Activity Correlation**: Relationship between agent scans and network activity
+
+#### Trend Visualization
+- **Interactive Charts**: Chart.js powered time series visualizations
+- **Activity Timelines**: Visual representation of network and agent activity
+- **Peak Analysis**: Identification of high and low activity periods
+- **Capacity Planning**: Historical data for network growth planning
+
+### 🔄 **Real-time Features**
+
+#### Auto-refresh Functionality
+- **30-Second Updates**: Automatic data refresh for current information
+- **Manual Refresh**: On-demand data updates with loading indicators
+- **Error Handling**: Graceful degradation when API endpoints are unavailable
+- **Loading States**: Professional loading animations and progress indicators
+
+#### API Integration
+- **RESTful Endpoints**: Clean, well-documented API for statistics data
+- **JSON Response Format**: Structured data with timestamps and success indicators
+- **Error Responses**: Comprehensive error handling with detailed messages
+- **Performance Optimized**: Efficient database queries for fast response times
+
+### 🎨 **Professional UI Design**
+
+#### PatternFly Components
+- **Enterprise Cards**: Professional card layouts with headers and actions
+- **Data Tables**: Sortable, responsive tables with pagination support
+- **Chart Integration**: Seamless Chart.js integration with PatternFly styling
+- **Color Schemes**: Consistent color themes across all visualizations
+- **Responsive Layout**: Mobile-optimized design with tablet and desktop support
+
+#### Visual Excellence
+- **Interactive Elements**: Hover effects, clickable charts, and dynamic content
+- **Status Indicators**: Color-coded badges for quick status assessment
+- **Typography**: Professional font choices with proper hierarchy
+- **Spacing & Layout**: Optimal white space and visual flow
+- **Accessibility**: Screen reader support and keyboard navigation
+
+---
+
 ## 🔧 Installation
 
 ### 🖥 Production Server Setup
@@ -308,15 +421,20 @@ git clone https://github.com/mightywomble/networkdiscovery.git /opt/networkmap
 cd /opt/networkmap
 
 # Install system dependencies
-sudo apt update && sudo apt install -y python3 python3-pip python3-venv nginx
+sudo apt update && sudo apt install -y python3 python3-pip python3-venv nginx postgresql postgresql-contrib
 
 # Create Python environment
 python3 -m venv venv
 source venv/bin/activate
 pip install -r requirements.txt
 
+# Setup PostgreSQL database
+sudo -u postgres createuser networkmap
+sudo -u postgres createdb networkmap -O networkmap
+sudo -u postgres psql -c "ALTER USER networkmap PASSWORD 'secure_password';"
+
 # Initialize database
-python3 -c "from database import Database; db = Database(); db.init_db()"
+python3 -c "from database_postgresql import Database; db = Database(); db.init_db()"
 
 # Create systemd service
 sudo cp scripts/networkmap.service /etc/systemd/system/
@@ -336,6 +454,9 @@ python3 -m venv dev-env
 source dev-env/bin/activate
 pip install -r requirements.txt
 
+# Use SQLite for development
+python3 -c "from database import Database; db = Database(); db.init_db()"
+
 # Run in development mode
 export FLASK_DEBUG=1
 python3 app.py
@@ -346,11 +467,12 @@ python3 app.py
 # Build Docker image
 docker build -t networkmap:latest .
 
-# Run container
+# Run container with PostgreSQL
 docker run -d \
   --name networkmap \
   -p 5150:5150 \
   -v /opt/networkmap/data:/app/data \
+  -e DATABASE_URL="postgresql://user:pass@localhost/networkmap" \
   networkmap:latest
 ```
 
@@ -360,6 +482,7 @@ docker run -d \
 ```bash
 # Create EC2 instance (Ubuntu 20.04+)
 # Configure security groups (port 5150, 22)
+# Setup RDS PostgreSQL instance
 # Follow standard installation steps
 # Consider using Application Load Balancer for high availability
 ```
@@ -368,7 +491,7 @@ docker run -d \
 ```bash
 # Create Compute Engine instance
 # Configure firewall rules
-# Use managed SQL for database (optional)
+# Use Cloud SQL for PostgreSQL database
 # Deploy with Cloud Run for serverless (advanced)
 ```
 
@@ -464,6 +587,123 @@ docker run -d \
 
 ---
 
+## 📚 API Reference
+
+### 🔗 Core API Endpoints
+
+#### Dashboard & Statistics *(Enhanced in v2.1.0)*
+```http
+GET    /api/stats/overview              # Live dashboard statistics
+GET    /api/statistics/network          # Comprehensive network traffic analytics
+GET    /api/statistics/agents           # Agent activity and monitoring metrics
+GET    /api/statistics/historical       # Historical data trends and analytics
+GET    /api/stats/realtime              # Real-time metrics
+GET    /api/stats/hosts                 # Host-specific statistics
+GET    /api/stats/connections           # Network connection stats
+```
+
+#### AI Analytics
+```http
+GET    /api/ai_settings                 # AI configuration status
+POST   /api/ai_settings                 # Update AI configuration
+GET    /api/ai_settings/{provider}      # Provider-specific settings
+POST   /api/ai_reports/generate         # Generate AI report
+GET    /api/ai_reports/data_stats       # Data statistics for reports
+```
+
+#### Host & Agent Management
+```http
+GET    /api/hosts                       # List all hosts
+POST   /api/hosts                       # Add new host
+PUT    /api/hosts/{id}                  # Update host configuration
+DELETE /api/hosts/{id}                  # Remove host
+
+GET    /api/agents                      # List all agents
+POST   /api/agents/deploy               # Deploy agent to hosts
+PUT    /api/agents/{id}/config          # Update agent configuration
+GET    /api/agents/{id}/status          # Get agent status
+POST   /api/agents/{id}/scan            # Trigger agent scan
+```
+
+#### Network Operations
+```http
+POST   /api/network/scan                # Start network scan
+GET    /api/network/scan/status         # Get scan progress
+GET    /api/network/scan/results        # Get scan results
+POST   /api/network/topology/build      # Build network topology
+GET    /api/network/topology/data       # Get topology data
+```
+
+### 📖 API Usage Examples
+
+#### Get Network Statistics *(NEW)*
+```bash
+curl -X GET http://localhost:5150/api/statistics/network \
+  -H "Accept: application/json"
+
+# Response includes:
+# - Protocol breakdown (TCP, UDP, ICMP)
+# - Top destinations with connection counts
+# - Top active hosts with traffic analysis
+# - LAN vs External traffic distribution
+```
+
+#### Get Agent Statistics *(NEW)*
+```bash
+curl -X GET http://localhost:5150/api/statistics/agents \
+  -H "Accept: application/json"
+
+# Response includes:
+# - Agent overview (total, active, recent activity)
+# - Platform breakdown (Linux, Windows, etc.)
+# - Version distribution across agents
+# - Scan activity metrics by type
+```
+
+#### Get Historical Analytics *(NEW)*
+```bash
+curl -X GET http://localhost:5150/api/statistics/historical?hours=24 \
+  -H "Accept: application/json"
+
+# Response includes:
+# - Hourly connection activity trends
+# - Daily agent scan activity
+# - Time-based filtering support
+# - Historical pattern analysis
+```
+
+#### Generate AI Report
+```bash
+curl -X POST http://localhost:5150/api/ai_reports/generate \
+  -H "Content-Type: application/json" \
+  -d '{
+    "ai_model": "gemini-2.5-flash",
+    "data_type": "latest_capture",
+    "include_recommendations": true
+  }'
+```
+
+#### Get Live Dashboard Statistics
+```bash
+curl -X GET http://localhost:5150/api/stats/overview \
+  -H "Accept: application/json"
+```
+
+#### Deploy Agent
+```bash
+curl -X POST http://localhost:5150/api/agents/deploy \
+  -H "Content-Type: application/json" \
+  -d '{
+    "host_ids": [1, 2, 3],
+    "config": {
+      "scan_interval": 300,
+      "heartbeat_interval": 60
+    }
+  }'
+```
+
+---
+
 ## 🎨 Modern UI Design
 
 ### 🖌 PatternFly Integration
@@ -509,161 +749,6 @@ docker run -d \
 
 #### Server Security
 ```bash
-# SSL/TLS Configuration (Production)
-server {
-    listen 443 ssl http2;
-    server_name networkmap.yourdomain.com;
-    
-    ssl_certificate /path/to/certificate.crt;
-    ssl_certificate_key /path/to/private.key;
-    
-    location / {
-        proxy_pass http://127.0.0.1:5150;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-    }
-}
-```
-
-#### API Security
-```python
-# Environment Variables
-export FLASK_SECRET_KEY="your-secret-key-here"
-export GEMINI_API_KEY="your-gemini-api-key"
-export OPENAI_API_KEY="your-openai-api-key"
-export DATABASE_ENCRYPTION_KEY="your-db-encryption-key"
-```
-
-#### Network Security
-```bash
-# Firewall Configuration
-sudo ufw allow 22/tcp      # SSH access
-sudo ufw allow 443/tcp     # HTTPS (recommended)
-sudo ufw allow 5150/tcp    # NetworkMap (if not using reverse proxy)
-sudo ufw deny 5150/tcp --from any --to any  # If using reverse proxy
-sudo ufw enable
-```
-
-### 🎛 Advanced Configuration
-
-#### AI Model Configuration
-```json
-{
-    "gemini": {
-        "default_model": "gemini-2.5-flash",
-        "timeout": 120,
-        "max_tokens": 8192,
-        "temperature": 0.1
-    },
-    "openai": {
-        "default_model": "gpt-4o",
-        "timeout": 120,
-        "max_tokens": 4000,
-        "temperature": 0.2
-    }
-}
-```
-
-#### Database Configuration
-```python
-# Custom database settings
-DATABASE_CONFIG = {
-    'path': '/opt/networkmap/data/networkmap.db',
-    'backup_interval': 3600,  # hourly backups
-    'retention_days': 30,     # data retention
-    'vacuum_interval': 86400  # daily optimization
-}
-```
-
----
-
-## 📚 API Reference
-
-### 🔗 Core API Endpoints
-
-#### Dashboard & Statistics
-```http
-GET    /api/stats/overview           # Live dashboard statistics
-GET    /api/stats/historical         # Historical data trends
-GET    /api/stats/realtime           # Real-time metrics
-GET    /api/stats/hosts              # Host-specific statistics
-GET    /api/stats/connections        # Network connection stats
-```
-
-#### AI Analytics
-```http
-GET    /api/ai_settings              # AI configuration status
-POST   /api/ai_settings              # Update AI configuration
-GET    /api/ai_settings/{provider}   # Provider-specific settings
-POST   /api/ai_reports/generate      # Generate AI report
-GET    /api/ai_reports/data_stats    # Data statistics for reports
-```
-
-#### Host & Agent Management
-```http
-GET    /api/hosts                    # List all hosts
-POST   /api/hosts                    # Add new host
-PUT    /api/hosts/{id}               # Update host configuration
-DELETE /api/hosts/{id}               # Remove host
-
-GET    /api/agents                   # List all agents
-POST   /api/agents/deploy            # Deploy agent to hosts
-PUT    /api/agents/{id}/config       # Update agent configuration
-GET    /api/agents/{id}/status       # Get agent status
-POST   /api/agents/{id}/scan         # Trigger agent scan
-```
-
-#### Network Operations
-```http
-POST   /api/network/scan             # Start network scan
-GET    /api/network/scan/status      # Get scan progress
-GET    /api/network/scan/results     # Get scan results
-POST   /api/network/topology/build   # Build network topology
-GET    /api/network/topology/data    # Get topology data
-```
-
-### 📖 API Usage Examples
-
-#### Generate AI Report
-```bash
-curl -X POST http://localhost:5150/api/ai_reports/generate \
-  -H "Content-Type: application/json" \
-  -d '{
-    "ai_model": "gemini-2.5-flash",
-    "data_type": "latest_capture",
-    "include_recommendations": true
-  }'
-```
-
-#### Get Live Statistics
-```bash
-curl -X GET http://localhost:5150/api/stats/overview \
-  -H "Accept: application/json"
-```
-
-#### Deploy Agent
-```bash
-curl -X POST http://localhost:5150/api/agents/deploy \
-  -H "Content-Type: application/json" \
-  -d '{
-    "host_ids": [1, 2, 3],
-    "config": {
-      "scan_interval": 300,
-      "heartbeat_interval": 60
-    }
-  }'
-```
-
----
-
-## 🔒 Security Best Practices
-
-### 🛡 Production Security
-
-#### Server Hardening
-```bash
 # Create dedicated user
 sudo useradd -r -s /bin/false networkmap
 sudo chown -R networkmap:networkmap /opt/networkmap
@@ -690,11 +775,17 @@ export $(cat /opt/networkmap/.env | xargs)
 
 #### Database Security
 ```bash
-# Encrypt database
-sqlite3 /opt/networkmap/data/networkmap.db "PRAGMA key='your-encryption-key'"
+# PostgreSQL Security (Production)
+sudo -u postgres psql -c "ALTER USER networkmap PASSWORD 'secure_random_password';"
+sudo -u postgres psql -c "GRANT CONNECT ON DATABASE networkmap TO networkmap;"
+sudo -u postgres psql -c "GRANT USAGE ON SCHEMA public TO networkmap;"
+sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO networkmap;"
 
-# Regular backups
-0 2 * * * /opt/networkmap/scripts/backup-database.sh
+# Enable SSL connections
+sudo vim /etc/postgresql/*/main/postgresql.conf
+# ssl = on
+# ssl_cert_file = 'server.crt'
+# ssl_key_file = 'server.key'
 ```
 
 ### 🔐 Agent Security
@@ -734,17 +825,37 @@ curl -X POST http://localhost:5150/api/ai_settings/gemini/test \
 tail -f /opt/networkmap/logs/app.log | grep -i "ai\|error"
 ```
 
-#### Dashboard Statistics Not Loading
+#### Statistics Dashboard Not Loading *(NEW Troubleshooting)*
 ```bash
-# Test statistics API
-curl -X GET http://localhost:5150/api/stats/overview
+# Test statistics API endpoints
+curl -X GET http://localhost:5150/api/statistics/network
+curl -X GET http://localhost:5150/api/statistics/agents
+curl -X GET http://localhost:5150/api/statistics/historical?hours=24
 
 # Check JavaScript console
 # Open browser DevTools → Console tab
 # Look for JavaScript errors or failed API calls
 
-# Verify database integrity
-sqlite3 /opt/networkmap/data/networkmap.db ".schema"
+# Verify database connectivity
+python3 -c "from database_postgresql import Database; db = Database(); print(db.get_network_statistics())"
+
+# Check Flask service logs
+journalctl -u networkmap --no-pager -n 20
+```
+
+#### Database Connection Issues *(PostgreSQL)*
+```bash
+# Test PostgreSQL connection
+sudo -u postgres psql -c "\l"
+
+# Check NetworkMap database
+sudo -u postgres psql -d networkmap -c "\dt"
+
+# Verify user permissions
+sudo -u postgres psql -c "\du networkmap"
+
+# Test Python database connection
+python3 -c "from database_postgresql import Database; db = Database(); print(db.get_connection())"
 ```
 
 #### Agent Deployment Issues  
@@ -757,6 +868,9 @@ tail -f /var/log/networkmap-agent.log
 
 # Verify Python environment
 ssh user@target-host "python3 --version && which python3"
+
+# Test agent heartbeat
+curl -X GET http://localhost:5150/api/agents | jq '.[] | select(.status == "online")'
 ```
 
 #### Performance Issues
@@ -766,11 +880,14 @@ htop
 iostat 1
 netstat -tuln | grep 5150
 
-# Check database performance
-sqlite3 /opt/networkmap/data/networkmap.db "ANALYZE; VACUUM;"
+# Check database performance (PostgreSQL)
+sudo -u postgres psql -d networkmap -c "SELECT * FROM pg_stat_activity;"
 
-# Review slow queries
-sqlite3 /opt/networkmap/data/networkmap.db ".timer on" "SELECT * FROM hosts;"
+# Check query performance
+sudo -u postgres psql -d networkmap -c "EXPLAIN ANALYZE SELECT * FROM network_connections LIMIT 100;"
+
+# Review Flask performance
+tail -f /opt/networkmap/logs/app.log | grep -E "INFO:werkzeug|ERROR"
 ```
 
 ### 📊 Monitoring & Maintenance
@@ -781,7 +898,10 @@ sqlite3 /opt/networkmap/data/networkmap.db ".timer on" "SELECT * FROM hosts;"
 curl -X GET http://localhost:5150/api/health
 
 # Database health check
-python3 -c "from database import Database; db = Database(); print(db.health_check())"
+python3 -c "from database_postgresql import Database; db = Database(); print(db.health_check())"
+
+# Statistics API health check
+curl -X GET http://localhost:5150/api/statistics/network | jq '.success'
 
 # Agent connectivity check
 python3 -c "from agents import AgentManager; am = AgentManager(); am.check_all_agents()"
@@ -791,8 +911,8 @@ python3 -c "from agents import AgentManager; am = AgentManager(); am.check_all_a
 ```bash
 # Daily maintenance script
 #!/bin/bash
-# Backup database
-sqlite3 /opt/networkmap/data/networkmap.db ".backup /opt/networkmap/backups/$(date +%Y%m%d).db"
+# Backup PostgreSQL database
+sudo -u postgres pg_dump networkmap > /opt/networkmap/backups/$(date +%Y%m%d).sql
 
 # Clean old logs
 find /opt/networkmap/logs -name "*.log" -mtime +30 -delete
@@ -802,6 +922,9 @@ python3 /opt/networkmap/scripts/update_agents.py --check-all
 
 # Generate system report
 python3 /opt/networkmap/scripts/health_report.py
+
+# Optimize database
+sudo -u postgres psql -d networkmap -c "VACUUM ANALYZE;"
 ```
 
 ---
@@ -925,6 +1048,15 @@ mypy networkmap/
 - [ ] **Single Sign-On**: SAML/OIDC integration
 - [ ] **Audit Logging**: Comprehensive activity tracking and compliance
 
+#### Statistics Enhancements *(Planned for v2.2.0)*
+- [ ] **Custom Dashboard Widgets**: User-configurable statistics displays
+- [ ] **Advanced Filtering**: Complex filter options for all statistics views
+- [ ] **Data Export**: Export statistics data in multiple formats (CSV, JSON, PDF)
+- [ ] **Alert Thresholds**: Configurable alerts based on statistical thresholds
+- [ ] **Comparative Analysis**: Compare statistics across different time periods
+- [ ] **Scheduled Reports**: Automated statistics reports via email
+- [ ] **Real-time Alerts**: Push notifications for critical network events
+
 ### 🎯 Long-term Vision (v3.0+)
 
 #### Cloud-Native Architecture
@@ -943,14 +1075,20 @@ mypy networkmap/
 
 ## 📋 Version History
 
-### 🆕 v2.1.0 (Current) - AI-Powered Analytics & Modern UI
+### 🆕 v2.1.0 (Current) - AI-Powered Analytics & Enhanced Statistics Platform
 - ✨ **AI Report Generation**: Google Gemini and OpenAI integration
 - 🎨 **PatternFly UI**: Complete interface redesign with modern components
 - 📊 **Dynamic Dashboard**: Real-time statistics with live API data
+- 📈 **Advanced Statistics Dashboard**: Comprehensive network analytics with interactive charts
+- 🔗 **REST API Endpoints**: Three new statistics APIs for real-time data access
+- 🗄️ **PostgreSQL Integration**: Enhanced database support with optimized queries  
+- 📊 **Chart.js Visualizations**: Interactive charts for protocol breakdown and traffic analysis
+- 🔄 **Auto-refresh Functionality**: Real-time updates with 30-second refresh intervals
 - 💡 **Smart Suggestions**: Contextual recommendations for network scans
 - 🎯 **Enhanced UX**: Streamlined navigation and improved workflows
 - 🔧 **Better Agent Management**: Improved deployment and monitoring
 - 🚀 **Performance Optimizations**: Faster loading and response times
+- 🛠️ **Service Reliability**: Improved Flask service stability and error handling
 
 ### 📦 Previous Versions
 - **v2.0.0**: Major UI overhaul with PatternFly integration
@@ -986,6 +1124,7 @@ mypy networkmap/
 - OS: Ubuntu 20.04
 - Python: 3.8.10
 - NetworkMap Version: 2.1.0
+- Database: PostgreSQL 13.x
 - Browser: Chrome 96
 
 **Issue Description:**

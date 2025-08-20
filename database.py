@@ -252,6 +252,44 @@ class Database:
                     )
                 ''')
                 
+                # Application settings
+                conn.execute('''
+                    CREATE TABLE IF NOT EXISTS application_settings (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        setting_key TEXT UNIQUE NOT NULL,
+                        setting_value TEXT,
+                        setting_type TEXT DEFAULT 'string',
+                        description TEXT,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    )
+                ''')
+                
+                # Chatbot conversations
+                conn.execute('''
+                    CREATE TABLE IF NOT EXISTS chatbot_conversations (
+                        id TEXT PRIMARY KEY,
+                        user_id TEXT,
+                        state TEXT DEFAULT 'initial',
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        metadata TEXT
+                    )
+                ''')
+                
+                # Chatbot messages
+                conn.execute('''
+                    CREATE TABLE IF NOT EXISTS chatbot_messages (
+                        id TEXT PRIMARY KEY,
+                        conversation_id TEXT NOT NULL,
+                        message_type TEXT DEFAULT 'bot',
+                        content TEXT,
+                        timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        metadata TEXT,
+                        FOREIGN KEY (conversation_id) REFERENCES chatbot_conversations (id)
+                    )
+                ''')
+                
                 # Update existing ai_api_settings table structure if needed
                 try:
                     conn.execute('ALTER TABLE ai_api_settings ADD COLUMN additional_config TEXT DEFAULT NULL')
@@ -264,6 +302,14 @@ class Database:
                     pass  # Column already exists
                 
                 conn.commit()
+                
+                # Initialize default application settings
+                try:
+                    self.initialize_default_settings()
+                    print("DEBUG: Default application settings initialized")
+                except Exception as e:
+                    print(f"WARNING: Could not initialize default settings: {e}")
+                
                 print("DEBUG: Database initialization completed successfully")
         except Exception as e:
             print(f"ERROR: Database initialization failed: {e}")
@@ -1778,6 +1824,187 @@ class Database:
                 conversation['messages'].append(message)
             
             return conversation
+    
+    def get_chatbot_messages(self, conversation_id):
+        """Get messages for a chatbot conversation"""
+        with self.get_connection() as conn:
+            cursor = conn.execute('''
+                SELECT * FROM chatbot_messages 
+                WHERE conversation_id = ? 
+                ORDER BY timestamp
+            ''', (conversation_id,))
+            
+            messages = []
+            for row in cursor.fetchall():
+                message = dict(row)
+                
+                # Parse metadata
+                try:
+                    message_metadata = json.loads(message.get('metadata', '{}'))
+                    message['metadata'] = message_metadata
+                except:
+                    message['metadata'] = {}
+                
+                # Map message_type to type for consistency
+                message['type'] = message.get('message_type', 'bot')
+                
+                messages.append(message)
+            
+            return messages
+    
+    # Application settings management
+    def save_application_setting(self, setting_key, setting_value, setting_type='string', description=None):
+        """Save or update an application setting"""
+        with self.get_connection() as conn:
+            # Convert value to string for storage
+            value_str = str(setting_value) if setting_value is not None else None
+            
+            # Check if setting exists
+            cursor = conn.execute('SELECT id FROM application_settings WHERE setting_key = ?', (setting_key,))
+            existing = cursor.fetchone()
+            
+            if existing:
+                # Update existing setting
+                conn.execute('''
+                    UPDATE application_settings 
+                    SET setting_value = ?, setting_type = ?, description = ?, updated_at = CURRENT_TIMESTAMP
+                    WHERE setting_key = ?
+                ''', (value_str, setting_type, description, setting_key))
+            else:
+                # Insert new setting
+                conn.execute('''
+                    INSERT INTO application_settings 
+                    (setting_key, setting_value, setting_type, description)
+                    VALUES (?, ?, ?, ?)
+                ''', (setting_key, value_str, setting_type, description))
+            
+            conn.commit()
+    
+    def get_application_setting(self, setting_key, default_value=None):
+        """Get an application setting by key"""
+        with self.get_connection() as conn:
+            cursor = conn.execute('SELECT * FROM application_settings WHERE setting_key = ?', (setting_key,))
+            row = cursor.fetchone()
+            
+            if row:
+                setting = dict(row)
+                # Convert value based on type
+                value_str = setting.get('setting_value')
+                setting_type = setting.get('setting_type', 'string')
+                
+                if value_str is None:
+                    return default_value
+                
+                # Type conversion
+                if setting_type == 'boolean':
+                    return value_str.lower() in ('true', '1', 'yes', 'on')
+                elif setting_type == 'integer':
+                    try:
+                        return int(value_str)
+                    except ValueError:
+                        return default_value
+                elif setting_type == 'float':
+                    try:
+                        return float(value_str)
+                    except ValueError:
+                        return default_value
+                elif setting_type == 'json':
+                    try:
+                        return json.loads(value_str)
+                    except json.JSONDecodeError:
+                        return default_value
+                else:  # string
+                    return value_str
+            
+            return default_value
+    
+    def get_all_application_settings(self):
+        """Get all application settings"""
+        with self.get_connection() as conn:
+            cursor = conn.execute('SELECT * FROM application_settings ORDER BY setting_key')
+            settings = {}
+            
+            for row in cursor.fetchall():
+                setting = dict(row)
+                key = setting['setting_key']
+                value_str = setting.get('setting_value')
+                setting_type = setting.get('setting_type', 'string')
+                
+                # Type conversion
+                if value_str is None:
+                    value = None
+                elif setting_type == 'boolean':
+                    value = value_str.lower() in ('true', '1', 'yes', 'on')
+                elif setting_type == 'integer':
+                    try:
+                        value = int(value_str)
+                    except ValueError:
+                        value = value_str
+                elif setting_type == 'float':
+                    try:
+                        value = float(value_str)
+                    except ValueError:
+                        value = value_str
+                elif setting_type == 'json':
+                    try:
+                        value = json.loads(value_str)
+                    except json.JSONDecodeError:
+                        value = value_str
+                else:  # string
+                    value = value_str
+                
+                settings[key] = {
+                    'value': value,
+                    'type': setting_type,
+                    'description': setting.get('description'),
+                    'created_at': setting.get('created_at'),
+                    'updated_at': setting.get('updated_at')
+                }
+            
+            return settings
+    
+    def delete_application_setting(self, setting_key):
+        """Delete an application setting"""
+        with self.get_connection() as conn:
+            cursor = conn.execute('DELETE FROM application_settings WHERE setting_key = ?', (setting_key,))
+            conn.commit()
+            return cursor.rowcount > 0
+    
+    def initialize_default_settings(self):
+        """Initialize default application settings if they don't exist"""
+        defaults = {
+            'chatbot.minimum_agent_version': {
+                'value': '1.6.0',
+                'type': 'string',
+                'description': 'Minimum agent version required for AI chatbot script execution'
+            },
+            'chatbot.require_version_check': {
+                'value': True,
+                'type': 'boolean',
+                'description': 'Whether to enforce minimum agent version checking for chatbot scripts'
+            },
+            'chatbot.script_timeout': {
+                'value': 300,
+                'type': 'integer',
+                'description': 'Default timeout for chatbot script execution (seconds)'
+            },
+            'chatbot.max_concurrent_executions': {
+                'value': 5,
+                'type': 'integer',
+                'description': 'Maximum number of concurrent script executions allowed'
+            }
+        }
+        
+        for key, config in defaults.items():
+            # Only set if not already exists
+            existing = self.get_application_setting(key)
+            if existing is None:
+                self.save_application_setting(
+                    key, 
+                    config['value'], 
+                    config['type'], 
+                    config['description']
+                )
     
     # Helper methods
     def _format_bytes(self, bytes_value):

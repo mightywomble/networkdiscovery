@@ -446,6 +446,11 @@
                                         <span>AI Settings</span>
                                     </a>
                                 </li>
+                                <li class="nm-nav-item">
+                                    <a href="{{ url_for('chatbot_settings') }}" class="nm-nav-link {% if request.endpoint == 'chatbot_settings' %}active{% endif %}">
+                                        <span>AI Chatbot</span>
+                                    </a>
+                                </li>
                             </ul>
                         </li>
                     </ul>

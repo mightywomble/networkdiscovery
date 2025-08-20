@@ -10,14 +10,20 @@ import json
 import os
 import threading
 import time
+import logging
 from collections import defaultdict, deque
+import psycopg2.extras
 
 from network_scanner import NetworkScanner
 from host_manager import HostManager
-from database import Database
+from database_postgresql import Database
 from topology_analyzer import TopologyAnalyzer
 
 app = Flask(__name__)
+# Initialize logger
+logger = logging.getLogger(__name__)
+logging.basicConfig(level=logging.INFO)
+
 app.secret_key = os.environ.get('FLASK_SECRET_KEY', 'dev-key-change-in-production')
 
 # Initialize components
@@ -41,19 +47,22 @@ scan_status = {
 def index():
     """Main dashboard page"""
     hosts = host_manager.get_all_hosts()
-    network_stats = db.get_network_stats()
-    return render_template('index.html', hosts=hosts, stats=network_stats, scan_status=scan_status)
+    unified_stats = db.get_unified_dashboard_stats()
+    return render_template('index.html', hosts=hosts, stats=unified_stats, scan_status=scan_status)
 
 @app.route('/hosts')
 def hosts():
     """Host management page"""
     hosts = host_manager.get_all_hosts()
-    return render_template('hosts.html', hosts=hosts)
+    unified_stats = db.get_unified_dashboard_stats()
+    return render_template("hosts.html", hosts=hosts, stats=unified_stats)
+    
 
 @app.route('/agents')
 def agents():
     """Agent management page"""
-    return render_template('agents.html')
+    unified_stats = db.get_unified_dashboard_stats()
+    return render_template("agents.html", stats=unified_stats)
 
 @app.route('/add_host', methods=['POST'])
 def add_host():
@@ -257,6 +266,13 @@ enhanced_scan_progress = {
 agent_run_progress = {
     'running': {},  # Dict of agent_id -> run_info
     'logs': deque(maxlen=500)  # Recent logs across all runs
+}
+
+# Global state for script execution progress
+script_execution_progress = {
+    'running': {},  # Dict of execution_id -> execution_info
+    'logs': deque(maxlen=1000),  # Recent logs across all script executions
+    'completed': {}  # Recently completed executions (kept for 5 minutes)
 }
 
 @app.route('/install_ubuntu_tools', methods=['POST'])
@@ -754,12 +770,15 @@ def export_enhanced_scan_results():
         # Try to get recent enhanced scan results from database first
         results = []
         try:
-            results = db.execute('''
-                SELECT host_id, scan_timestamp, scan_data 
-                FROM enhanced_scan_results 
-                WHERE scan_timestamp > datetime('now', '-24 hours')
-                ORDER BY scan_timestamp DESC
-            ''').fetchall()
+            with db.get_connection() as conn:
+                cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+                cursor.execute('''
+                    SELECT host_id, scan_timestamp, scan_data 
+                    FROM enhanced_scan_results 
+                    WHERE scan_timestamp > NOW() - INTERVAL '24 HOURS'
+                    ORDER BY scan_timestamp DESC
+                ''')
+                results = cursor.fetchall()
         except Exception as db_error:
             print(f"Database query failed: {db_error}")
         
@@ -1516,10 +1535,11 @@ def update_device():
                     try:
                         # Update host in the database using proper connection pattern
                         with db.get_connection() as conn:
-                            conn.execute("""
+                            cursor = conn.cursor()
+                            cursor.execute("""
                                 UPDATE hosts 
-                                SET name = ?, description = ?
-                                WHERE ip_address = ?
+                                SET name = %s, description = %s
+                                WHERE ip_address = %s
                             """, (label, notes, ip))
                             conn.commit()
                         
@@ -1529,8 +1549,9 @@ def update_device():
             
             # Store/update device metadata in a device_metadata table
             with db.get_connection() as conn:
+                cursor = conn.cursor()
                 # Create the table if it doesn't exist
-                conn.execute("""
+                cursor.execute("""
                     CREATE TABLE IF NOT EXISTS device_metadata (
                         device_id TEXT PRIMARY KEY,
                         ip_address TEXT,
@@ -1542,11 +1563,17 @@ def update_device():
                     )
                 """)
                 
-                # Insert or update device metadata
-                conn.execute("""
-                    INSERT OR REPLACE INTO device_metadata 
+                # Insert or update device metadata (PostgreSQL UPSERT)
+                cursor.execute("""
+                    INSERT INTO device_metadata 
                     (device_id, ip_address, label, device_type, notes, updated_at)
-                    VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+                    VALUES (%s, %s, %s, %s, %s, CURRENT_TIMESTAMP)
+                    ON CONFLICT (device_id) DO UPDATE SET
+                        ip_address = EXCLUDED.ip_address,
+                        label = EXCLUDED.label,
+                        device_type = EXCLUDED.device_type,
+                        notes = EXCLUDED.notes,
+                        updated_at = CURRENT_TIMESTAMP
                 """, (device_id, ip, label, device_type, notes))
                 
                 conn.commit()
@@ -1586,8 +1613,9 @@ def get_device_metadata(device_id):
     try:
         # Query device metadata using proper connection pattern
         with db.get_connection() as conn:
-            cursor = conn.execute(
-                "SELECT * FROM device_metadata WHERE device_id = ?", 
+            cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+            cursor.execute(
+                "SELECT * FROM device_metadata WHERE device_id = %s", 
                 (device_id,)
             )
             result = cursor.fetchone()
@@ -1625,7 +1653,8 @@ def get_all_device_metadata():
     try:
         # Query all device metadata using proper connection pattern
         with db.get_connection() as conn:
-            cursor = conn.execute(
+            cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+            cursor.execute(
                 "SELECT * FROM device_metadata ORDER BY updated_at DESC"
             )
             results = cursor.fetchall()
@@ -1705,9 +1734,10 @@ def update_host():
         try:
             # Update host in database
             with db.get_connection() as conn:
+                cursor = conn.cursor()
                 # Check if host exists
-                cursor = conn.execute(
-                    "SELECT id FROM hosts WHERE id = ?", 
+                cursor.execute(
+                    "SELECT id FROM hosts WHERE id = %s", 
                     (host_id,)
                 )
                 existing_host = cursor.fetchone()
@@ -1719,11 +1749,11 @@ def update_host():
                     }), 404
                 
                 # Update the host
-                conn.execute("""
+                cursor.execute("""
                     UPDATE hosts 
-                    SET name = ?, ip_address = ?, username = ?, ssh_port = ?, 
-                        description = ?, updated_at = CURRENT_TIMESTAMP
-                    WHERE id = ?
+                    SET name = %s, ip_address = %s, username = %s, ssh_port = %s, 
+                        description = %s, updated_at = CURRENT_TIMESTAMP
+                    WHERE id = %s
                 """, (name, ip_address, username, ssh_port, description, host_id))
                 
                 conn.commit()
@@ -1875,7 +1905,8 @@ def import_hosts():
             # Delete all existing hosts
             try:
                 with db.get_connection() as conn:
-                    conn.execute("DELETE FROM hosts")
+                    cursor = conn.cursor()
+                    cursor.execute("DELETE FROM hosts")
                     conn.commit()
                 print("Cleared all existing hosts for replace mode")
             except Exception as e:
@@ -1922,11 +1953,12 @@ def import_hosts():
                     # Update existing host
                     try:
                         with db.get_connection() as conn:
-                            conn.execute("""
+                            cursor = conn.cursor()
+                            cursor.execute("""
                                 UPDATE hosts 
-                                SET name = ?, ip_address = ?, username = ?, ssh_port = ?, 
-                                    description = ?, updated_at = CURRENT_TIMESTAMP
-                                WHERE id = ?
+                                SET name = %s, ip_address = %s, username = %s, ssh_port = %s, 
+                                    description = %s, updated_at = CURRENT_TIMESTAMP
+                                WHERE id = %s
                             """, (name, ip_address, username, ssh_port, description, existing_host['id']))
                             conn.commit()
                         
@@ -3865,6 +3897,154 @@ def run_agent_now():
             'error': str(e)
         }), 500
 
+@app.route('/api/agent/execute_script', methods=['POST'])
+def execute_script_on_agent():
+    """Execute a script on an agent host via SSH with progress tracking"""
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({
+                'success': False,
+                'error': 'No data provided'
+            }), 400
+        
+        # Required fields
+        hostname = data.get('hostname')
+        ip_address = data.get('ip_address')
+        script_content = data.get('script_content')
+        
+        if not all([hostname, ip_address, script_content]):
+            return jsonify({
+                'success': False,
+                'error': 'hostname, ip_address, and script_content are required'
+            }), 400
+        
+        # Optional fields with defaults
+        script_type = data.get('script_type', 'bash')
+        timeout = data.get('timeout', 300)  # 5 minute default
+        working_dir = data.get('working_dir')
+        background = data.get('background', False)  # Run in background with progress tracking
+        
+        # Validate script type
+        allowed_script_types = ['bash', 'sh', 'python', 'python3', 'python2', 'perl', 'ruby']
+        if script_type.lower() not in allowed_script_types:
+            return jsonify({
+                'success': False,
+                'error': f'Invalid script_type. Allowed: {", ".join(allowed_script_types)}'
+            }), 400
+        
+        # Validate timeout
+        if not isinstance(timeout, int) or timeout < 1 or timeout > 3600:  # Max 1 hour
+            return jsonify({
+                'success': False,
+                'error': 'timeout must be an integer between 1 and 3600 seconds'
+            }), 400
+        
+        # Basic script security validation
+        dangerous_patterns = [
+            'rm -rf /',
+            'sudo rm',
+            'mkfs.',
+            'dd if=',
+            'format ',
+            '> /dev/sd',
+            'shutdown',
+            'reboot',
+            'halt',
+            'init 0',
+            'init 6'
+        ]
+        
+        script_lower = script_content.lower()
+        for pattern in dangerous_patterns:
+            if pattern in script_lower:
+                return jsonify({
+                    'success': False,
+                    'error': f'Script contains potentially dangerous command: {pattern}'
+                }), 400
+        
+        # Find host by IP or name
+        hosts = host_manager.get_all_hosts()
+        host = next((h for h in hosts if h['ip_address'] == ip_address or h['name'] == hostname), None)
+        
+        if not host:
+            return jsonify({
+                'success': False,
+                'error': f'Host {hostname} ({ip_address}) not found in configuration'
+            }), 404
+        
+        # If background execution is requested, start it with progress tracking
+        if background:
+            import uuid
+            execution_id = str(uuid.uuid4())
+            
+            # Check if script execution is already running for this host
+            global script_execution_progress
+            host_key = f"{hostname}_{ip_address}"
+            
+            if host_key in script_execution_progress['running']:
+                return jsonify({
+                    'success': False,
+                    'error': f'Script execution already in progress for {hostname}'
+                }), 400
+            
+            # Start script execution in background thread with progress tracking
+            thread = threading.Thread(
+                target=execute_script_with_progress, 
+                args=(execution_id, host, script_content, script_type, timeout, working_dir, hostname, ip_address)
+            )
+            thread.daemon = True
+            thread.start()
+            
+            return jsonify({
+                'success': True,
+                'execution_id': execution_id,
+                'message': f'Script execution started in background on {hostname}',
+                'hostname': hostname,
+                'ip_address': ip_address,
+                'background': True,
+                'timestamp': datetime.now().isoformat()
+            })
+        else:
+            # Execute the script synchronously (existing behavior)
+            result, error = host_manager.execute_script(
+                host=host,
+                script_content=script_content,
+                script_type=script_type,
+                timeout=timeout,
+                working_dir=working_dir
+            )
+            
+            if result:
+                return jsonify({
+                    'success': result['success'],
+                    'script_id': result['script_id'],
+                    'exit_status': result['exit_status'],
+                    'stdout': result['stdout'],
+                    'stderr': result['stderr'],
+                    'script_type': result['script_type'],
+                    'hostname': hostname,
+                    'ip_address': ip_address,
+                    'background': False,
+                    'timestamp': datetime.now().isoformat()
+                })
+            else:
+                return jsonify({
+                    'success': False,
+                    'error': error,
+                    'hostname': hostname,
+                    'ip_address': ip_address,
+                    'background': False,
+                    'timestamp': datetime.now().isoformat()
+                }), 500
+            
+    except Exception as e:
+        print(f"Error executing script: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
 @app.route('/api/agent/last_data/<agent_id>', methods=['GET'])
 def get_agent_last_data(agent_id):
     """Get the last data collected by an agent"""
@@ -4090,6 +4270,163 @@ def get_all_agent_run_progress():
             'error': str(e)
         }), 500
 
+def execute_script_with_progress(execution_id, host, script_content, script_type, timeout, working_dir, hostname, ip_address):
+    """Execute script with progress tracking"""
+    global script_execution_progress
+    
+    host_key = f"{hostname}_{ip_address}"
+    
+    # Initialize execution info
+    execution_info = {
+        'execution_id': execution_id,
+        'hostname': hostname,
+        'ip_address': ip_address,
+        'start_time': datetime.now().isoformat(),
+        'current_phase': 'initializing',
+        'progress': 0,
+        'status': 'running',
+        'current_action': 'Starting script execution...',
+        'script_type': script_type,
+        'timeout': timeout,
+        'working_dir': working_dir,
+        'error': None,
+        'phases_completed': []
+    }
+    
+    # Add to running executions
+    script_execution_progress['running'][execution_id] = execution_info
+    
+    def log_script_progress(message, level='info', phase=None, progress=None, action=None):
+        """Log progress for this specific script execution"""
+        log_entry = {
+            'timestamp': datetime.now().isoformat(),
+            'execution_id': execution_id,
+            'hostname': hostname,
+            'message': message,
+            'level': level,
+            'phase': phase
+        }
+        
+        script_execution_progress['logs'].append(log_entry)
+        
+        # Update execution info
+        if phase:
+            execution_info['current_phase'] = phase
+        if progress is not None:
+            execution_info['progress'] = progress
+        if action:
+            execution_info['current_action'] = action
+        
+        print(f"[SCRIPT EXEC {execution_id}] {hostname}: {message}")
+    
+    try:
+        log_script_progress("🚀 Starting script execution", 'info', 'initializing', 0, 'Connecting to host...')
+        
+        # Phase 1: Test connectivity
+        log_script_progress("Testing SSH connectivity", 'info', 'connecting', 10, 'Testing SSH connection...')
+        
+        test_result, test_error = host_manager.execute_command(host, 'echo "SSH test successful"', timeout=10)
+        
+        if not test_result or not test_result.get('success'):
+            error_msg = f'SSH connection failed: {test_error or "Connection timeout"}'
+            log_script_progress(error_msg, 'error', 'error', execution_info['progress'], 'SSH connection failed')
+            execution_info['status'] = 'error'
+            execution_info['error'] = error_msg
+            return
+        
+        log_script_progress("✅ SSH connectivity confirmed", 'info', 'connecting', 20, 'SSH connection successful')
+        execution_info['phases_completed'].append('connecting')
+        
+        # Phase 2: Prepare script for execution
+        log_script_progress("Preparing script for execution", 'info', 'preparing', 30, 'Preparing script...')
+        
+        # Phase 3: Execute the script
+        log_script_progress(f"Executing {script_type} script", 'info', 'executing', 50, f'Running {script_type} script...')
+        
+        # Execute the script using host_manager
+        result, error = host_manager.execute_script(
+            host=host,
+            script_content=script_content,
+            script_type=script_type,
+            timeout=timeout,
+            working_dir=working_dir
+        )
+        
+        execution_info['phases_completed'].append('executing')
+        
+        # Phase 4: Process results
+        log_script_progress("Processing execution results", 'info', 'processing', 80, 'Processing results...')
+        
+        if result:
+            # Store execution results
+            execution_info['result'] = {
+                'success': result['success'],
+                'script_id': result['script_id'],
+                'exit_status': result['exit_status'],
+                'stdout': result['stdout'],
+                'stderr': result['stderr'],
+                'script_type': result['script_type']
+            }
+            
+            if result['success']:
+                log_script_progress(f"✅ Script executed successfully (exit status: {result['exit_status']})", 'info', 'complete', 100, 'Script execution completed')
+                execution_info['status'] = 'completed'
+            else:
+                log_script_progress(f"⚠️ Script completed with errors (exit status: {result['exit_status']})", 'warning', 'complete', 100, 'Script execution completed with errors')
+                execution_info['status'] = 'completed_with_errors'
+        else:
+            error_msg = error or "Unknown error during script execution"
+            log_script_progress(f"❌ Script execution failed: {error_msg}", 'error', 'error', execution_info['progress'], 'Script execution failed')
+            execution_info['status'] = 'error'
+            execution_info['error'] = error_msg
+            execution_info['result'] = {
+                'success': False,
+                'error': error_msg
+            }
+        
+        execution_info['phases_completed'].append('processing')
+        
+        # Phase 5: Complete
+        execution_info['end_time'] = datetime.now().isoformat()
+        
+        # Calculate duration
+        start_time = datetime.fromisoformat(execution_info['start_time'])
+        end_time = datetime.fromisoformat(execution_info['end_time'])
+        duration = (end_time - start_time).total_seconds()
+        execution_info['duration_seconds'] = round(duration, 2)
+        
+        log_script_progress(f"Script execution completed in {duration:.1f} seconds", 'info', 'complete', 100, f'Completed in {duration:.1f}s')
+        
+    except Exception as e:
+        error_msg = f"Exception during script execution: {str(e)}"
+        log_script_progress(error_msg, 'error', 'error', execution_info.get('progress', 0), 'Exception occurred')
+        execution_info['status'] = 'error'
+        execution_info['error'] = error_msg
+        print(f"Exception in execute_script_with_progress: {e}")
+    
+    finally:
+        # Move to completed executions and keep for a brief period
+        def move_to_completed():
+            time.sleep(300)  # Keep in completed for 5 minutes
+            if execution_id in script_execution_progress['running']:
+                # Move from running to completed
+                script_execution_progress['completed'][execution_id] = script_execution_progress['running'][execution_id]
+                del script_execution_progress['running'][execution_id]
+                
+                # Cleanup completed executions after some time
+                def cleanup_completed():
+                    time.sleep(300)  # Keep completed for another 5 minutes
+                    if execution_id in script_execution_progress['completed']:
+                        del script_execution_progress['completed'][execution_id]
+                
+                cleanup_thread = threading.Thread(target=cleanup_completed)
+                cleanup_thread.daemon = True
+                cleanup_thread.start()
+        
+        move_thread = threading.Thread(target=move_to_completed)
+        move_thread.daemon = True
+        move_thread.start()
+
 def run_agent_with_progress(agent, host):
     """Run agent scan with progress tracking"""
     global agent_run_progress
@@ -4307,7 +4644,7 @@ def get_statistics_overview():
     try:
         overview_stats = db.get_network_overview_stats()
         agent_stats = db.get_agent_stats()
-        network_stats = db.get_network_stats()
+        unified_stats = db.get_unified_dashboard_stats()
         
         # Combine all overview data
         combined_stats = {
@@ -4432,33 +4769,35 @@ def get_connection_statistics():
         # Get connection breakdown by protocol, port, etc.
         with db.get_connection() as conn:
             # Protocol breakdown
-            cursor = conn.execute('''
+            cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+            cursor.execute('''
                 SELECT 
                     protocol,
                     COUNT(*) as connection_count,
                     SUM(connection_count) as total_connections,
                     SUM(bytes_sent + bytes_received) as total_traffic
                 FROM network_connections
-                WHERE last_seen > datetime('now', '-{} hour')
+                WHERE last_seen > NOW() - INTERVAL '%s HOUR'
                 GROUP BY protocol
                 ORDER BY connection_count DESC
-            '''.format(hours))
-            protocol_stats = [dict(row) for row in cursor.fetchall()]
+            ''', (hours,))
+            protocol_stats = cursor.fetchall()
             
             # Top ports
-            cursor = conn.execute('''
+            cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+            cursor.execute('''
                 SELECT 
                     dest_port,
                     COUNT(*) as connection_count,
                     SUM(connection_count) as total_connections,
                     COUNT(DISTINCT source_host_id) as unique_sources
                 FROM network_connections
-                WHERE last_seen > datetime('now', '-{} hour')
+                WHERE last_seen > NOW() - INTERVAL '%s HOUR'
                 GROUP BY dest_port
                 ORDER BY connection_count DESC
                 LIMIT 20
-            '''.format(hours))
-            port_stats = [dict(row) for row in cursor.fetchall()]
+            ''', (hours,))
+            port_stats = cursor.fetchall()
         
         return jsonify({
             'success': True,
@@ -4490,30 +4829,33 @@ def get_realtime_statistics():
         
         with db.get_connection() as conn:
             # Recent activity counters
-            cursor = conn.execute('''
+            cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+            cursor.execute('''
                 SELECT COUNT(*) as recent_connections
                 FROM network_connections 
-                WHERE last_seen > ?
+                WHERE last_seen > %s
             ''', (recent_cutoff,))
-            recent_activity = dict(cursor.fetchone())
+            recent_activity = cursor.fetchone()
             
             # Active hosts in last 5 minutes
-            cursor = conn.execute('''
+            cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+            cursor.execute('''
                 SELECT COUNT(DISTINCT source_host_id) as active_hosts
                 FROM network_connections 
-                WHERE last_seen > ?
+                WHERE last_seen > %s
             ''', (recent_cutoff,))
-            active_hosts = dict(cursor.fetchone())
+            active_hosts = cursor.fetchone()
             
             # Recent agent activity
-            cursor = conn.execute('''
+            cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+            cursor.execute('''
                 SELECT 
                     COUNT(*) as recent_heartbeats,
                     COUNT(CASE WHEN status = 'active' THEN 1 END) as active_agents
                 FROM agents 
-                WHERE last_heartbeat > ?
+                WHERE last_heartbeat > %s
             ''', (recent_cutoff,))
-            agent_activity = dict(cursor.fetchone())
+            agent_activity = cursor.fetchone()
         
         realtime_data = {
             'current_time': current_time.isoformat(),
@@ -4702,6 +5044,11 @@ def ai_chatbot():
     """Render the AI Chatbot page"""
     return render_template('chatbot.html')
 
+@app.route('/chatbotsettings')
+def chatbot_settings():
+    """Render the dedicated AI Chatbot Settings page"""
+    return render_template('chatbot_settings.html')
+
 @app.route('/api/chatbot/start', methods=['POST'])
 def start_chatbot_conversation():
     """Start a new chatbot conversation"""
@@ -4755,6 +5102,110 @@ def send_chatbot_message():
             'success': False,
             'error': str(e)
         }), 500
+
+# Chatbot settings routes
+@app.route('/api/chatbot_settings', methods=['GET'])
+def get_chatbot_settings():
+    """Get chatbot configuration settings"""
+    try:
+        settings = {
+            'minimum_agent_version': db.get_application_setting('chatbot.minimum_agent_version', '1.6.0'),
+            'require_version_check': db.get_application_setting('chatbot.require_version_check', True),
+            'script_timeout': db.get_application_setting('chatbot.script_timeout', 300),
+            'max_concurrent_executions': db.get_application_setting('chatbot.max_concurrent_executions', 5),
+            'system_prompt': db.get_application_setting('chatbot.system_prompt', '')
+        }
+        
+        return jsonify({
+            'success': True,
+            'settings': settings
+        })
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@app.route('/api/chatbot_settings', methods=['POST'])
+def save_chatbot_settings():
+    """Save chatbot configuration settings"""
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({
+                'success': False,
+                'error': 'No data provided'
+            }), 400
+        
+        # Validate required fields
+        minimum_agent_version = data.get('minimum_agent_version')
+        if not minimum_agent_version:
+            return jsonify({
+                'success': False,
+                'error': 'Minimum agent version is required'
+            }), 400
+        
+        # Save settings to database
+        db.save_application_setting(
+            'chatbot.minimum_agent_version', 
+            minimum_agent_version, 
+            'string', 
+            'Minimum agent version required for AI chatbot script execution'
+        )
+        
+        db.save_application_setting(
+            'chatbot.require_version_check', 
+            data.get('require_version_check', True), 
+            'boolean', 
+            'Whether to enforce minimum agent version checking for chatbot scripts'
+        )
+        
+        db.save_application_setting(
+            'chatbot.script_timeout', 
+            data.get('script_timeout', 300), 
+            'integer', 
+            'Default timeout for chatbot script execution (seconds)'
+        )
+        
+        db.save_application_setting(
+            'chatbot.max_concurrent_executions', 
+            data.get('max_concurrent_executions', 5), 
+            'integer', 
+            'Maximum number of concurrent script executions allowed'
+        )
+        
+        db.save_application_setting(
+            'chatbot.system_prompt', 
+            data.get('system_prompt', ''), 
+            'string', 
+            'System prompt for AI chatbot script generation'
+        )
+        
+        return jsonify({
+            'success': True,
+            'message': 'Chatbot settings saved successfully'
+        })
+        
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+@app.route("/api/unified_stats", methods=["GET"])
+def get_unified_stats():
+    """Get unified dashboard statistics for all pages"""
+    try:
+        stats = db.get_unified_dashboard_stats()
+        return jsonify({
+            "success": True,
+            "stats": stats
+        })
+    except Exception as e:
+        return jsonify({
+            "success": False,
+            "error": str(e)
+        }), 500
+
 
 @app.route('/api/chatbot/conversation/<conversation_id>', methods=['GET'])
 def get_chatbot_conversation(conversation_id):
@@ -5306,12 +5757,333 @@ def generate_ai_report():
             'generated_at': datetime.now().isoformat()
         })
 
+# Script execution progress tracking endpoints
+@app.route('/api/script_execution/progress/<execution_id>', methods=['GET'])
+def get_script_execution_progress(execution_id):
+    """Get the progress of a running script execution"""
+    try:
+        global script_execution_progress
+        
+        # Check running executions first
+        if execution_id in script_execution_progress['running']:
+            execution_info = script_execution_progress['running'][execution_id]
+            
+            # Get recent logs for this specific execution
+            execution_logs = [log for log in script_execution_progress['logs'] 
+                             if log.get('execution_id') == execution_id][-20:]  # Last 20 logs
+            
+            return jsonify({
+                'success': True,
+                'execution_id': execution_id,
+                'running': True,
+                'execution_info': execution_info,
+                'logs': execution_logs,
+                'timestamp': datetime.now().isoformat()
+            })
+        
+        # Check completed executions
+        elif execution_id in script_execution_progress['completed']:
+            execution_info = script_execution_progress['completed'][execution_id]
+            
+            # Get logs for this completed execution
+            execution_logs = [log for log in script_execution_progress['logs'] 
+                             if log.get('execution_id') == execution_id]
+            
+            return jsonify({
+                'success': True,
+                'execution_id': execution_id,
+                'running': False,
+                'completed': True,
+                'execution_info': execution_info,
+                'logs': execution_logs,
+                'timestamp': datetime.now().isoformat()
+            })
+        
+        else:
+            return jsonify({
+                'success': False,
+                'error': f'No execution found for ID {execution_id}',
+                'running': False,
+                'completed': False
+            }), 404
+        
+    except Exception as e:
+        print(f"Error getting script execution progress: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@app.route('/api/script_execution/all_progress', methods=['GET'])
+def get_all_script_execution_progress():
+    """Get the progress of all running script executions"""
+    try:
+        global script_execution_progress
+        
+        # Get recent logs (last 50 entries)
+        recent_logs = list(script_execution_progress['logs'])[-50:]
+        
+        # Count running and completed executions
+        running_count = len(script_execution_progress['running'])
+        completed_count = len(script_execution_progress['completed'])
+        
+        return jsonify({
+            'success': True,
+            'running_executions': script_execution_progress['running'],
+            'completed_executions': script_execution_progress['completed'],
+            'running_count': running_count,
+            'completed_count': completed_count,
+            'recent_logs': recent_logs,
+            'timestamp': datetime.now().isoformat()
+        })
+        
+    except Exception as e:
+        print(f"Error getting all script execution progress: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@app.route('/api/script_execution/results/<execution_id>', methods=['GET'])
+def get_script_execution_results(execution_id):
+    """Get the detailed results of a script execution"""
+    try:
+        global script_execution_progress
+        
+        execution_info = None
+        
+        # Check running executions first
+        if execution_id in script_execution_progress['running']:
+            execution_info = script_execution_progress['running'][execution_id]
+        # Check completed executions
+        elif execution_id in script_execution_progress['completed']:
+            execution_info = script_execution_progress['completed'][execution_id]
+        
+        if not execution_info:
+            return jsonify({
+                'success': False,
+                'error': f'No execution found for ID {execution_id}'
+            }), 404
+        
+        # Get all logs for this execution
+        execution_logs = [log for log in script_execution_progress['logs'] 
+                         if log.get('execution_id') == execution_id]
+        
+        # Prepare detailed results
+        results = {
+            'execution_id': execution_id,
+            'hostname': execution_info.get('hostname'),
+            'ip_address': execution_info.get('ip_address'),
+            'script_type': execution_info.get('script_type'),
+            'start_time': execution_info.get('start_time'),
+            'end_time': execution_info.get('end_time'),
+            'duration_seconds': execution_info.get('duration_seconds'),
+            'status': execution_info.get('status'),
+            'current_phase': execution_info.get('current_phase'),
+            'progress': execution_info.get('progress'),
+            'current_action': execution_info.get('current_action'),
+            'phases_completed': execution_info.get('phases_completed', []),
+            'error': execution_info.get('error'),
+            'result': execution_info.get('result'),
+            'logs': execution_logs
+        }
+        
+        return jsonify({
+            'success': True,
+            'results': results,
+            'timestamp': datetime.now().isoformat()
+        })
+        
+    except Exception as e:
+        print(f"Error getting script execution results: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@app.route('/api/script_execution/cancel/<execution_id>', methods=['POST'])
+def cancel_script_execution(execution_id):
+    """Cancel a running script execution"""
+    try:
+        global script_execution_progress
+        
+        if execution_id not in script_execution_progress['running']:
+            return jsonify({
+                'success': False,
+                'error': f'No running execution found for ID {execution_id}'
+            }), 404
+        
+        execution_info = script_execution_progress['running'][execution_id]
+        
+        # Mark as cancelled
+        execution_info['status'] = 'cancelled'
+        execution_info['current_action'] = 'Execution cancelled by user'
+        execution_info['end_time'] = datetime.now().isoformat()
+        
+        # Calculate duration if start time exists
+        if execution_info.get('start_time'):
+            try:
+                start_time = datetime.fromisoformat(execution_info['start_time'])
+                end_time = datetime.fromisoformat(execution_info['end_time'])
+                duration = (end_time - start_time).total_seconds()
+                execution_info['duration_seconds'] = round(duration, 2)
+            except:
+                pass
+        
+        # Add cancellation log
+        log_entry = {
+            'timestamp': datetime.now().isoformat(),
+            'execution_id': execution_id,
+            'hostname': execution_info.get('hostname'),
+            'message': 'Script execution cancelled by user',
+            'level': 'warning',
+            'phase': 'cancelled'
+        }
+        script_execution_progress['logs'].append(log_entry)
+        
+        # Move to completed
+        script_execution_progress['completed'][execution_id] = execution_info
+        del script_execution_progress['running'][execution_id]
+        
+        return jsonify({
+            'success': True,
+            'message': f'Script execution {execution_id} cancelled',
+            'execution_id': execution_id,
+            'timestamp': datetime.now().isoformat()
+        })
+        
+    except Exception as e:
+        print(f"Error cancelling script execution: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@app.route('/api/script_execution/cleanup', methods=['POST'])
+def cleanup_script_executions():
+    """Clean up old completed script executions"""
+    try:
+        global script_execution_progress
+        
+        # Get cleanup parameters
+        data = request.get_json() or {}
+        hours_old = data.get('hours_old', 1)  # Default: remove executions older than 1 hour
+        
+        cutoff_time = datetime.now() - timedelta(hours=hours_old)
+        
+        removed_count = 0
+        execution_ids_to_remove = []
+        
+        # Find old completed executions
+        for execution_id, execution_info in script_execution_progress['completed'].items():
+            try:
+                if execution_info.get('end_time'):
+                    end_time = datetime.fromisoformat(execution_info['end_time'])
+                    if end_time < cutoff_time:
+                        execution_ids_to_remove.append(execution_id)
+            except:
+                # If we can't parse the time, consider it for removal
+                execution_ids_to_remove.append(execution_id)
+        
+        # Remove old executions
+        for execution_id in execution_ids_to_remove:
+            del script_execution_progress['completed'][execution_id]
+            removed_count += 1
+        
+        # Also clean up old logs
+        log_cutoff_time = datetime.now() - timedelta(hours=hours_old * 2)  # Keep logs longer
+        original_log_count = len(script_execution_progress['logs'])
+        
+        # Filter out old logs
+        filtered_logs = []
+        for log in script_execution_progress['logs']:
+            try:
+                log_time = datetime.fromisoformat(log['timestamp'])
+                if log_time >= log_cutoff_time:
+                    filtered_logs.append(log)
+            except:
+                # Keep logs we can't parse timestamp for
+                filtered_logs.append(log)
+        
+        script_execution_progress['logs'] = deque(filtered_logs, maxlen=1000)
+        logs_removed = original_log_count - len(filtered_logs)
+        
+        return jsonify({
+            'success': True,
+            'message': f'Cleaned up {removed_count} executions and {logs_removed} log entries',
+            'executions_removed': removed_count,
+            'logs_removed': logs_removed,
+            'hours_old': hours_old,
+            'timestamp': datetime.now().isoformat()
+        })
+        
+    except Exception as e:
+        print(f"Error cleaning up script executions: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
 # Statistics page route
 @app.route('/statistics')
 def statistics_dashboard():
     """Render the statistics dashboard page"""
-    return render_template('statistics.html')
+    unified_stats = db.get_unified_dashboard_stats()
+    return render_template("statistics.html", stats=unified_stats)
 
+@app.route('/api/statistics/network', methods=['GET'])
+def get_network_statistics_api():
+    """Get network traffic statistics"""
+    try:
+        stats = db.get_network_statistics()
+        return jsonify({
+            'success': True,
+            'data': stats,
+            'timestamp': datetime.now().isoformat()
+        })
+    except Exception as e:
+        logger.error(f'Error getting network statistics: {e}')
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+
+@app.route('/api/statistics/agents', methods=['GET'])
+def get_agent_statistics_api():
+    """Get agent activity statistics"""
+    try:
+        stats = db.get_agent_statistics()
+        return jsonify({
+            'success': True,
+            'data': stats,
+            'timestamp': datetime.now().isoformat()
+        })
+    except Exception as e:
+        logger.error(f'Error getting agent statistics: {e}')
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@app.route('/api/statistics/historical', methods=['GET'])
+def get_historical_statistics_api():
+    """Get historical statistics"""
+    try:
+        hours = int(request.args.get('hours', 24))
+        stats = db.get_historical_statistics(hours)
+        return jsonify({
+            'success': True,
+            'data': stats,
+            'hours': hours,
+            'timestamp': datetime.now().isoformat()
+        })
+    except Exception as e:
+        logger.error(f'Error getting historical statistics: {e}')
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
 if __name__ == '__main__':
     print("Initializing NetworkMap Flask Application...")
     
@@ -5331,3 +6103,4 @@ if __name__ == '__main__':
         print(f"❌ Failed to start Flask application: {e}")
         import traceback
         traceback.print_exc()
+

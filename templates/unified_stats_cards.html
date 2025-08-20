@@ -1,0 +1,175 @@
+<!-- Unified Statistics Cards - Reusable across all pages -->
+<div class="pf-l-grid pf-m-all-12-col-on-sm pf-m-all-6-col-on-md pf-m-all-3-col-on-lg pf-m-gutter" id="unified-stats-cards">
+    <!-- Total Hosts -->
+    <div class="pf-l-grid__item">
+        <div class="pf-c-card pf-m-hoverable">
+            <div class="pf-c-card__body">
+                <div class="pf-l-flex pf-m-align-items-center">
+                    <div class="pf-l-flex__item">
+                        <div class="pf-c-content">
+                            <i class="fas fa-server pf-u-font-size-2xl pf-u-color-100" style="color: #06c;"></i>
+                        </div>
+                    </div>
+                    <div class="pf-l-flex__item pf-m-flex-1">
+                        <div class="pf-c-content pf-u-text-align-right">
+                            <h2 class="pf-c-title pf-m-2xl pf-u-mb-xs" id="total-hosts-count">{{ stats.total_hosts }}</h2>
+                            <p class="pf-u-color-200">Total Hosts</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Online Hosts -->
+    <div class="pf-l-grid__item">
+        <div class="pf-c-card pf-m-hoverable">
+            <div class="pf-c-card__body">
+                <div class="pf-l-flex pf-m-align-items-center">
+                    <div class="pf-l-flex__item">
+                        <div class="pf-c-content">
+                            <i class="fas fa-circle pf-u-font-size-2xl" style="color: #3e8635;"></i>
+                        </div>
+                    </div>
+                    <div class="pf-l-flex__item pf-m-flex-1">
+                        <div class="pf-c-content pf-u-text-align-right">
+                            <h2 class="pf-c-title pf-m-2xl pf-u-mb-xs" id="online-hosts-count">{{ stats.online_hosts }}</h2>
+                            <p class="pf-u-color-200">Online Hosts</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Active Agents -->
+    <div class="pf-l-grid__item">
+        <div class="pf-c-card pf-m-hoverable">
+            <div class="pf-c-card__body">
+                <div class="pf-l-flex pf-m-align-items-center">
+                    <div class="pf-l-flex__item">
+                        <div class="pf-c-content">
+                            <i class="fas fa-robot pf-u-font-size-2xl" style="color: #2b9af3;"></i>
+                        </div>
+                    </div>
+                    <div class="pf-l-flex__item pf-m-flex-1">
+                        <div class="pf-c-content pf-u-text-align-right">
+                            <h2 class="pf-c-title pf-m-2xl pf-u-mb-xs" id="active-agents-count">{{ stats.active_agents }}</h2>
+                            <p class="pf-u-color-200">Active Agents</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Agents Deployed -->
+    <div class="pf-l-grid__item">
+        <div class="pf-c-card pf-m-hoverable">
+            <div class="pf-c-card__body">
+                <div class="pf-l-flex pf-m-align-items-center">
+                    <div class="pf-l-flex__item">
+                        <div class="pf-c-content">
+                            <i class="fas fa-download pf-u-font-size-2xl" style="color: #7d1007;"></i>
+                        </div>
+                    </div>
+                    <div class="pf-l-flex__item pf-m-flex-1">
+                        <div class="pf-c-content pf-u-text-align-right">
+                            <h2 class="pf-c-title pf-m-2xl pf-u-mb-xs" id="agents-deployed-count">{{ stats.agents_deployed }}</h2>
+                            <p class="pf-u-color-200">Agents Deployed</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Current Deployed Version -->
+    <div class="pf-l-grid__item">
+        <div class="pf-c-card pf-m-hoverable">
+            <div class="pf-c-card__body">
+                <div class="pf-l-flex pf-m-align-items-center">
+                    <div class="pf-l-flex__item">
+                        <div class="pf-c-content">
+                            <i class="fas fa-code-branch pf-u-font-size-2xl" style="color: #f0ab00;"></i>
+                        </div>
+                    </div>
+                    <div class="pf-l-flex__item pf-m-flex-1">
+                        <div class="pf-c-content pf-u-text-align-right">
+                            <h2 class="pf-c-title pf-m-lg pf-u-mb-xs" id="current-deployed-version">{{ stats.current_deployed }}</h2>
+                            <p class="pf-u-color-200">Current Deployed</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Latest Available Version -->
+    <div class="pf-l-grid__item">
+        <div class="pf-c-card pf-m-hoverable">
+            <div class="pf-c-card__body">
+                <div class="pf-l-flex pf-m-align-items-center">
+                    <div class="pf-l-flex__item">
+                        <div class="pf-c-content">
+                            <i class="fas fa-cloud-download-alt pf-u-font-size-2xl" style="color: #6a0dad;"></i>
+                        </div>
+                    </div>
+                    <div class="pf-l-flex__item pf-m-flex-1">
+                        <div class="pf-c-content pf-u-text-align-right">
+                            <h2 class="pf-c-title pf-m-lg pf-u-mb-xs" id="latest-available-version">{{ stats.latest_available }}</h2>
+                            <p class="pf-u-color-200">Latest Available</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Scans -->
+    <div class="pf-l-grid__item">
+        <div class="pf-c-card pf-m-hoverable">
+            <div class="pf-c-card__body">
+                <div class="pf-l-flex pf-m-align-items-center">
+                    <div class="pf-l-flex__item">
+                        <div class="pf-c-content">
+                            <i class="fas fa-search pf-u-font-size-2xl" style="color: #009596;"></i>
+                        </div>
+                    </div>
+                    <div class="pf-l-flex__item pf-m-flex-1">
+                        <div class="pf-c-content pf-u-text-align-right">
+                            <h2 class="pf-c-title pf-m-2xl pf-u-mb-xs" id="recent-scans-count">{{ stats.recent_scans }}</h2>
+                            <p class="pf-u-color-200">Recent Scans</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- JavaScript to refresh statistics dynamically -->
+<script>
+function refreshUnifiedStats() {
+    fetch('/api/stats')
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                const stats = data.stats;
+                document.getElementById('total-hosts-count').textContent = stats.total_hosts;
+                document.getElementById('online-hosts-count').textContent = stats.online_hosts;
+                document.getElementById('active-agents-count').textContent = stats.active_agents;
+                document.getElementById('agents-deployed-count').textContent = stats.agents_deployed;
+                document.getElementById('current-deployed-version').textContent = stats.current_deployed;
+                document.getElementById('latest-available-version').textContent = stats.latest_available;
+                document.getElementById('recent-scans-count').textContent = stats.recent_scans;
+            }
+        })
+        .catch(error => {
+            console.error('Error refreshing unified stats:', error);
+        });
+}
+
+// Refresh stats every 30 seconds
+setInterval(refreshUnifiedStats, 30000);
+</script>
