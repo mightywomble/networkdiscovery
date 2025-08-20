@@ -138,8 +138,32 @@ class ChatbotController:
             conversation = self.active_conversations.get(conversation_id)
             if not conversation:
                 # Try to load from database
-                conversation = self.db.get_chatbot_conversation(conversation_id)
-                if conversation:
+                conversation_data = self.db.get_chatbot_conversation(conversation_id)
+                if conversation_data:
+                    # Create a fully reconstructed conversation object
+                    conversation = {
+                        'id': conversation_id,
+                        'user_id': conversation_data.get('user_id'),
+                        'state': conversation_data.get('state', 'initial'),
+                        'messages': [],  # Will be loaded from messages table
+                        'created_at': conversation_data.get('created_at') or datetime.now().isoformat(),
+                        'updated_at': conversation_data.get('updated_at') or datetime.now().isoformat()
+                    }
+                    
+                    # Add metadata fields to the conversation
+                    metadata = conversation_data.get('metadata', {})
+                    if metadata:
+                        conversation['current_script'] = metadata.get('current_script')
+                        conversation['validation_result'] = metadata.get('validation_result')
+                        conversation['selected_hosts'] = metadata.get('selected_hosts', [])
+                        conversation['execution_results'] = metadata.get('execution_results')
+                    
+                    # Fetch messages
+                    messages = self.db.get_chatbot_messages(conversation_id)
+                    if messages:
+                        conversation['messages'] = messages
+                    
+                    # Cache in memory
                     self.active_conversations[conversation_id] = conversation
                 else:
                     return {
@@ -918,8 +942,34 @@ What would you like me to help you with today?"""
     def _save_conversation(self, conversation: Dict):
         """Save conversation to database"""
         try:
-            self.db.save_chatbot_conversation(conversation)
-            logger.info(f"Saved conversation {conversation['id']} to database")
+            # Extract needed data from the conversation object for PostgreSQL
+            conversation_id = conversation['id']
+            user_id = conversation.get('user_id')
+            state = conversation.get('state', 'initial')
+            
+            # Create metadata dict with all the conversation data we want to persist
+            metadata = {
+                'current_script': conversation.get('current_script'),
+                'validation_result': conversation.get('validation_result'),
+                'selected_hosts': conversation.get('selected_hosts', []),
+                'execution_results': conversation.get('execution_results'),
+                'updated_at': conversation.get('updated_at'),
+                'created_at': conversation.get('created_at')
+            }
+            
+            # Save conversation metadata
+            self.db.save_chatbot_conversation(conversation_id, user_id, state, metadata)
+            logger.info(f"Saved conversation {conversation_id} to database")
+            
+            # Save each message separately
+            for message in conversation.get('messages', []):
+                self.db.save_chatbot_message(
+                    message['id'],
+                    conversation_id,
+                    message['type'],
+                    message['content'],
+                    message.get('metadata')
+                )
             
         except Exception as e:
             logger.error(f"Error saving conversation: {e}")
