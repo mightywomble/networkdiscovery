@@ -166,7 +166,7 @@
                                         <i class="fas fa-calendar pf-u-mr-xs pf-u-color-200"></i>
                                         <strong>Added:</strong> 
                                         {% if host.created_at %}
-                                            {{ host.created_at[:10] if host.created_at|string|length > 10 else host.created_at }}
+                                            {% if host.created_at %}{{ (host.created_at|string)[:10] }}{% else %}Unknown{% endif %}
                                         {% else %}
                                             Unknown
                                         {% endif %}
