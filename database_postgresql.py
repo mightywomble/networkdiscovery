@@ -629,35 +629,47 @@ class Database:
             return dict(row) if row else None
     
     def get_network_stats(self):
-        """Get network overview statistics"""
-        with self.get_connection() as conn:
-            cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
-            cursor.execute('''
-                SELECT 
-                    COUNT(DISTINCT id) as total_hosts,
-                    COUNT(DISTINCT CASE WHEN status = 'active' THEN id END) as active_hosts,
-                    COUNT(DISTINCT CASE WHEN last_seen > CURRENT_TIMESTAMP - INTERVAL '1 hour' THEN id END) as recent_hosts
-                FROM hosts
-            ''')
-            host_stats = cursor.fetchone()
+        """Get overall network statistics"""
+        try:
+            cursor = self.conn.cursor()
             
+            # Host counts
+            cursor.execute('SELECT COUNT(*) as total_hosts FROM hosts')
+            result = cursor.fetchone()
+            total_hosts = result[0] if result else 0
+            
+            cursor.execute("SELECT COUNT(*) as online_hosts FROM hosts WHERE status = %s", ('online',))
+            result = cursor.fetchone()
+            online_hosts = result[0] if result else 0
+            
+            # Connection counts
             cursor.execute('SELECT COUNT(*) as total_connections FROM network_connections')
-            conn_stats = cursor.fetchone()
+            result = cursor.fetchone()
+            total_connections = result[0] if result else 0
             
-            cursor.execute('''
-                SELECT 
-                    SUM(bytes_sent + bytes_received) as total_bytes,
-                    AVG(connection_count) as avg_connections_per_endpoint
-                FROM network_connections
-            ''')
-            traffic_stats = cursor.fetchone()
+            # Recent activity (last 24 hours)
+            cursor.execute("""
+                SELECT COUNT(*) as recent_connections 
+                FROM network_connections WHERE last_seen > NOW() - INTERVAL '24 hour'
+            """)
+            result = cursor.fetchone()
+            recent_connections = result[0] if result else 0
             
             return {
-                'hosts': dict(host_stats) if host_stats else {},
-                'connections': dict(conn_stats) if conn_stats else {},
-                'traffic': dict(traffic_stats) if traffic_stats else {}
+                'total_hosts': total_hosts,
+                'online_hosts': online_hosts,
+                'total_connections': total_connections,
+                'recent_connections': recent_connections
             }
-    
+        except Exception as e:
+            logger.error(f"Error getting network stats: {e}")
+            return {
+                'total_hosts': 0,
+                'online_hosts': 0,
+                'total_connections': 0,
+                'recent_connections': 0
+            }
+
     def get_host_stats(self, host_id):
         """Get statistics for a specific host"""
         with self.get_connection() as conn:
@@ -1032,6 +1044,133 @@ class Database:
                 results.append(result)
             return results
     
+
+    def get_network_overview_stats(self):
+        """Get comprehensive network overview statistics"""
+        try:
+            cursor = self.conn.cursor()
+            stats = {}
+            
+            # Host statistics
+            cursor.execute("""
+                SELECT 
+                    COUNT(*) as total_hosts,
+                    COUNT(CASE WHEN status = %s THEN 1 END) as online_hosts,
+                    COUNT(CASE WHEN status = %s THEN 1 END) as offline_hosts,
+                    COUNT(CASE WHEN last_seen > NOW() - INTERVAL %s THEN 1 END) as active_last_hour,
+                    COUNT(CASE WHEN last_seen > NOW() - INTERVAL %s THEN 1 END) as active_last_day
+                FROM hosts
+            """, ("online", "offline", "1 hour", "24 hour"))
+            result = cursor.fetchone()
+            if result:
+                # Add to flat stats structure (not nested)
+                stats.update({
+                    "total_hosts": result[0] or 0,
+                    "online_hosts": result[1] or 0,
+                    "offline_hosts": result[2] or 0,
+                    "hosts_active_last_hour": result[3] or 0,
+                    "hosts_active_last_day": result[4] or 0
+                })
+            else:
+                stats.update({"total_hosts": 0, "online_hosts": 0, "offline_hosts": 0, "hosts_active_last_hour": 0, "hosts_active_last_day": 0})
+            
+            # Connection statistics  
+            cursor.execute("""
+                SELECT 
+                    COUNT(*) as total_connections,
+                    COUNT(DISTINCT source_host_id) as hosts_with_connections,
+                    COALESCE(SUM(connection_count), 0) as total_connection_count,
+                    COALESCE(SUM(bytes_sent), 0) as total_bytes_sent,
+                    COALESCE(SUM(bytes_received), 0) as total_bytes_received,
+                    COUNT(CASE WHEN last_seen > NOW() - INTERVAL %s THEN 1 END) as active_last_hour
+                FROM network_connections
+            """, ("1 hour",))
+            result = cursor.fetchone()
+            if result:
+                stats.update({
+                    "total_connections": result[0] or 0,
+                    "hosts_with_connections": result[1] or 0,
+                    "total_connection_count": result[2] or 0,
+                    "total_bytes_sent": result[3] or 0,
+                    "total_bytes_received": result[4] or 0,
+                    "connections_active_last_hour": result[5] or 0
+                })
+            else:
+                stats.update({"total_connections": 0, "hosts_with_connections": 0, "total_connection_count": 0, "total_bytes_sent": 0, "total_bytes_received": 0, "connections_active_last_hour": 0})
+            
+            # Port statistics
+            cursor.execute("""
+                SELECT 
+                    COUNT(*) as total_open_ports,
+                    COUNT(DISTINCT host_id) as hosts_with_open_ports,
+                    COUNT(DISTINCT port) as unique_ports
+                FROM port_scans
+                WHERE state = %s
+            """, ("open",))
+            result = cursor.fetchone()
+            if result:
+                stats.update({
+                    "total_open_ports": result[0] or 0,
+                    "hosts_with_open_ports": result[1] or 0,
+                    "unique_ports": result[2] or 0
+                })
+            else:
+                stats.update({"total_open_ports": 0, "hosts_with_open_ports": 0, "unique_ports": 0})
+            
+            # Agent statistics
+            cursor.execute("""
+                SELECT 
+                    COUNT(*) as total_agents,
+                    COUNT(CASE WHEN status = %s THEN 1 END) as active_agents,
+                    COUNT(CASE WHEN last_heartbeat > NOW() - INTERVAL %s THEN 1 END) as recently_active,
+                    COUNT(DISTINCT hostname) as unique_hosts
+                FROM agents
+            """, ("active", "10 minute"))
+            result = cursor.fetchone()
+            if result:
+                stats.update({
+                    "total_agents": result[0] or 0,
+                    "active_agents": result[1] or 0,
+                    "recently_active": result[2] or 0,
+                    "agents_unique_hosts": result[3] or 0
+                })
+            else:
+                stats.update({"total_agents": 0, "active_agents": 0, "recently_active": 0, "agents_unique_hosts": 0})
+            
+            # Recent scan statistics
+            cursor.execute("""
+                SELECT 
+                    COUNT(*) as total_scans,
+                    COUNT(DISTINCT agent_id) as unique_agents,
+                    COUNT(CASE WHEN scan_timestamp > NOW() - INTERVAL %s THEN 1 END) as scans_last_day,
+                    COUNT(CASE WHEN scan_timestamp > NOW() - INTERVAL %s THEN 1 END) as scans_last_hour
+                FROM agent_scan_results
+            """, ("24 hour", "1 hour"))
+            result = cursor.fetchone()
+            if result:
+                stats.update({
+                    "total_scans": result[0] or 0,
+                    "unique_agents": result[1] or 0,
+                    "scans_last_day": result[2] or 0,
+                    "scans_last_hour": result[3] or 0
+                })
+            else:
+                stats.update({"total_scans": 0, "unique_agents": 0, "scans_last_day": 0, "scans_last_hour": 0})
+            
+            return stats
+            
+        except Exception as e:
+            logger.error(f"Error getting network overview stats: {e}")
+            # Return empty flat stats structure to prevent template errors
+            return {
+                "total_hosts": 0, "online_hosts": 0, "offline_hosts": 0, "hosts_active_last_hour": 0, "hosts_active_last_day": 0,
+                "total_connections": 0, "hosts_with_connections": 0, "total_connection_count": 0, "total_bytes_sent": 0, "total_bytes_received": 0, "connections_active_last_hour": 0,
+                "total_open_ports": 0, "hosts_with_open_ports": 0, "unique_ports": 0,
+                "total_agents": 0, "active_agents": 0, "recently_active": 0, "agents_unique_hosts": 0,
+                "total_scans": 0, "unique_agents": 0, "scans_last_day": 0, "scans_last_hour": 0
+            }
+
+
     # Utility method
     def _format_bytes(self, bytes_value):
         """Format bytes to human readable format"""
