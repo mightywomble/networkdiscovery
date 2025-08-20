@@ -110,6 +110,33 @@
                 </div>
             </div>
         </div>
+        
+        <!-- AI Chatbot Settings Card -->
+        <div class="pf-l-gallery__item">
+            <div class="pf-c-card" style="min-height: 400px;">
+                <div class="pf-c-card__header">
+                    <div class="pf-c-card__header-main">
+                        <h2 class="pf-c-card__title">
+                            <i class="fas fa-robot pf-u-mr-sm"></i>AI Chatbot
+                        </h2>
+                    </div>
+                </div>
+                <div class="pf-c-card__body">
+                    <p class="pf-u-color-200">Configure AI Chatbot settings for script generation and execution.</p>
+                    <p>Manage agent version requirements, prompts, and execution policies for the AI-powered chatbot.</p>
+                    
+                    <div id="chatbot-settings-status" class="pf-u-mt-md">
+                        <!-- Chatbot settings status will be loaded here -->
+                        <div class="pf-c-skeleton pf-u-w-100 pf-u-h-sm"></div>
+                    </div>
+                </div>
+                <div class="pf-c-card__footer">
+                    <button class="pf-c-button pf-m-primary" type="button" onclick="openChatbotSettingsModal()">
+                        <i class="fas fa-cog pf-u-mr-sm"></i>Configure Chatbot
+                    </button>
+                </div>
+            </div>
+        </div>
 
         <!-- System Information -->
         <div class="pf-l-gallery__item" style="grid-column: 1 / -1;">
@@ -167,6 +194,7 @@ document.addEventListener('DOMContentLoaded', function() {
     loadAISettingsOverview();
     loadProviderStatus('gemini');
     loadProviderStatus('chatgpt');
+    loadChatbotSettingsStatus();
 });
 
 function loadAISettingsOverview() {
@@ -314,12 +342,172 @@ function loadProviderStatus(provider) {
     });
 }
 
+function loadChatbotSettingsStatus() {
+    const statusContainer = document.getElementById('chatbot-settings-status');
+    
+    fetch('/api/chatbot_settings')
+    .then(response => response.json())
+    .then(data => {
+        let html = '';
+        
+        if (data.success) {
+            const settings = data.settings;
+            const versionCheckColor = settings.require_version_check ? 'success' : 'warning';
+            const versionCheckText = settings.require_version_check ? 'Enabled' : 'Disabled';
+            const versionCheckIcon = settings.require_version_check ? 'check-circle' : 'exclamation-triangle';
+            
+            html = `
+                <div style="color: #000; font-weight: bold; margin-bottom: 8px;">Minimum Agent Version</div>
+                <div style="margin-bottom: 12px;">${settings.minimum_agent_version}</div>
+                
+                <div style="color: #000; font-weight: bold; margin-bottom: 8px;">Version Checking</div>
+                <div style="margin-bottom: 12px;">
+                    <span class="pf-c-label pf-m-${versionCheckColor}">
+                        <span class="pf-c-label__content">
+                            <i class="fas fa-${versionCheckIcon} pf-u-mr-xs"></i>${versionCheckText}
+                        </span>
+                    </span>
+                </div>
+                
+                <div style="color: #000; font-weight: bold; margin-bottom: 8px;">Script Timeout</div>
+                <div>${settings.script_timeout}s</div>
+            `;
+        } else {
+            html = `
+                <div class="pf-c-alert pf-m-warning pf-m-inline pf-m-plain" aria-label="Warning alert">
+                    <div class="pf-c-alert__icon">
+                        <i class="fas fa-exclamation-triangle" aria-hidden="true"></i>
+                    </div>
+                    <p class="pf-c-alert__title">Unable to load chatbot settings</p>
+                </div>
+            `;
+        }
+        
+        statusContainer.innerHTML = html;
+    })
+    .catch(error => {
+        console.error('Error loading chatbot settings:', error);
+        statusContainer.innerHTML = `
+            <div class="pf-c-alert pf-m-warning pf-m-inline pf-m-plain" aria-label="Warning alert">
+                <div class="pf-c-alert__icon">
+                    <i class="fas fa-exclamation-triangle" aria-hidden="true"></i>
+                </div>
+                <p class="pf-c-alert__title">Unable to load status</p>
+            </div>
+        `;
+    });
+}
+
+function openChatbotSettingsModal() {    window.location.href = "/chatbotsettings";}
+
+function loadChatbotSettingsIntoForm() {
+    fetch('/api/chatbot_settings')
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            const settings = data.settings;
+            
+            document.getElementById('minimum-agent-version').value = settings.minimum_agent_version || '1.6.0';
+            document.getElementById('require-version-check').checked = settings.require_version_check !== false;
+            document.getElementById('script-timeout').value = settings.script_timeout || 300;
+            document.getElementById('max-concurrent').value = settings.max_concurrent_executions || 5;
+            document.getElementById('system-prompt').value = settings.system_prompt || '';
+        }
+    })
+    .catch(error => {
+        console.error('Error loading chatbot settings into form:', error);
+    });
+}
+
+function saveChatbotSettings() {
+    const formData = {
+        minimum_agent_version: document.getElementById('minimum-agent-version').value,
+        require_version_check: document.getElementById('require-version-check').checked,
+        script_timeout: parseInt(document.getElementById('script-timeout').value),
+        max_concurrent_executions: parseInt(document.getElementById('max-concurrent').value),
+        system_prompt: document.getElementById('system-prompt').value
+    };
+    
+    // Show saving indicator
+    const saveButton = document.querySelector('#chatbotSettingsModal .pf-m-primary');
+    const originalText = saveButton.innerHTML;
+    saveButton.innerHTML = '<i class="fas fa-spinner fa-spin pf-u-mr-sm"></i>Saving...';
+    saveButton.disabled = true;
+    
+    fetch('/api/chatbot_settings', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(formData)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Show success notification
+            showNotification('Chatbot settings saved successfully', 'success');
+            closeChatbotSettingsModal();
+            loadChatbotSettingsStatus();
+        } else {
+            showNotification('Error saving settings: ' + data.error, 'danger');
+        }
+    })
+    .catch(error => {
+        console.error('Error saving chatbot settings:', error);
+        showNotification('Error saving chatbot settings', 'danger');
+    })
+    .finally(() => {
+        saveButton.innerHTML = originalText;
+        saveButton.disabled = false;
+    });
+}
+
+function closeChatbotSettingsModal() {
+    const modal = document.getElementById('chatbotSettingsModal');
+    if (modal) {
+        modal.style.display = 'none';
+    }
+}
+
+function showNotification(message, type) {
+    // Simple notification function - you can enhance this
+    const alert = document.createElement('div');
+    alert.className = `pf-c-alert pf-m-${type} pf-m-inline`;
+    alert.style.position = 'fixed';
+    alert.style.top = '20px';
+    alert.style.right = '20px';
+    alert.style.zIndex = '9999';
+    alert.innerHTML = `
+        <div class="pf-c-alert__icon">
+            <i class="fas fa-${type === 'success' ? 'check-circle' : 'exclamation-circle'}" aria-hidden="true"></i>
+        </div>
+        <p class="pf-c-alert__title">${message}</p>
+    `;
+    
+    document.body.appendChild(alert);
+    
+    // Remove after 5 seconds
+    setTimeout(() => {
+        if (alert && alert.parentNode) {
+            alert.parentNode.removeChild(alert);
+        }
+    }, 5000);
+}
+
 // Refresh the overview and provider status when modals are closed
 document.addEventListener('hidden.bs.modal', function (event) {
     if (event.target.id === 'geminiModal' || event.target.id === 'chatgptModal') {
         loadAISettingsOverview();
         loadProviderStatus('gemini');
         loadProviderStatus('chatgpt');
+    }
+});
+
+// Close modal when clicking outside
+document.addEventListener('click', function(event) {
+    const modal = document.getElementById('chatbotSettingsModal');
+    if (modal && event.target === modal) {
+        closeChatbotSettingsModal();
     }
 });
 </script>

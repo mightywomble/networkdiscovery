@@ -5014,6 +5014,11 @@ def ai_chatbot():
     """Render the AI Chatbot page"""
     return render_template('chatbot.html')
 
+@app.route('/chatbotsettings')
+def chatbot_settings():
+    """Render the dedicated AI Chatbot Settings page"""
+    return render_template('chatbot_settings.html')
+
 @app.route('/api/chatbot/start', methods=['POST'])
 def start_chatbot_conversation():
     """Start a new chatbot conversation"""
@@ -5061,6 +5066,95 @@ def send_chatbot_message():
         result = chatbot.process_user_message(conversation_id, user_message, selected_hosts)
         
         return jsonify(result)
+        
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+# Chatbot settings routes
+@app.route('/api/chatbot_settings', methods=['GET'])
+def get_chatbot_settings():
+    """Get chatbot configuration settings"""
+    try:
+        settings = {
+            'minimum_agent_version': db.get_application_setting('chatbot.minimum_agent_version', '1.6.0'),
+            'require_version_check': db.get_application_setting('chatbot.require_version_check', True),
+            'script_timeout': db.get_application_setting('chatbot.script_timeout', 300),
+            'max_concurrent_executions': db.get_application_setting('chatbot.max_concurrent_executions', 5),
+            'system_prompt': db.get_application_setting('chatbot.system_prompt', '')
+        }
+        
+        return jsonify({
+            'success': True,
+            'settings': settings
+        })
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@app.route('/api/chatbot_settings', methods=['POST'])
+def save_chatbot_settings():
+    """Save chatbot configuration settings"""
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({
+                'success': False,
+                'error': 'No data provided'
+            }), 400
+        
+        # Validate required fields
+        minimum_agent_version = data.get('minimum_agent_version')
+        if not minimum_agent_version:
+            return jsonify({
+                'success': False,
+                'error': 'Minimum agent version is required'
+            }), 400
+        
+        # Save settings to database
+        db.save_application_setting(
+            'chatbot.minimum_agent_version', 
+            minimum_agent_version, 
+            'string', 
+            'Minimum agent version required for AI chatbot script execution'
+        )
+        
+        db.save_application_setting(
+            'chatbot.require_version_check', 
+            data.get('require_version_check', True), 
+            'boolean', 
+            'Whether to enforce minimum agent version checking for chatbot scripts'
+        )
+        
+        db.save_application_setting(
+            'chatbot.script_timeout', 
+            data.get('script_timeout', 300), 
+            'integer', 
+            'Default timeout for chatbot script execution (seconds)'
+        )
+        
+        db.save_application_setting(
+            'chatbot.max_concurrent_executions', 
+            data.get('max_concurrent_executions', 5), 
+            'integer', 
+            'Maximum number of concurrent script executions allowed'
+        )
+        
+        db.save_application_setting(
+            'chatbot.system_prompt', 
+            data.get('system_prompt', ''), 
+            'string', 
+            'System prompt for AI chatbot script generation'
+        )
+        
+        return jsonify({
+            'success': True,
+            'message': 'Chatbot settings saved successfully'
+        })
         
     except Exception as e:
         return jsonify({
