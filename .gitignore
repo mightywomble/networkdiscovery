@@ -1,9 +1,36 @@
+# Virtual environment
 venv/
+
+# Python cache
 __pycache__/
-*.db
+
+# Application files
 *.log
-*.backup
-*.backup*
 *.out
 
+# Database files  
+*.db
+*.sql
+*.dump
+*.psql
+networkmap.db
+
+# Backup files
+*.backup
+*.backup*
+
+# Migration files
 migrate_data.py
+
+# PostgreSQL specific files
+pg_hba.conf
+postgresql.conf
+postmaster.pid
+*.pid
+
+# Database backups and exports
+*.sql.gz
+*.dump.gz
+*.csv
+data_export/
+database_backups/
