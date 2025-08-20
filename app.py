@@ -42,19 +42,22 @@ scan_status = {
 def index():
     """Main dashboard page"""
     hosts = host_manager.get_all_hosts()
-    network_stats = db.get_network_stats()
-    return render_template('index.html', hosts=hosts, stats=network_stats, scan_status=scan_status)
+    unified_stats = db.get_unified_dashboard_stats()
+    return render_template('index.html', hosts=hosts, stats=unified_stats, scan_status=scan_status)
 
 @app.route('/hosts')
 def hosts():
     """Host management page"""
     hosts = host_manager.get_all_hosts()
-    return render_template('hosts.html', hosts=hosts)
+    unified_stats = db.get_unified_dashboard_stats()
+    return render_template("hosts.html", hosts=hosts, stats=unified_stats)
+    
 
 @app.route('/agents')
 def agents():
     """Agent management page"""
-    return render_template('agents.html')
+    unified_stats = db.get_unified_dashboard_stats()
+    return render_template("agents.html", stats=unified_stats)
 
 @app.route('/add_host', methods=['POST'])
 def add_host():
@@ -4636,7 +4639,7 @@ def get_statistics_overview():
     try:
         overview_stats = db.get_network_overview_stats()
         agent_stats = db.get_agent_stats()
-        network_stats = db.get_network_stats()
+        unified_stats = db.get_unified_dashboard_stats()
         
         # Combine all overview data
         combined_stats = {
@@ -5183,6 +5186,21 @@ def save_chatbot_settings():
             'success': False,
             'error': str(e)
         }), 500
+@app.route("/api/unified_stats", methods=["GET"])
+def get_unified_stats():
+    """Get unified dashboard statistics for all pages"""
+    try:
+        stats = db.get_unified_dashboard_stats()
+        return jsonify({
+            "success": True,
+            "stats": stats
+        })
+    except Exception as e:
+        return jsonify({
+            "success": False,
+            "error": str(e)
+        }), 500
+
 
 @app.route('/api/chatbot/conversation/<conversation_id>', methods=['GET'])
 def get_chatbot_conversation(conversation_id):
@@ -6005,7 +6023,8 @@ def cleanup_script_executions():
 @app.route('/statistics')
 def statistics_dashboard():
     """Render the statistics dashboard page"""
-    return render_template('statistics.html')
+    unified_stats = db.get_unified_dashboard_stats()
+    return render_template("statistics.html", stats=unified_stats)
 
 if __name__ == '__main__':
     print("Initializing NetworkMap Flask Application...")

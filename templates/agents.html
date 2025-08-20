@@ -216,48 +216,10 @@
     </div>
 </section>
 
-<!-- Agent Statistics -->
+<!-- Statistics Overview -->
 <section class="pf-c-page__main-section" style="padding-top: 0;">
-    <div class="pf-l-gallery pf-m-gutter" style="grid-template-columns: repeat(7, 1fr);">
-        <div class="pf-c-card nm-stat-card">
-            <div class="pf-c-card__body pf-u-text-align-center">
-                <div class="nm-stat-value" style="color: var(--pf-global--primary-color--100)" id="total-hosts">-</div>
-                <div class="nm-stat-label">Total Hosts</div>
-            </div>
-        </div>
-        <div class="pf-c-card nm-stat-card">
-            <div class="pf-c-card__body pf-u-text-align-center">
-                <div class="nm-stat-value" style="color: var(--pf-global--success-color--100)" id="deployed-agents">-</div>
-                <div class="nm-stat-label">Agents Deployed</div>
-            </div>
-        </div>
-        <div class="pf-c-card nm-stat-card">
-            <div class="pf-c-card__body pf-u-text-align-center">
-                <div class="nm-stat-value" style="color: var(--pf-global--info-color--100)" id="online-agents">-</div>
-                <div class="nm-stat-label">Online Agents</div>
-            </div>
-        </div>
-        <div class="pf-c-card nm-stat-card">
-            <div class="pf-c-card__body pf-u-text-align-center">
-                <div class="nm-stat-value" style="color: var(--pf-global--warning-color--100)" id="pending-agents">-</div>
-                <div class="nm-stat-label">Pending</div>
-            </div>
-        </div>
-        <div class="pf-c-card nm-stat-card">
-            <div class="pf-c-card__body pf-u-text-align-center">
-                <div class="nm-stat-value" style="color: var(--pf-global--palette--purple-500)" id="current-deployed-version">-</div>
-                <div class="nm-stat-label">Current Deployed</div>
-            </div>
-        </div>
-        <div class="pf-c-card nm-stat-card">
-            <div class="pf-c-card__body pf-u-text-align-center">
-                <div class="nm-stat-value" style="color: var(--pf-global--palette--cyan-500)" id="latest-available-version">-</div>
-                <div class="nm-stat-label">Latest Available</div>
-            </div>
-        </div>
-    </div>
+    {% include "unified_stats_cards.html" %}
 </section>
-
 <!-- Action Buttons -->
 <section class="pf-c-page__main-section" style="padding-top: 0;">
     <div class="nm-action-buttons">
@@ -1031,10 +993,17 @@ async function updateStats() {
     
     const pendingAgents = selectedHosts.size;
     
-    document.getElementById('total-hosts').textContent = totalHosts;
-    document.getElementById('deployed-agents').textContent = deployedAgents;
-    document.getElementById('online-agents').textContent = onlineCount;
-    document.getElementById('pending-agents').textContent = pendingAgents;
+    // Safely update unified stats cards
+    const totalHostsEl = document.getElementById('total-hosts-count');
+    if (totalHostsEl) totalHostsEl.textContent = totalHosts;
+    
+    const deployedAgentsEl = document.getElementById('agents-deployed-count');
+    if (deployedAgentsEl) deployedAgentsEl.textContent = deployedAgents;
+    
+    const activeAgentsEl = document.getElementById('active-agents-count');
+    if (activeAgentsEl) activeAgentsEl.textContent = onlineCount;
+    
+    // Note: pending-agents doesn't exist in unified stats cards, skip it
     
     // Update version statistics
     await updateVersionStats();
@@ -1067,14 +1036,14 @@ async function updateVersionStats() {
         }
         
         // Update the version statistics in the UI
-        document.getElementById('current-deployed-version').textContent = currentDeployedVersion;
-        document.getElementById('latest-available-version').textContent = latestAvailableVersion;
+        const currentVersionEl = document.getElementById('current-deployed-version'); if (currentVersionEl) currentVersionEl.textContent = currentDeployedVersion;
+        const latestVersionEl = document.getElementById('latest-available-version'); if (latestVersionEl) latestVersionEl.textContent = latestAvailableVersion;
         
     } catch (error) {
         console.error('Error updating version stats:', error);
         // Set fallback values on error
-        document.getElementById('current-deployed-version').textContent = 'Error';
-        document.getElementById('latest-available-version').textContent = 'Error';
+        const currentVersionElErr = document.getElementById('current-deployed-version'); if (currentVersionElErr) currentVersionElErr.textContent = 'Error';
+        const latestVersionElErr = document.getElementById('latest-available-version'); if (latestVersionElErr) latestVersionElErr.textContent = 'Error';
     }
 }
 
