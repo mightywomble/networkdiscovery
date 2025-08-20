@@ -317,7 +317,11 @@ function saveChatbotSettings() {
     saveButton.innerHTML = '<i class="fas fa-spinner fa-spin pf-u-mr-sm"></i>Saving...';
     saveButton.disabled = true;
     
+    const timeoutController = new AbortController();
+    const timeoutId = setTimeout(() => timeoutController.abort(), 10000); // 10 second timeout
+    
     fetch('/api/chatbot_settings', {
+        signal: timeoutController.signal,
         method: 'POST',
         headers: {
             'Content-Type': 'application/json'
@@ -326,6 +330,7 @@ function saveChatbotSettings() {
     })
     .then(response => response.json())
     .then(data => {
+        clearTimeout(timeoutId);
         if (data.success) {
             showAlert('Chatbot settings saved successfully', 'success');
             loadCurrentStatus(); // Refresh status display
@@ -334,8 +339,13 @@ function saveChatbotSettings() {
         }
     })
     .catch(error => {
+        clearTimeout(timeoutId);
         console.error('Error saving chatbot settings:', error);
-        showAlert('Failed to save chatbot settings', 'danger');
+        if (error.name === 'AbortError') {
+            showAlert('Request timeout - settings save took too long', 'warning');
+        } else {
+            showAlert('Failed to save chatbot settings', 'danger');
+        }
     })
     .finally(() => {
         saveButton.innerHTML = originalText;

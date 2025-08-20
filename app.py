@@ -5157,11 +5157,9 @@ def save_chatbot_settings():
         })
         
     except Exception as e:
-        import traceback
-        traceback.print_exc()  # Print full traceback to console for debugging
         return jsonify({
             'success': False,
-            'error': f'{type(e).__name__}: {str(e)}'
+            'error': str(e)
         }), 500
 
 @app.route('/api/chatbot/conversation/<conversation_id>', methods=['GET'])

@@ -631,10 +631,8 @@ class ChatbotController:
         
         # Show script preview
         content += "**Generated Script:**\n```bash\n"
-        content += script_data['script'][:500]
-        if len(script_data['script']) > 500:
-            content += "\n... (script truncated for display)\n"
-        content += "```\n\n"
+        content += script_data['script']
+        content += "\n```\n\n"
         
         # Show explanation
         content += "**What this script does:**\n"
